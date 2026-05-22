@@ -1,3 +1,6 @@
+export const revalidate = 0
+export const dynamic = 'force-dynamic'
+
 import { supabase } from '../lib/supabase'
 
 export default async function NotesPage() {
@@ -109,7 +112,8 @@ export default async function NotesPage() {
               let subjectColor = 'text-rose-400';
 
               return (
-                <article
+                
+                <a key={note.id} href={`/notes/${note.slug}`} target="_blank" rel="noopener noreferrer"><article
                   key={note.id}
                   className="rounded-2xl border border-amber-950/30 bg-[#1f1915]/90 p-6 hover:scale-[1.01] hover:shadow-lg transition-all duration-300 relative overflow-hidden group"
                 >
@@ -147,7 +151,7 @@ export default async function NotesPage() {
                     </div>
                     <span className="font-serif italic text-amber-500/70">Wiedza Szyta na Miarę</span>
                   </div>
-                </article>
+                </article></a>
               );
             })
           ) : (

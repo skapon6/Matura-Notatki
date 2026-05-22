@@ -33,24 +33,27 @@ export default function Home() {
   const [notes, setNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchNotes() {
-      try {
-        const { data, error } = await supabase
-          .from("notes")
-          .select("*");
-        if (!error && data) {
-          // Store all notes retrieved. Filtering is applied later via UI controls.
-          setNotes(data as any[]);
-        }
-      } catch (err) {
-        console.error("Error fetching notes:", err);
-      } finally {
-        setLoading(false);
+useEffect(() => {
+  async function fetchNotes() {
+    setLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from("notes")
+        .select("*");
+      if (!error && data) {
+        setNotes(data as any[]);
       }
+    } catch (err) {
+      console.error("Error fetching notes:", err);
+    } finally {
+      setLoading(false);
     }
-    fetchNotes();
-  }, []);
+  }
+
+  fetchNotes()
+  document.addEventListener('visibilitychange', fetchNotes)
+  return () => document.removeEventListener('visibilitychange', fetchNotes)
+}, [])
 
   // Pomodoro state
   const [pomodoroMode, setPomodoroMode] = useState<"work" | "break">("work");
@@ -218,6 +221,7 @@ export default function Home() {
 
   // Epochs keywords mapping for smart dynamic searching
   const epochKeywords: Record<string, string[]> = {
+    "Barok": ["barok", "vanitas", "konceptyzm", "sarmatyzm", "marinizm"],
     "Romantyzm": ["romantyzm", "kordian", "mickiewicz", "słowacki", "dziady", "pan tadeusz"],
     "Pozytywizm": ["pozytywizm", "lalka", "prus", "orzeszkowa", "nad niemnem", "mendel gdanski"],
     "Młoda Polska": ["młoda polska", "wesele", "wyspiański", "ludzie bezdomni", "chłopi", "reymont"],
@@ -247,7 +251,7 @@ export default function Home() {
         return s.length > 140 ? s.substring(0, 140) + '...' : s;
       } catch (_) {}
     }
-    return '';
+    return note.era ? `Epoka: ${note.era}` : '';
   };
 
   const filteredNotes = notes.filter((note) => {
@@ -578,7 +582,7 @@ export default function Home() {
 
             {/* Quick subject filter chips */}
             <div className="flex flex-wrap gap-2 pt-1 border-t border-stone-800/40">
-              {["Wszystkie", "Romantyzm", "Pozytywizm", "Młoda Polska", "Dwudziestolecie", "Współczesność"].map((subject) => (
+              {["Wszystkie", "Barok", "Romantyzm", "Pozytywizm", "Młoda Polska", "Dwudziestolecie", "Współczesność"].map((subject) => (
                 <button
                   key={subject}
                   onClick={() => setSelectedSubject(subject)}
@@ -614,43 +618,41 @@ export default function Home() {
               </div>
             ) : filteredNotes.length > 0 ? (
               filteredNotes.map((note) => (
-                <Link
+                <a
                   href={`/notes/${note.slug}`}
-                  key={note.id}
-                  className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-5 hover:scale-[1.01] hover:shadow-lg transition-all duration-300 flex flex-col justify-between relative overflow-hidden group`}
-                >
-                  {/* Subject Tag & Read Time */}
-                  <div className="flex items-center justify-between text-[11px] font-semibold text-stone-400">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-base">{note.icon || "📕"}</span>
-                      <span className="uppercase tracking-wider text-amber-500/80">{note.subject || "Język Polski"}</span>
+                    key={note.id}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-5 hover:scale-[1.01] hover:shadow-lg transition-all duration-300 flex flex-col justify-between relative overflow-hidden group`}
+                  >
+                    {/* Subject Tag & Read Time */}
+                    <div className="flex items-center justify-between text-[11px] font-semibold text-stone-400">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-base">📕</span>
+                        <span className="uppercase tracking-wider text-amber-500/80">{note.subject || "Język Polski"}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="flex items-center gap-1">
+                          ⏱️ {note.read_time || note.readTime || (Math.max(2, Math.round((String(note.content || "")).split(/\s+/).length / 150)) + " min")}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] border bg-amber-950/40 border-amber-900/50 text-amber-400`}>
+                          Lektura
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="flex items-center gap-1">
-                        ⏱️ {note.read_time || note.readTime || (Math.max(2, Math.round((String(note.content || "")).split(/\s+/).length / 150)) + " min")}
-                      </span>
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] border bg-amber-950/40 border-amber-900/50 text-amber-400`}>
-                        Lektura
+                    <h4 className="text-base font-bold text-stone-100 font-serif mt-3 tracking-tight group-hover:text-amber-200 transition-colors">
+                      {note.title}
+                    </h4>
+                    <p className="text-xs text-stone-400/90 leading-relaxed mt-2 line-clamp-3">
+                      {getExcerpt(note)}
+                    </p>
+                    <div className="border-t border-stone-800/40 mt-4 pt-3 flex items-center justify-between text-xs text-stone-500">
+                      <span>Zaktualizowano niedawno</span>
+                      <span className={`text-amber-500/80 group-hover:text-amber-400 font-medium flex items-center gap-1 transition-colors`}>
+                        Otwórz notatkę 📚
                       </span>
                     </div>
-                  </div>
-
-                  {/* Title & Preview Excerpt */}
-                  <h4 className="text-base font-bold text-stone-100 font-serif mt-3 tracking-tight group-hover:text-amber-200 transition-colors">
-                    {note.title}
-                  </h4>
-                  <p className="text-xs text-stone-400/90 leading-relaxed mt-2 line-clamp-3">
-                    {getExcerpt(note)}
-                  </p>
-
-                  {/* Action items inside note card */}
-                  <div className="border-t border-stone-800/40 mt-4 pt-3 flex items-center justify-between text-xs text-stone-500">
-                    <span>Zaktualizowano niedawno</span>
-                    <span className={`text-amber-500/80 group-hover:text-amber-400 font-medium flex items-center gap-1 transition-colors`}>
-                      Otwórz notatkę 📚
-                    </span>
-                  </div>
-                </Link>
+                  </a>
               ))
             ) : (
               <div className={`rounded-2xl border border-dashed border-stone-800 p-8 text-center text-sm text-stone-500`}>
