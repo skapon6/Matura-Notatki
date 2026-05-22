@@ -2,69 +2,8 @@
 
 import React, { useState, useEffect, useRef } from "react";
 
-// Mock list of Matura notes
-const MOCK_NOTES = [
-  {
-    id: 1,
-    title: "Lalka Bolesława Prusa – Streszczenie i motywy",
-    subject: "Pozytywizm",
-    category: "humanistyczny",
-    readTime: "8 min",
-    excerpt: "Najważniejsze wątki: miłość Wokulskiego do Izabeli Łęckiej, polskie społeczeństwo XIX wieku, spór romantyków z pozytywistami oraz rola pieniądza...",
-    difficulty: "Średni",
-    icon: "📕"
-  },
-  {
-    id: 2,
-    title: "Wesele Stanisława Wyspiańskiego – Symbolika",
-    subject: "Młoda Polska",
-    category: "humanistyczny",
-    readTime: "6 min",
-    excerpt: "Analiza najważniejszych symboli: złoty róg, czapka z piór, chocholi taniec, złota podkowa, kaduceusz oraz postacie dramatu...",
-    difficulty: "Trudny",
-    icon: "🎭"
-  },
-  {
-    id: 3,
-    title: "Kordian Juliusza Słowackiego – Walka narodowowyzwoleńcza",
-    subject: "Romantyzm",
-    category: "humanistyczny",
-    readTime: "9 min",
-    excerpt: "Dramat romantyczny o dorastaniu Kordiana, podróży po Europie, spisku na życie cara oraz dylematach moralnych polskiego spiskowca...",
-    difficulty: "Trudny",
-    icon: "🕯️"
-  },
-  {
-    id: 4,
-    title: "Przedwiośnie Stefana Żeromskiego – Obraz rewolucji",
-    subject: "Dwudziestolecie",
-    category: "humanistyczny",
-    readTime: "11 min",
-    excerpt: "Losy Cezarego Baryki, jego ucieczka z ogarniętego rewolucją Baku, powrót do odrodzonej Polski i poszukiwanie drogi dla ojczyzny (szklane domy)...",
-    difficulty: "Średni",
-    icon: "🚂"
-  },
-  {
-    id: 5,
-    title: "Tango Sławomira Mrożka – Bunt Artura i kryzys wartości",
-    subject: "Współczesność",
-    category: "humanistyczny",
-    readTime: "8 min",
-    excerpt: "Konflikt pokoleń, w którym młody Artur próbuje siłą przywrócić porządek i tradycyjne wartości w całkowicie zliberalizowanym, nowoczesnym domu...",
-    difficulty: "Średni",
-    icon: "💃"
-  },
-  {
-    id: 6,
-    title: "Ferdydurke Witolda Gombrowicza – Formy, gęby i pupy",
-    subject: "Dwudziestolecie",
-    category: "humanistyczny",
-    readTime: "10 min",
-    excerpt: "Groteskowa powieść o walce jednostki z narzucanymi jej przez otoczenie rolami (Formą), infantylizacji w szkole oraz gębach przyprawianych przez innych...",
-    difficulty: "Trudny",
-    icon: "🧒"
-  }
-];
+import { supabase } from "./lib/supabase";
+
 
 // Cozy quotes for Matura students
 const COZY_QUOTES = [
@@ -88,6 +27,32 @@ export default function Home() {
   // Search & filter states
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("Wszystkie");
+
+  // Dynamic notes loaded from Supabase
+  const [notes, setNotes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchNotes() {
+      try {
+        const { data, error } = await supabase
+          .from("notes")
+          .select("*");
+        if (!error && data) {
+          // Filter only Polish notes (subject contains 'polsk')
+          const polish = data.filter((note: any) => 
+            (note.subject || "").toLowerCase().includes("polsk")
+          );
+          setNotes(polish);
+        }
+      } catch (err) {
+        console.error("Error fetching notes:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchNotes();
+  }, []);
 
   // Pomodoro state
   const [pomodoroMode, setPomodoroMode] = useState<"work" | "break">("work");
@@ -253,12 +218,29 @@ export default function Home() {
     setMugMessage(messages[clicks % messages.length]);
   };
 
-  // Filter notes based on search & subject selection
-  const filteredNotes = MOCK_NOTES.filter((note) => {
-    const matchesSearch = note.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          note.excerpt.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          note.subject.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesSubject = selectedSubject === "Wszystkie" || note.subject === selectedSubject;
+  // Epochs keywords mapping for smart dynamic searching
+  const epochKeywords: Record<string, string[]> = {
+    "Romantyzm": ["romantyzm", "kordian", "mickiewicz", "słowacki", "dziady", "pan tadeusz"],
+    "Pozytywizm": ["pozytywizm", "lalka", "prus", "orzeszkowa", "nad niemnem", "mendel gdanski"],
+    "Młoda Polska": ["młoda polska", "wesele", "wyspiański", "ludzie bezdomni", "chłopi", "reymont"],
+    "Dwudziestolecie": ["dwudziestolecie", "ferdydurke", "gombrowicz", "przedwiośnie", "żeromski", "granica", "nałkowska"],
+    "Współczesność": ["współczesność", "tango", "mrożek", "ocalenie", "szymborska", "różewicz", "herbert"]
+  };
+
+  // Filter notes based on search & subject (epoch) selection
+  const filteredNotes = notes.filter((note) => {
+    const titleLower = (note.title || "").toLowerCase();
+    const contentLower = (note.content || "").toLowerCase();
+    const textToSearch = `${titleLower} ${contentLower}`;
+    
+    const matchesSearch = textToSearch.includes(searchQuery.toLowerCase());
+    
+    let matchesSubject = true;
+    if (selectedSubject !== "Wszystkie") {
+      const keywords = epochKeywords[selectedSubject] || [selectedSubject.toLowerCase()];
+      matchesSubject = keywords.some(keyword => textToSearch.includes(keyword));
+    }
+    
     return matchesSearch && matchesSubject;
   });
 
@@ -595,7 +577,7 @@ export default function Home() {
               <h3 className="text-sm font-semibold font-serif text-stone-100 flex items-center gap-2">
                 📂 Baza Notatek
                 <span className={`text-[10px] font-sans font-normal px-2 py-0.5 rounded-full bg-stone-900 border ${currentTheme.cardBorder} text-stone-400`}>
-                  {filteredNotes.length} z {MOCK_NOTES.length}
+                  {filteredNotes.length} z {notes.length}
                 </span>
               </h3>
               <a href="/notes" className="text-xs text-amber-500/80 hover:text-amber-400 transition-colors font-medium">
@@ -603,7 +585,11 @@ export default function Home() {
               </a>
             </div>
 
-            {filteredNotes.length > 0 ? (
+            {loading ? (
+              <div className="rounded-2xl border border-dashed border-amber-950/40 p-8 text-center text-sm text-stone-500 bg-[#1f1915]/30">
+                ☕ Parzenie herbaty i pobieranie notatek z Supabase...
+              </div>
+            ) : filteredNotes.length > 0 ? (
               filteredNotes.map((note) => (
                 <div
                   key={note.id}
@@ -612,21 +598,15 @@ export default function Home() {
                   {/* Subject Tag & Read Time */}
                   <div className="flex items-center justify-between text-[11px] font-semibold text-stone-400">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-base">{note.icon}</span>
-                      <span className="uppercase tracking-wider text-amber-500/80">{note.subject}</span>
+                      <span className="text-base">{note.icon || "📕"}</span>
+                      <span className="uppercase tracking-wider text-amber-500/80">{note.subject || "Język Polski"}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="flex items-center gap-1">
-                        ⏱️ {note.readTime}
+                        ⏱️ {note.readTime || (Math.max(2, Math.round((note.content || "").split(/\s+/).length / 150)) + " min")}
                       </span>
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] border ${
-                        note.difficulty === "Trudny" 
-                          ? "bg-red-950/40 border-red-900/50 text-red-400"
-                          : note.difficulty === "Średni"
-                            ? "bg-amber-950/40 border-amber-900/50 text-amber-400"
-                            : "bg-emerald-950/40 border-emerald-900/50 text-emerald-400"
-                      }`}>
-                        {note.difficulty}
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] border bg-amber-950/40 border-amber-900/50 text-amber-400`}>
+                        Lektura
                       </span>
                     </div>
                   </div>
@@ -635,8 +615,8 @@ export default function Home() {
                   <h4 className="text-base font-bold text-stone-100 font-serif mt-3 tracking-tight group-hover:text-amber-200 transition-colors">
                     {note.title}
                   </h4>
-                  <p className="text-xs text-stone-400/90 leading-relaxed mt-2">
-                    {note.excerpt}
+                  <p className="text-xs text-stone-400/90 leading-relaxed mt-2 line-clamp-3">
+                    {note.excerpt || (note.content || "").substring(0, 140) + "..."}
                   </p>
 
                   {/* Action items inside note card */}
