@@ -7,7 +7,7 @@ const MOCK_NOTES = [
   {
     id: 1,
     title: "Lalka Bolesława Prusa – Streszczenie i motywy",
-    subject: "Język Polski",
+    subject: "Pozytywizm",
     category: "humanistyczny",
     readTime: "8 min",
     excerpt: "Najważniejsze wątki: miłość Wokulskiego do Izabeli Łęckiej, polskie społeczeństwo XIX wieku, spór romantyków z pozytywistami oraz rola pieniądza...",
@@ -17,7 +17,7 @@ const MOCK_NOTES = [
   {
     id: 2,
     title: "Wesele Stanisława Wyspiańskiego – Symbolika",
-    subject: "Język Polski",
+    subject: "Młoda Polska",
     category: "humanistyczny",
     readTime: "6 min",
     excerpt: "Analiza najważniejszych symboli: złoty róg, czapka z piór, chocholi taniec, złota podkowa, kaduceusz oraz postacie dramatu...",
@@ -26,43 +26,43 @@ const MOCK_NOTES = [
   },
   {
     id: 3,
-    title: "Funkcja kwadratowa w pigułce – Wzory i wykresy",
-    subject: "Matematyka",
-    category: "ścisły",
-    readTime: "12 min",
-    excerpt: "Wszystko o delcie (Δ), wierzchołku paraboli W(p, q), postaci kanonicznej i iloczynowej. Zbiór najczęściej powtarzających się zadań maturalnych...",
-    difficulty: "Łatwy",
-    icon: "📐"
+    title: "Kordian Juliusza Słowackiego – Walka narodowowyzwoleńcza",
+    subject: "Romantyzm",
+    category: "humanistyczny",
+    readTime: "9 min",
+    excerpt: "Dramat romantyczny o dorastaniu Kordiana, podróży po Europie, spisku na życie cara oraz dylematach moralnych polskiego spiskowca...",
+    difficulty: "Trudny",
+    icon: "🕯️"
   },
   {
     id: 4,
-    title: "Czasy gramatyczne: Past Simple vs Present Perfect",
-    subject: "Język Angielski",
-    category: "języki",
-    readTime: "5 min",
-    excerpt: "Jasne zestawienie kluczowych różnic, słowa klucze (since, for, yesterday, ago) oraz gotowe konstrukcje zdań na maturę ustną i pisemną...",
-    difficulty: "Łatwy",
-    icon: "🇬🇧"
+    title: "Przedwiośnie Stefana Żeromskiego – Obraz rewolucji",
+    subject: "Dwudziestolecie",
+    category: "humanistyczny",
+    readTime: "11 min",
+    excerpt: "Losy Cezarego Baryki, jego ucieczka z ogarniętego rewolucją Baku, powrót do odrodzonej Polski i poszukiwanie drogi dla ojczyzny (szklane domy)...",
+    difficulty: "Średni",
+    icon: "🚂"
   },
   {
     id: 5,
-    title: "Gospodarka Polski – Rolnictwo i przemysł",
-    subject: "Geografia",
-    category: "przyrodniczy",
-    readTime: "10 min",
-    excerpt: "Warunki rozwoju rolnictwa w Polsce, struktura użytkowania gruntów, główne okręgi przemysłowe oraz restrukturyzacja przemysłu po 1989 roku...",
+    title: "Tango Sławomira Mrożka – Bunt Artura i kryzys wartości",
+    subject: "Współczesność",
+    category: "humanistyczny",
+    readTime: "8 min",
+    excerpt: "Konflikt pokoleń, w którym młody Artur próbuje siłą przywrócić porządek i tradycyjne wartości w całkowicie zliberalizowanym, nowoczesnym domu...",
     difficulty: "Średni",
-    icon: "🌍"
+    icon: "💃"
   },
   {
     id: 6,
-    title: "Trygonometria – Dowodzenie tożsamości",
-    subject: "Matematyka",
-    category: "ścisły",
-    readTime: "9 min",
-    excerpt: "Kluczowe tożsamości trygonometryczne (jedynka trygonometryczna, wzory redukcyjne) oraz strategie rozwiązywania zadań za 3 i 4 punkty...",
+    title: "Ferdydurke Witolda Gombrowicza – Formy, gęby i pupy",
+    subject: "Dwudziestolecie",
+    category: "humanistyczny",
+    readTime: "10 min",
+    excerpt: "Groteskowa powieść o walce jednostki z narzucanymi jej przez otoczenie rolami (Formą), infantylizacji w szkole oraz gębach przyprawianych przez innych...",
     difficulty: "Trudny",
-    icon: "📈"
+    icon: "🧒"
   }
 ];
 
@@ -553,7 +553,7 @@ export default function Home() {
             <div className="relative">
               <input
                 type="text"
-                placeholder="Wyszukaj lekturę, pojęcie lub przedmiot..."
+                placeholder="Wyszukaj lekturę, motyw lub epokę..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-stone-900/70 border border-stone-800 rounded-xl py-2.5 pl-10 pr-4 text-sm text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60 focus:ring-1 focus:ring-amber-700/60 transition-all font-sans"
@@ -573,7 +573,7 @@ export default function Home() {
 
             {/* Quick subject filter chips */}
             <div className="flex flex-wrap gap-2 pt-1 border-t border-stone-800/40">
-              {["Wszystkie", "Język Polski", "Matematyka", "Język Angielski", "Geografia"].map((subject) => (
+              {["Wszystkie", "Romantyzm", "Pozytywizm", "Młoda Polska", "Dwudziestolecie", "Współczesność"].map((subject) => (
                 <button
                   key={subject}
                   onClick={() => setSelectedSubject(subject)}

@@ -23,6 +23,12 @@ export default async function NotesPage() {
     );
   }
 
+  // Filter only Polish language notes
+  const polishNotes = notes?.filter((note) => {
+    const subject = (note.subject || "").toLowerCase();
+    return subject.includes("polsk");
+  }) || [];
+
   return (
     <div className="min-h-screen bg-[#14100e] text-stone-200 font-sans flex flex-col transition-colors duration-500">
       {/* Dynamic Keyframes for Subtle Steam effect in the logo */}
@@ -89,41 +95,18 @@ export default async function NotesPage() {
           </span>
           <h2 className="text-2xl font-bold font-serif text-stone-100 mt-2">Notatki maturalne z bazy danych</h2>
           <p className="text-xs text-stone-400 mt-1 leading-relaxed max-w-2xl">
-            Oto Twoje kompendium wiedzy pobrane bezpośrednio z chmury Supabase. Każda notatka jest starannie wyselekcjonowana i zredagowana, aby pomóc Ci w opanowaniu kluczowych wymagań egzaminacyjnych CKE.
+            Oto Twoje kompendium wiedzy pobrane bezpośrednio z chmury Supabase. Każda notatka jest starannie wyselekcjonowana i zredagowana, aby pomóc Ci w opanowaniu kluczowych wymagań egzaminacyjnych CKE z języka polskiego.
           </p>
         </div>
 
         {/* Dynamic Notes List */}
         <div className="flex flex-col gap-5">
-          {notes && notes.length > 0 ? (
-            notes.map((note) => {
+          {polishNotes && polishNotes.length > 0 ? (
+            polishNotes.map((note) => {
               // Extract subject for a custom emoji
               const subjectLower = note.subject?.toLowerCase() || '';
-              let emoji = '📝';
-              let subjectColor = 'text-amber-500/80';
-              let bgTagColor = 'bg-amber-950/40 border-amber-900/40';
-
-              if (subjectLower.includes('polsk')) {
-                emoji = '📕';
-                subjectColor = 'text-rose-400';
-                bgTagColor = 'bg-rose-950/30 border-rose-900/30';
-              } else if (subjectLower.includes('matematyk')) {
-                emoji = '📐';
-                subjectColor = 'text-sky-400';
-                bgTagColor = 'bg-sky-950/30 border-sky-900/30';
-              } else if (subjectLower.includes('angielsk')) {
-                emoji = '🇬🇧';
-                subjectColor = 'text-emerald-400';
-                bgTagColor = 'bg-emerald-950/30 border-emerald-900/30';
-              } else if (subjectLower.includes('histori')) {
-                emoji = '📜';
-                subjectColor = 'text-orange-400';
-                bgTagColor = 'bg-orange-950/30 border-orange-900/30';
-              } else if (subjectLower.includes('geograf')) {
-                emoji = '🌍';
-                subjectColor = 'text-teal-400';
-                bgTagColor = 'bg-teal-950/30 border-teal-900/30';
-              }
+              let emoji = '📕';
+              let subjectColor = 'text-rose-400';
 
               return (
                 <article
@@ -170,7 +153,7 @@ export default async function NotesPage() {
           ) : (
             <div className="rounded-2xl border border-dashed border-stone-850 p-12 text-center text-stone-500 bg-[#1f1915]/40">
               <span className="text-3xl block mb-2">📭</span>
-              Brak notatek w bazie danych. Spróbuj dodać notatki w panelu administracyjnym Supabase.
+              Brak notatek z języka polskiego w bazie danych. Dodaj je w panelu Supabase.
             </div>
           )}
         </div>
