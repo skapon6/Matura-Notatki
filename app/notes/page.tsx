@@ -27,10 +27,7 @@ export default async function NotesPage() {
   }
 
   // Filter only Polish language notes
-  const polishNotes = notes?.filter((note) => {
-    const subject = (note.subject || "").toLowerCase();
-    return subject.includes("polsk");
-  }) || [];
+      const polishNotes = notes || [];
 
   return (
     <div className="min-h-screen bg-[#14100e] text-stone-200 font-sans flex flex-col transition-colors duration-500">
