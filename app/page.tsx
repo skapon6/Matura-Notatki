@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 
 import { supabase } from "./lib/supabase";
+import Link from 'next/link';
 
 
 // Cozy quotes for Matura students
@@ -39,11 +40,8 @@ export default function Home() {
           .from("notes")
           .select("*");
         if (!error && data) {
-          // Filter only Polish notes (subject contains 'polsk')
-          const polish = data.filter((note: any) => 
-            (note.subject || "").toLowerCase().includes("polsk")
-          );
-          setNotes(polish);
+          // Store all notes retrieved. Filtering is applied later via UI controls.
+          setNotes(data as any[]);
         }
       } catch (err) {
         console.error("Error fetching notes:", err);
@@ -228,9 +226,34 @@ export default function Home() {
   };
 
   // Filter notes based on search & subject (epoch) selection
+  const getExcerpt = (note: any) => {
+    if (note.excerpt && typeof note.excerpt === 'string') return note.excerpt;
+    const content = note.content;
+    if (typeof content === 'string') return content.length > 140 ? content.substring(0, 140) + '...' : content;
+    if (Array.isArray(content)) {
+      for (const b of content) {
+        if (typeof b === 'string') {
+          return b.length > 140 ? b.substring(0, 140) + '...' : b;
+        }
+        if (b && (b.content || b.text || b.body)) {
+          const t = b.content || b.text || b.body;
+          if (typeof t === 'string') return t.length > 140 ? t.substring(0, 140) + '...' : t;
+        }
+      }
+    }
+    if (content && typeof content === 'object') {
+      try {
+        const s = JSON.stringify(content);
+        return s.length > 140 ? s.substring(0, 140) + '...' : s;
+      } catch (_) {}
+    }
+    return '';
+  };
+
   const filteredNotes = notes.filter((note) => {
     const titleLower = (note.title || "").toLowerCase();
-    const contentLower = (note.content || "").toLowerCase();
+    const contentString = typeof note.content === 'string' ? note.content : JSON.stringify(note.content || "");
+    const contentLower = contentString.toLowerCase();
     const textToSearch = `${titleLower} ${contentLower}`;
     
     const matchesSearch = textToSearch.includes(searchQuery.toLowerCase());
@@ -453,7 +476,7 @@ export default function Home() {
                   <span className="text-sm font-medium group-hover:text-amber-400 transition-colors">Wszystkie Notatki</span>
                 </div>
                 <span className="text-xs bg-stone-900 border border-stone-800 text-amber-500/80 px-2 py-0.5 rounded-full">
-                  6
+                  {notes.length}
                 </span>
               </a>
 
@@ -591,7 +614,8 @@ export default function Home() {
               </div>
             ) : filteredNotes.length > 0 ? (
               filteredNotes.map((note) => (
-                <div
+                <Link
+                  href={`/notes/${note.slug}`}
                   key={note.id}
                   className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-5 hover:scale-[1.01] hover:shadow-lg transition-all duration-300 flex flex-col justify-between relative overflow-hidden group`}
                 >
@@ -603,7 +627,7 @@ export default function Home() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="flex items-center gap-1">
-                        ⏱️ {note.readTime || (Math.max(2, Math.round((note.content || "").split(/\s+/).length / 150)) + " min")}
+                        ⏱️ {note.read_time || note.readTime || (Math.max(2, Math.round((String(note.content || "")).split(/\s+/).length / 150)) + " min")}
                       </span>
                       <span className={`px-2 py-0.5 rounded-md text-[10px] border bg-amber-950/40 border-amber-900/50 text-amber-400`}>
                         Lektura
@@ -616,20 +640,17 @@ export default function Home() {
                     {note.title}
                   </h4>
                   <p className="text-xs text-stone-400/90 leading-relaxed mt-2 line-clamp-3">
-                    {note.excerpt || (note.content || "").substring(0, 140) + "..."}
+                    {getExcerpt(note)}
                   </p>
 
                   {/* Action items inside note card */}
                   <div className="border-t border-stone-800/40 mt-4 pt-3 flex items-center justify-between text-xs text-stone-500">
                     <span>Zaktualizowano niedawno</span>
-                    <a
-                      href="/notes"
-                      className={`text-amber-500/80 group-hover:text-amber-400 font-medium flex items-center gap-1 transition-colors`}
-                    >
+                    <span className={`text-amber-500/80 group-hover:text-amber-400 font-medium flex items-center gap-1 transition-colors`}>
                       Otwórz notatkę 📚
-                    </a>
+                    </span>
                   </div>
-                </div>
+                </Link>
               ))
             ) : (
               <div className={`rounded-2xl border border-dashed border-stone-800 p-8 text-center text-sm text-stone-500`}>
