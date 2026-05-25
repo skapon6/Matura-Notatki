@@ -5,7 +5,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "./lib/supabase";
 import Link from 'next/link';
 
-
 // Cozy quotes for Matura students
 const COZY_QUOTES = [
   { text: "Cierpliwość i praca tworzą wielkie dzieła.", author: "Konfucjusz" },
@@ -620,9 +619,9 @@ useEffect(() => {
               filteredNotes.map((note) => (
                 <a
                   href={`/notes/${note.slug}`}
-                    key={note.id}
                     target="_blank"
                     rel="noopener noreferrer"
+                    key={note.id}
                     className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-5 hover:scale-[1.01] hover:shadow-lg transition-all duration-300 flex flex-col justify-between relative overflow-hidden group`}
                   >
                     {/* Subject Tag & Read Time */}

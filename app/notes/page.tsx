@@ -110,7 +110,7 @@ export default async function NotesPage() {
 
               return (
                 
-                <a key={note.id} href={`/notes/${note.slug}`} target="_blank" rel="noopener noreferrer"><article
+                <a key={note.id} href={`/notes/${note.slug}`}target="_blank" rel="noopener noreferrer"><article
                   key={note.id}
                   className="rounded-2xl border border-amber-950/30 bg-[#1f1915]/90 p-6 hover:scale-[1.01] hover:shadow-lg transition-all duration-300 relative overflow-hidden group"
                 >
