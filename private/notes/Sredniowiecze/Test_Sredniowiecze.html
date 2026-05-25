@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Test maturalny – Język polski: Średniowiecze (na podstawie notatki)</title>
+  <link rel="stylesheet" href="stylsredniowiecze.css"/>
+  <style>
+    /* Tylko układ komponentów testu (bez ruszania Twoich klas/zmiennych w CSS bazowym) */
+    .test-wrap{max-width:980px;margin:0 auto;padding:18px}
+    .test-card{margin:14px 0}
+    .q-meta{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:.85rem}
+    .pill-info{background:rgba(0,0,0,.06)}
+    .q-title{margin:10px 0 8px 0;font-size:1.05rem}
+    .q-block{margin-top:10px}
+    .q-block label{display:block;margin:7px 0;cursor:pointer}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .col{flex:1;min-width:260px}
+    select, input[type="text"]{width:100%;padding:10px;border-radius:12px;border:1px solid rgba(0,0,0,.18);background:rgba(255,255,255,.8)}
+    .btnbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+    .btn{border:0;border-radius:14px;padding:10px 14px;cursor:pointer}
+    .btn-primary{background:rgba(0,0,0,.12)}
+    .btn-ghost{background:transparent;border:1px dashed rgba(0,0,0,.25)}
+    .score-box{margin-top:14px;padding:14px;border-radius:16px;background:rgba(0,0,0,.06)}
+    .small{font-size:.9rem;opacity:.9}
+    .ok{font-weight:700}
+    .bad{font-weight:700}
+    .hint{font-size:.88rem;opacity:.85;margin-top:6px}
+    .grid-match{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media (max-width:720px){.grid-match{grid-template-columns:1fr}}
+  </style>
+</head>
+
+<body>
+  <div class="test-wrap">
+    <div class="hero" style="margin-bottom:14px">
+      <div class="hero-row">
+        <div class="hero-text">
+          <div class="hero-book-badge">📜 Test maturalny</div>
+          <div class="hero-title-main">Język polski – Średniowiecze</div>
+          <div class="hero-title-sub">Na podstawie Twojej notatki „Średniowiecze” (teocentryzm, filozofie, gatunki, topoi, hasła do argumentacji)</div>
+          <div class="badge-row" style="margin-top:10px">
+            <div class="badge">jednokrotny wybór</div>
+            <div class="badge">wielokrotny wybór</div>
+            <div class="badge">prawda/fałsz</div>
+            <div class="badge">uzupełnianie</div>
+            <div class="badge">dopasowanie</div>
+            <div class="badge">kolejność</div>
+          </div>
+          <p class="hero-quote" style="margin-top:10px">
+            Cel: szybka powtórka do matury – po sprawdzeniu dostajesz wynik, a przy każdym zadaniu pokazuje się informacja zwrotna.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <section class="section-card test-card">
+      <div class="section-header">
+        <div class="section-title-row">
+          <div class="section-title"><span class="section-icon">🧠</span><span>Instrukcja</span></div>
+          <div class="section-tag">zrób wszystko naraz, potem „Sprawdź”</div>
+        </div>
+      </div>
+      <div class="section-content" style="display:block">
+        <ul>
+          <li>Odpowiedz na wszystkie pytania (możesz też zostawić puste – wtedy nie dostaniesz punktów).</li>
+          <li>Zadania otwarte sprawdzają odpowiedź „maturalnie” – liczą się słowa klucze, nie idealnie identyczna fraza.</li>
+          <li>Wielokrotny wybór daje punkty częściowe (minus za zaznaczenie błędów).</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Q1 -->
+    <section class="section-card test-card" data-qid="q1" data-type="radio" data-points="1" data-answer="teocentryzm">
+      <div class="section-header">
+        <div class="section-title-row">
+          <div class="section-title"><span class="section-icon">1️⃣</span><span>Dominanta światopoglądowa</span></div>
+          <div class="section-tag">jednokrotny wybór</div>
+        </div>
+      </div>
+      <div class="section-content" style="display:block">
+        <div class="q-meta">
+          <span class="pill pill-info">1 pkt</span>
+        </div>
+        <div class="q-title">Które pojęcie najlepiej opisuje średniowieczny obraz świata z Twojej notatki?</div>
+        <div class="q-block options">
+          <label class="option"><input type="radio" name="q1" value="antropocentryzm"> Antropocentryzm</label>
+          <label class="option"><input type="radio" name="q1" value="teocentryzm"> Teocentryzm</label>
+          <label class="option"><input type="radio" name="q1" value="hedonizm"> Hedonizm</label>
+          <label class="option"><input type="radio" name="q1" value="naturalizm"> Naturalizm</label>
+        </div>
+        <div class="feedback-text"></div>
+      </div>
+    </section>
+
+    <!-- Q2 -->
+    <section class="section-card test-card" data-qid="q2" data-type="tf" data-points="1" data-answer="true">
+      <div class="section-header">
+        <div class="section-title-row">
+          <div class="section-title"><span class="section-icon">2️⃣</span><span>Scholastyka</span></div>
+          <div class="section-tag">prawda/fałsz</div>
+        </div>
+      </div>
+      <div class="section-content" style="display:block">
+        <div class="q-meta"><span class="pill pill-info">1 pkt</span></div>
+        <div class="q-title">Scholastyka w średniowieczu to metoda nauczania i dochodzenia do prawdy (m.in. przez rozumowanie i dysputę).</div>
+        <div class="q-block options">
+          <label class="option"><input type="radio" name="q2" value="true"> Prawda</label>
+          <label class="option"><input type="radio" name="q2" value="false"> Fałsz</label>
+        </div>
+        <div class="feedback-text"></div>
+      </div>
+    </section>
+
+    <!-- Q3 -->
+    <section class="section-card test-card" data-qid="q3" data-type="checkbox" data-points="2" data-answers="swiety,rycerz,wladca">
+      <div class="section-header">
+        <div class="section-title-row">
+          <div class="section-title"><span class="section-icon">3️⃣</span><span>Wzorce osobowe</span></div>
+          <div class="section-tag">wielokrotny wybór</div>
+        </div>
+      </div>
+      <div class="section-content" style="display:block">
+        <div class="q-meta"><span class="pill pill-info">2 pkt</span><span class="small">Punkty częściowe</span></div>
+        <div class="q-title">Zaznacz trzy średniowieczne wzorce osobowe wymienione w notatce (dokładnie 3).</div>
+        <div class="q-block options">
+          <label class="option"><input type="checkbox" name="q3" value="swiety"> święty-asceta</label>
+          <label class="option"><input type="checkbox" name="q3" value="rycerz"> rycerz</label>
+          <label class="option"><input type="checkbox" name="q3" value="wladca"> władca idealny</label>
+          <label class="option"><input type="checkbox" name="q3" value="artysta"> artysta-buntownik</label>
+          <label class="option"><input type="checkbox" name="q3" value="uczony"> uczony-humanista</label>
+        </div>
+        <div class="feedback-text"></div>
+      </div>
+    </section>
+
+    <!-- Q4 -->
+    <section class="section-card test-card" data-qid="q4" data-type="text" data-points="1" data-keywords="pamietaj|pamiętaj;smierc|śmierć|pamietaj o smierci|pamiętaj o śmierci">
+      <div class="section-header">
+        <div class="section-title-row">
+          <div class="section-title"><span class="section-icon">4️⃣</span><span>Memento mori</span></div>
+          <div class="section-tag">uzupełnianie</div>
+        </div>
+      </div>
+      <div class="section-content" style="display:block">
+        <div class="q-meta"><span class="pill pill-info">1 pkt</span></div>
+        <div class="q-title">Wyjaśnij po polsku sens hasła <em>memento mori</em> (1 zdanie).</div>
+        <div class="q-block">
+          <input type="text" name="q4" placeholder='Np. "..."' />
+          <div class="hint">Wystarczą słowa-klucze (nie musisz pisać idealnej definicji).</div>
+        </div>
+        <div class="feedback-text"></div>
+      </div>
+    </section>
+
+    <!-- Q5 (matching philosophies) -->
+    <section class="section-card test-card" data-qid="q5" data-type="match" data-points="3">
+      <div class="section-header">
+        <div class="section-title-row">
+          <div class="section-title"><span class="section-icon">5️⃣</span><span>Filozofie: dopasowanie</span></div>
+          <div class="section-tag">dopasowanie 3×</div>
+        </div>
+      </div>
+      <div class="section-content" style="display:block">
+        <div class="q-meta"><span class="pill pill-info">3 pkt</span></div>
+        <div class="q-title">Dopasuj nurt do jego najważniejszej idei (wg notatki).</div>
+
+        <div class="grid-match q-block">
+          <div>
+            <div class="small"><strong>Augustynizm</strong></div>
+            <select name="q5a">
+              <option value="">— wybierz —</option>
+              <option value="dualizm">Dualizm: dusza vs. ciało, konflikt wewnętrzny</option>
+              <option value="harmonia">Harmonia wiary i rozumu; porządek świata</option>
+              <option value="radosc">Radość z istnienia, miłość do świata i stworzenia</option>
+            </select>
+          </div>
+
+          <div>
+            <div class="small"><strong>Tomizm</strong></div>
+            <select name="q5b">
+              <option value="">— wybierz —</option>
+              <option value="dualizm">Dualizm: dusza vs. ciało, konflikt wewnętrzny</option>
+              <option value="harmonia">Harmonia wiary i rozumu; porządek świata</option>
+              <option value="radosc">Radość z istnienia, miłość do świata i stworzenia</option>
+            </select>
+          </div>
+
+          <div>
+            <div class="small"><strong>Franciszkanizm</strong></div>
+            <select name="q5c">
+              <option value="">— wybierz —</option>
+              <option value="dualizm">Dualizm: dusza vs. ciało, konflikt wewnętrzny</option>
+              <option value="harmonia">Harmonia wiary i rozumu; porządek świata</option>
+              <option value="radosc">Radość z istnienia, miłość do świata i stworzenia</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="feedback-text"></div>
+      </div>
+    </section>
+
+    <!-- Q6 -->
+    <section class="section-card test-card" data-qid="q6" data-type="radio" data-points="1" data-answer="liryka">
+      <div class="section-header">
+        <div class="section-title-row">
+          <div class="section-title"><span class="section-icon">6️⃣</span><span>„Bogurodzica”</span></div>
+          <div class="section-tag">jednokrotny wybór</div>
+        </div>
+      </div>
+      <div class="section-content" style="display:block">
+        <div class="q-meta"><span class="pill pill-info">1 pkt</span></div>
+        <div class="q-title">„Bogurodzica” w notatce pojawia się jako przykład:</div>
+        <div class="q-block options">
+          <label class="option"><input type="radio" name="q6" value="liryka"> liryki religijnej (pieśni)</label>
+          <label class="option"><input type="radio" name="q6" value="kronika"> kroniki</label>
+          <label class="option"><input type="radio" name="q6" value="hagiografia"> hagiografii</label>
+          <label class="option"><input type="radio" name="q6" value="epos"> eposu rycerskiego</label>
+        </div>
+        <div class="feedback-text"></div>
+      </div>
+    </section>
+
+    <!-- Q7 -->
+    <section class="section-card test-card" data-qid="q7" data-type="radio" data-points="1" data-answer="dialog">
+      <div class="section-header">
+        <div class="section-title-row">
+          <div class="section-title"><span class="section-icon">7️⃣</span><span>„Rozmowa Mistrza Polikarpa ze Śmiercią”</span></div>
+          <div class="section-tag">jednokrotny wybór</div>
+        </div>
+      </div>
+      <div class="section-content" style="display:block">
+        <div class="q-meta"><span class="pill pill-info">1 pkt</span></div>
+        <div class="q-title">Najtrafniej określisz ten utwór jako:</div>
+        <div class="q-block options">
+          <label class="option"><input type="radio" name="q7" value="dialog"> dialog o charakterze dydaktycznym/satyrycznym (motyw śmierci)</label>
+          <label class="option"><input type="radio" name="q7" value="ballada"> balladę</label>
+          <label class="option"><input type="radio" name="q7" value="tragedia"> tragedię antyczną</label>
+          <label class="option"><input type="radio" name="q7" value="oda"> odę</label>
+        </div>
+        <div class="feedback-text"></div>
+      </div>
+    </section>
+
+    <!-- Q8 -->
+    <section class="section-card test-card" data-qid="q8" data-type="text" data-points="2" data-keywords="chryst|christ;mary|matk;jan|chrzc">
+      <div class="section-header">
+        <div class="section-title-row">
+          <div class="section-title"><span class="section-icon">8️⃣</span><span>Topos deesis</span></div>
+          <div class="section-tag">odpowiedź krótka</div>
+        </div>
+      </div>
+      <div class="section-content" style="display:block">
+        <div class="q-meta"><span class="pill pill-info">2 pkt</span></div>
+        <div class="q-title">Wyjaśnij, czym jest <strong>deesis</strong> (wystarczy 1–2 zdania).</div>
+        <div class="q-block">
+          <input type="text" name="q8" placeholder='Np. "..."' />
+          <div class="hint">Podpowiedź: wstawiennictwo / prośba do Boga przez świętych (np. Maryję).</div>
+        </div>
+        <div class="feedback-text"></div>
+      </div>
+    </section>
+
+    <!-- Q9 ordering -->
+    <section class="section-card test-card" data-qid="q9" data-type="order" data-points="2">
+      <div class="section-header">
+        <div class="section-title-row">
+          <div class="section-title"><span class="section-icon">9️⃣</span><span>„Średniowiecze w 5 minut” – kolejność</span></div>
+          <div class="section-tag">kolejność 3×</div>
+        </div>
+      </div>
+      <div class="section-content" style="display:block">
+        <div class="q-meta"><span class="pill pill-info">2 pkt</span></div>
+        <div class="q-title">Ustaw w kolejności jak w notatce „3 filary” (od 1 do 3):</div>
+
+        <div class="row q-block">
+          <div class="col">
+            <div class="small"><strong>1</strong></div>
+            <select name="q9_1">
+              <option value="">— wybierz —</option>
+              <option value="bog">Bóg w centrum</option>
+              <option value="kosciol">Kościół i łacina</option>
+              <option value="wzorce">Wzorce osobowe</option>
+            </select>
+          </div>
+          <div class="col">
+            <div class="small"><strong>2</strong></div>
+            <select name="q9_2">
+              <option value="">— wybierz —</option>
+              <option value="bog">Bóg w centrum</option>
+              <option value="kosciol">Kościół i łacina</option>
+              <option value="wzorce">Wzorce osobowe</option>
+            </select>
+          </div>
+          <div class="col">
+            <div class="small"><strong>3</strong></div>
+            <select name="q9_3">
+              <option value="">— wybierz —</option>
+              <option value="bog">Bóg w centrum</option>
+              <option value="kosciol">Kościół i łacina</option>
+              <option value="wzorce">Wzorce osobowe</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="feedback-text"></div>
+      </div>
+    </section>
+
+    <!-- Q10 Topoi match -->
+    <section class="section-card test-card" data-qid="q10" data-type="match2" data-points="3">
+      <div class="section-header">
+        <div class="section-title-row">
+          <div class="section-title"><span class="section-icon">🔟</span><span>Toposy – dopasuj definicje</span></div>
+          <div class="section-tag">dopasowanie 4×</div>
+        </div>
+      </div>
+      <div class="section-content" style="display:block">
+        <div class="q-meta"><span class="pill pill-info">3 pkt</span><span class="small">Za 4 dopasowania</span></div>
+        <div class="q-title">Dopasuj topos do definicji (wg „Formuł i haseł do zapamiętania”).</div>
+
+        <div class="grid-match q-block">
+          <div>
+            <div class="small"><strong>Memento mori</strong></div>
+            <select name="q10a">
+              <option value="">— wybierz —</option>
+              <option value="pamietaj">Pamiętaj o śmierci</option>
+              <option value="marność">Marność dóbr doczesnych</option>
+              <option value="taniec">Śmierć zrównuje wszystkich</option>
+              <option value="droga">Człowiek w drodze (pielgrzym)</option>
+            </select>
+          </div>
+
+          <div>
+            <div class="small"><strong>Vanitas</strong></div>
+            <select name="q10b">
+              <option value="">— wybierz —</option>
+              <option value="pamietaj">Pamiętaj o śmierci</option>
+              <option value="marność">Marność dóbr doczesnych</option>
+              <option value="taniec">Śmierć zrównuje wszystkich</option>
+              <option value="droga">Człowiek w drodze (pielgrzym)</option>
+            </select>
+          </div>
+
+          <div>
+            <div class="small"><strong>Danse macabre</strong></div>
+            <select name="q10c">
+              <option value="">— wybierz —</option>
+              <option value="pamietaj">Pamiętaj o śmierci</option>
+              <option value="marność">Marność dóbr doczesnych</option>
+              <option value="taniec">Śmierć zrównuje wszystkich</option>
+              <option value="droga">Człowiek w drodze (pielgrzym)</option>
+            </select>
+          </div>
+
+          <div>
+            <div class="small"><strong>Homo viator</strong></div>
+            <select name="q10d">
+              <option value="">— wybierz —</option>
+              <option value="pamietaj">Pamiętaj o śmierci</option>
+              <option value="marność">Marność dóbr doczesnych</option>
+              <option value="taniec">Śmierć zrównuje wszystkich</option>
+              <option value="droga">Człowiek w drodze (pielgrzym)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="feedback-text"></div>
+      </div>
+    </section>
+
+    <!-- Q11 -->
+    <section class="section-card test-card" data-qid="q11" data-type="checkbox" data-points="2" data-answers="dydaktyzm,anonimowosc">
+      <div class="section-header">
+        <div class="section-title-row">
+          <div class="section-title"><span class="section-icon">1️⃣1️⃣</span><span>Cechy literatury</span></div>
+          <div class="section-tag">wielokrotny wybór</div>
+        </div>
+      </div>
+      <div class="section-content" style="display:block">
+        <div class="q-meta"><span class="pill pill-info">2 pkt</span><span class="small">Punkty częściowe</span></div>
+        <div class="q-title">Zaznacz cechy mocno podkreślone w notatce jako „hasła do argumentacji” (2 odpowiedzi).</div>
+        <div class="q-block options">
+          <label class="option"><input type="checkbox" name="q11" value="dydaktyzm"> dydaktyzm (literatura ma uczyć)</label>
+          <label class="option"><input type="checkbox" name="q11" value="anonimowosc"> anonimowość autora</label>
+          <label class="option"><input type="checkbox" name="q11" value="autotematyzm"> autotematyzm</label>
+          <label class="option"><input type="checkbox" name="q11" value="turpizm"> turpizm</label>
+        </div>
+        <div class="feedback-text"></div>
+      </div>
+    </section>
+
+    <!-- Q12 -->
+    <section class="section-card test-card" data-qid="q12" data-type="radio" data-points="1" data-answer="hagiografia">
+      <div class="section-header">
+        <div class="section-title-row">
+          <div class="section-title"><span class="section-icon">1️⃣2️⃣</span><span>Gatunek: żywot świętego</span></div>
+          <div class="section-tag">jednokrotny wybór</div>
+        </div>
+      </div>
+      <div class="section-content" style="display:block">
+        <div class="q-meta"><span class="pill pill-info">1 pkt</span></div>
+        <div class="q-title">Jak nazywa się gatunek literacki: „żywot świętego”?</div>
+        <div class="q-block options">
+          <label class="option"><input type="radio" name="q12" value="hagiografia"> hagiografia</label>
+          <label class="option"><input type="radio" name="q12" value="kronika"> kronika</label>
+          <label class="option"><input type="radio" name="q12" value="epos"> epos rycerski</label>
+          <label class="option"><input type="radio" name="q12" value="sielanka"> sielanka</label>
+        </div>
+        <div class="feedback-text"></div>
+      </div>
+    </section>
+
+    <!-- Q13 -->
+    <section class="section-card test-card" data-qid="q13" data-type="text" data-points="2" data-keywords="zbaw|zbawien;bog|bóg">
+      <div class="section-header">
+        <div class="section-title-row">
+          <div class="section-title"><span class="section-icon">1️⃣3️⃣</span><span>Cel życia w epoce</span></div>
+          <div class="section-tag">odpowiedź krótka</div>
+        </div>
+      </div>
+      <div class="section-content" style="display:block">
+        <div class="q-meta"><span class="pill pill-info">2 pkt</span></div>
+        <div class="q-title">Jak w notatce ujęto <strong>cel życia</strong> człowieka średniowiecza?</div>
+        <div class="q-block">
+          <input type="text" name="q13" placeholder='Np. "..."' />
+        </div>
+        <div class="feedback-text"></div>
+      </div>
+    </section>
+
+    <!-- Q14 (mini-interpretacja – wybór) -->
+    <section class="section-card test-card" data-qid="q14" data-type="radio" data-points="1" data-answer="dydaktyzm">
+      <div class="section-header">
+        <div class="section-title-row">
+          <div class="section-title"><span class="section-icon">1️⃣4️⃣</span><span>Funkcja literatury</span></div>
+          <div class="section-tag">jednokrotny wybór</div>
+        </div>
+      </div>
+      <div class="section-content" style="display:block">
+        <div class="q-meta"><span class="pill pill-info">1 pkt</span></div>
+        <div class="q-title">W notatce podkreślono, że literatura średniowieczna ma przede wszystkim:</div>
+        <div class="q-block options">
+          <label class="option"><input type="radio" name="q14" value="dydaktyzm"> uczyć i wychowywać (moralnie/religijnie)</label>
+          <label class="option"><input type="radio" name="q14" value="rozrywka"> bawić i zaskakiwać eksperymentem</label>
+          <label class="option"><input type="radio" name="q14" value="realizm"> wiernie odtwarzać codzienność „jak w reportażu”</label>
+          <label class="option"><input type="radio" name="q14" value="skandal"> szokować obyczajowo</label>
+        </div>
+        <div class="feedback-text"></div>
+      </div>
+    </section>
+
+    <!-- Q15 (kontekst maturalny) -->
+    <section class="section-card test-card" data-qid="q15" data-type="text" data-points="2" data-keywords="ascet|ascez;rycer|wladc|władc">
+      <div class="section-header">
+        <div class="section-title-row">
+          <div class="section-title"><span class="section-icon">1️⃣5️⃣</span><span>Argumentacja – zdanie gotowiec</span></div>
+          <div class="section-tag">krótka wypowiedź</div>
+        </div>
+      </div>
+      <div class="section-content" style="display:block">
+        <div class="q-meta"><span class="pill pill-info">2 pkt</span></div>
+        <div class="q-title">Napisz jedno zdanie, w którym użyjesz pojęcia <strong>teocentryzm</strong> i odwołasz się do jednego wzorca osobowego (święty-asceta / rycerz / władca idealny).</div>
+        <div class="q-block">
+          <input type="text" name="q15" placeholder='Np. "..."' />
+          <div class="hint">Sprawdzenie jest „na słowa klucze” – ważne, żeby pojawił się teocentryzm i choć jedno z: asceta / rycerz / władca.</div>
+        </div>
+        <div class="feedback-text"></div>
+      </div>
+    </section>
+
+    <!-- Controls -->
+    <section class="section-card test-card">
+      <div class="section-header">
+        <div class="section-title-row">
+          <div class="section-title"><span class="section-icon">✅</span><span>Sprawdź wynik</span></div>
+          <div class="section-tag">automatyczna ocena</div>
+        </div>
+      </div>
+      <div class="section-content" style="display:block">
+        <div class="btnbar">
+          <button class="btn btn-primary" type="button" onclick="grade()">Sprawdź</button>
+          <button class="btn btn-ghost" type="button" onclick="resetTest()">Wyczyść</button>
+        </div>
+        <div id="summary" class="score-box" style="display:none"></div>
+      </div>
+    </section>
+
+    <p class="small" style="margin:18px 6px; opacity:.85">
+      Jeśli chcesz, zrobię też wersję „jak arkusz maturalny”: tekst źródłowy + pytania do interpretacji + plan wypracowania (bez zmiany Twojego CSS).
+    </p>
+  </div>
+
+<script>
+  function norm(s){
+    if(!s) return "";
+    return s.toLowerCase()
+      .replace(/[\u2019\u2018]/g,"'")
+      .replace(/[^\p{L}\p{N}\s]/gu," ")
+      .replace(/\s+/g," ")
+      .trim();
+  }
+
+  function getRadio(name){
+    const el = document.querySelector('input[name="'+name+'"]:checked');
+    return el ? el.value : "";
+  }
+
+  function getChecks(name){
+    return Array.from(document.querySelectorAll('input[name="'+name+'"]:checked')).map(x=>x.value);
+  }
+
+  function setFeedback(qEl, ok, msg){
+    const fb = qEl.querySelector(".feedback-text");
+    fb.innerHTML = msg;
+    fb.classList.remove("ok","bad");
+    fb.classList.add(ok ? "ok" : "bad");
+  }
+
+  function grade(){
+    const questions = Array.from(document.querySelectorAll(".test-card[data-qid]"));
+    let total = 0;
+    let earned = 0;
+
+    for(const q of questions){
+      const type = q.dataset.type;
+      const pts = parseFloat(q.dataset.points || "0");
+      total += pts;
+
+      if(type === "radio" || type === "tf"){
+        const name = q.dataset.qid;
+        const ans = q.dataset.answer;
+        const val = getRadio(name);
+        if(val && val === ans){
+          earned += pts;
+          setFeedback(q, true, "✅ Poprawnie. +" + pts + " pkt");
+        }else{
+          setFeedback(q, false, "❌ Nie. Poprawna odpowiedź: <strong>" + prettyAnswer(type, ans) + "</strong>. +0 pkt");
+        }
+      }
+
+      if(type === "checkbox"){
+        const name = q.dataset.qid;
+        const correct = (q.dataset.answers || "").split(",").filter(Boolean);
+        const chosen = getChecks(name);
+        const cset = new Set(correct);
+        let good = 0, bad = 0;
+        for(const x of chosen){
+          if(cset.has(x)) good++;
+          else bad++;
+        }
+        const raw = Math.max(0, good - bad);
+        const frac = correct.length ? (raw / correct.length) : 0;
+        const add = Math.round((pts * frac) * 100) / 100;
+        earned += add;
+
+        const msg = [
+          (raw === correct.length && bad === 0) ? "✅ Poprawnie." : "ℹ️ Częściowo.",
+          "Twoje: <strong>" + (chosen.length ? chosen.map(labelForValue).join(", ") : "—") + "</strong>.",
+          "Poprawne: <strong>" + correct.map(labelForValue).join(", ") + "</strong>.",
+          " +" + add + " pkt"
+        ].join(" ");
+        setFeedback(q, raw === correct.length && bad === 0, msg);
+      }
+
+      if(type === "text"){
+        const name = q.dataset.qid;
+        const inp = q.querySelector('input[name="'+name+'"]');
+        const text = norm(inp ? inp.value : "");
+        const rule = q.dataset.keywords || "";
+        const ok = checkKeywords(text, rule);
+        if(ok){
+          earned += pts;
+          setFeedback(q, true, "✅ Zaliczone (słowa-klucze). +" + pts + " pkt");
+        }else{
+          setFeedback(q, false, "ℹ️ Brakuje słów-kluczy. Spróbuj doprecyzować odpowiedź. +0 pkt");
+        }
+      }
+
+      if(type === "match"){
+        // q5
+        const a = q.querySelector('select[name="q5a"]').value;
+        const b = q.querySelector('select[name="q5b"]').value;
+        const c = q.querySelector('select[name="q5c"]').value;
+        let got = 0;
+        if(a === "dualizm") got++;
+        if(b === "harmonia") got++;
+        if(c === "radosc") got++;
+        const add = (pts * got) / 3;
+        earned += add;
+        const ok = (got === 3);
+        setFeedback(q, ok, (ok ? "✅" : "ℹ️") + " Dopasowania: " + got + "/3. +" + add + " pkt");
+      }
+
+      if(type === "match2"){
+        // q10
+        const a = q.querySelector('select[name="q10a"]').value;
+        const b = q.querySelector('select[name="q10b"]').value;
+        const c = q.querySelector('select[name="q10c"]').value;
+        const d = q.querySelector('select[name="q10d"]').value;
+        let got = 0;
+        if(a === "pamietaj") got++;
+        if(b === "marność") got++;
+        if(c === "taniec") got++;
+        if(d === "droga") got++;
+        const add = (pts * got) / 4;
+        earned += add;
+        const ok = (got === 4);
+        setFeedback(q, ok, (ok ? "✅" : "ℹ️") + " Dopasowania: " + got + "/4. +" + add + " pkt");
+      }
+
+      if(type === "order"){
+        // q9 expected: bog, kosciol, wzorce
+        const s1 = q.querySelector('select[name="q9_1"]').value;
+        const s2 = q.querySelector('select[name="q9_2"]').value;
+        const s3 = q.querySelector('select[name="q9_3"]').value;
+        const expected = ["bog","kosciol","wzorce"];
+        const got = [s1,s2,s3].filter((v,i)=>v && v===expected[i]).length;
+        const add = (pts * got) / 3;
+        earned += add;
+        const ok = (got === 3);
+        setFeedback(q, ok, (ok ? "✅" : "ℹ️") + " Pozycje poprawne: " + got + "/3. +" + add + " pkt (poprawna kolejność: Bóg w centrum → Kościół i łacina → Wzorce osobowe)");
+      }
+    }
+
+    const pct = total ? Math.round((earned/total)*100) : 0;
+    const summary = document.getElementById("summary");
+    summary.style.display = "block";
+    summary.innerHTML =
+      "<div style='font-size:1.05rem'><strong>Wynik:</strong> " + earned.toFixed(2) + " / " + total + " pkt (" + pct + "%)</div>" +
+      "<div class='small' style='margin-top:8px'>Tip maturalny: do wypracowania wrzucaj hasła-klucze (teocentryzm, memento mori, vanitas, danse macabre, deesis, homo viator, dydaktyzm, anonimowość) i podpinaj je pod argument.</div>";
+
+    // przewiń do wyniku
+    summary.scrollIntoView({behavior:"smooth", block:"start"});
+  }
+
+  function prettyAnswer(type, ans){
+    if(type==="tf") return ans==="true" ? "Prawda" : "Fałsz";
+    return labelForValue(ans) || ans;
+  }
+
+  function labelForValue(v){
+    const map = {
+      teocentryzm:"Teocentryzm",
+      antropocentryzm:"Antropocentryzm",
+      hedonizm:"Hedonizm",
+      naturalizm:"Naturalizm",
+      swiety:"święty-asceta",
+      rycerz:"rycerz",
+      wladca:"władca idealny",
+      artysta:"artysta-buntownik",
+      uczony:"uczony-humanista",
+      dydaktyzm:"dydaktyzm",
+      anonimowosc:"anonimowość",
+      autotematyzm:"autotematyzm",
+      turpizm:"turpizm",
+      liryka:"liryka religijna (pieśń)",
+      kronika:"kronika",
+      hagiografia:"hagiografia",
+      epos:"epos rycerski",
+      dialog:"dialog (dydaktyczny/satyryczny)",
+      ballada:"ballada",
+      tragedia:"tragedia",
+      oda:"oda",
+      bog:"Bóg w centrum",
+      kosciol:"Kościół i łacina",
+      wzorce:"Wzorce osobowe"
+    };
+    return map[v] || v;
+  }
+
+  function checkKeywords(text, rule){
+    // rule format: group1;group2;... where each group is a|b|c alternatives
+    // All groups must be satisfied at least one alternative present.
+    const groups = rule.split(";").map(x=>x.trim()).filter(Boolean);
+    if(!groups.length) return false;
+    for(const g of groups){
+      const alts = g.split("|").map(x=>x.trim()).filter(Boolean);
+      let ok = false;
+      for(const a of alts){
+        if(a && text.includes(a)) { ok = true; break; }
+      }
+      if(!ok) return false;
+    }
+    return true;
+  }
+
+  function resetTest(){
+    // radios
+    document.querySelectorAll('input[type="radio"]').forEach(x=>x.checked=false);
+    document.querySelectorAll('input[type="checkbox"]').forEach(x=>x.checked=false);
+    document.querySelectorAll('input[type="text"]').forEach(x=>x.value="");
+    document.querySelectorAll('select').forEach(x=>x.value="");
+    document.querySelectorAll('.feedback-text').forEach(x=>{x.innerHTML=""; x.classList.remove("ok","bad");});
+    const summary = document.getElementById("summary");
+    summary.style.display="none";
+    summary.innerHTML="";
+    window.scrollTo({top:0, behavior:"smooth"});
+  }
+</script>
+</body>
+</html>

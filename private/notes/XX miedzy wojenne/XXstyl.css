@@ -1,0 +1,585 @@
+/* =========================================================
+   DWUDZIESTOLECIE MIĘDZYWOJENNE (1918–1939)
+   Styl: papier + druk, art déco, elegancki modernizm
+   Podmień CAŁY plik CSS na ten.
+   ========================================================= */
+
+/* --- PALETA --- */
+:root{
+  --paper: #f4f1ea;        /* złamana biel papieru */
+  --paper-2: #fbfaf6;      /* jaśniejszy papier */
+  --ink: #2b2b2b;          /* tusz drukarski */
+  --sepia: #7a5c3e;        /* sepia */
+  --burgundy: #6b2e2e;     /* bordo */
+  --dark-green: #2f4f3a;   /* butelkowa zieleń */
+  --gold: #b89b5e;         /* zgaszone złoto */
+  --line: rgba(43,43,43,0.20);
+  --line-strong: rgba(43,43,43,0.55);
+}
+
+/* --- WATERMARK --- */
+.watermark {
+  position: fixed;
+  opacity: 8%;
+  bottom: -100px;
+  right: -65px;
+  color: rgba(43, 43, 43, 0.2);
+  pointer-events: none;
+  z-index: 1000;
+  filter: grayscale(100%);
+}
+
+/* --- RESET --- */
+*{
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body{
+  background:
+    linear-gradient(rgba(244,241,234,0.92), rgba(244,241,234,0.92)),
+    url("https://www.transparenttextures.com/patterns/old-paper.png");
+  background-color: var(--paper);
+  padding: 24px;
+  color: var(--ink);
+  user-select: none;
+
+  /* tekst jak w podręczniku / gazecie */
+  font-family: "Georgia", "Times New Roman", serif;
+}
+
+/* Nagłówki: plakaty / modernizm / art déco (systemowe odpowiedniki) */
+h1, h2, h3, h4, h5, h6,
+.hero-title-main,
+.hero-book-title,
+.toggle-btn{
+  font-family: "Futura", "Gill Sans", "Trebuchet MS", "Arial", sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+#fix{ list-style: none; }
+
+.container{
+  max-width: 1100px;
+  margin: 0 auto 40px auto;
+}
+
+/* =========================================================
+   HERO
+   ========================================================= */
+.hero{
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(260px, 2fr);
+  gap: 18px;
+  margin-bottom: 24px;
+  align-items: stretch;
+}
+
+.hero-text{
+  padding: 16px 18px;
+  background: rgba(251,250,246,0.88);
+  border-radius: 0;
+  border: 1px solid var(--line-strong);
+  box-shadow: none;
+  position: relative;
+  overflow: hidden;
+}
+
+/* delikatna ramka w stylu druku */
+.hero-text::after{
+  content:"";
+  position:absolute;
+  inset: 10px;
+  border: 1px solid rgba(43,43,43,0.12);
+  pointer-events:none;
+}
+
+.hero-title-main{
+  font-size: 2rem;
+  font-weight: 800;
+  margin-bottom: 4px;
+  color: var(--ink);
+  text-shadow: none;
+}
+
+.hero-title-sub{
+  font-size: 0.98rem;
+  color: rgba(43,43,43,0.75);
+  margin-bottom: 14px;
+}
+
+.hero-row{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 0.88rem;
+}
+
+/* Chipy jak „stempel” */
+.hero-chip{
+  padding: 4px 9px;
+  border-radius: 0;
+  background: transparent;
+  border: 1px solid var(--ink);
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 700;
+}
+
+.hero-chip span{
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
+.hero-quote{
+  margin-top: 8px;
+  font-size: 0.92rem;
+  font-style: italic;
+  border-left: 3px solid var(--burgundy);
+  padding-left: 10px;
+  color: var(--sepia);
+}
+
+/* Książka / plakietka (prawa kolumna) */
+.hero-book{
+  background: var(--dark-green);
+  border-radius: 0;
+  padding: 18px 16px;
+  position: relative;
+  color: var(--paper);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  border: 2px solid var(--gold);
+  box-shadow: none;
+}
+
+.hero-book::before{
+  content:"";
+  position:absolute;
+  inset: 12px 10px;
+  border-radius: 0;
+  border: 1px solid rgba(184,155,94,0.55);
+  pointer-events:none;
+}
+
+.hero-book-top{ z-index: 1; }
+
+.hero-book-title{
+  font-weight: 900;
+  font-size: 1.35rem;
+  margin-bottom: 6px;
+  color: var(--paper);
+}
+
+.hero-book-author{
+  font-family: "Georgia", "Times New Roman", serif;
+  font-size: 0.92rem;
+  opacity: 0.9;
+  margin-bottom: 10px;
+}
+
+.hero-book-divider{
+  height: 1px;
+  background: linear-gradient(to right, rgba(184,155,94,0.75), transparent);
+  margin: 6px 0 10px 0;
+}
+
+.hero-book-badge-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  font-size:0.8rem;
+}
+
+.hero-book-badge{
+  border-radius: 0;
+  padding: 3px 7px;
+  background: var(--gold);
+  border: 1px solid rgba(43,43,43,0.25);
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.hero-book-bottom{
+  z-index: 1;
+  font-size: 0.82rem;
+  margin-top: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  color: rgba(244,241,234,0.9);
+  gap: 8px;
+  flex-wrap: wrap;
+  opacity: 0.95;
+}
+
+.hero-cityline{ display:none; }
+
+/* =========================================================
+   TIPY / OSTRZEŻENIA
+   ========================================================= */
+.tips{
+  background: rgba(251,250,246,0.92);
+  border-radius: 0;
+  padding: 10px 14px;
+  font-size: 0.92rem;
+  margin-bottom: 20px;
+  border: 1px solid var(--line-strong);
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  color: var(--ink);
+  box-shadow: none;
+}
+
+.tips strong{ color: var(--ink); }
+.tips-icon{ font-size: 1.4rem; margin-top: 2px; }
+
+/* =========================================================
+   SEKCJE
+   ========================================================= */
+.section-card{
+  background: rgba(255,255,255,0.92);
+  border-radius: 0;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  border: 1px solid var(--line-strong);
+  position: relative;
+  overflow: hidden;
+  color: var(--ink);
+  box-shadow: none;
+}
+
+/* cienka ramka „drukarska” w środku */
+.section-card::after{
+  content:"";
+  position:absolute;
+  inset: 10px;
+  border: 1px solid rgba(43,43,43,0.08);
+  pointer-events:none;
+}
+
+.section-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  cursor:pointer;
+}
+
+.section-title-row{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+
+.section-title{
+  font-size: 1rem;
+  font-weight: 900;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  color: var(--ink);
+}
+
+.section-icon{
+  font-size: 1.1rem;
+  opacity: 0.85;
+  color: var(--burgundy);
+}
+
+.section-tag{
+  font-size: 0.8rem;
+  color: rgba(43,43,43,0.75);
+  margin-top: 1px;
+}
+
+/* Przycisk jak „tabliczka/ramka” */
+.toggle-btn{
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  background: transparent;
+  color: var(--ink);
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  font-weight: 800;
+}
+
+.toggle-btn:hover{
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.section-content{
+  margin-top: 10px;
+  font-size: 0.94rem;
+  line-height: 1.65;
+  color: var(--ink);
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+
+  overflow: hidden;
+  max-height: 3000px;
+  transition: max-height 0.3s ease-in-out,
+              padding-top 0.5s ease-in-out,
+              margin-top 0.5s ease-in-out;
+}
+
+.hidden{
+  max-height: 0;
+  padding-top: 0;
+  margin-top: 0;
+  overflow: hidden;
+  border-top-width: 0;
+}
+
+ul{ margin-left: 18px; margin-top: 6px; list-style-type: '– '; }
+li{ margin-bottom: 4px; }
+
+#sec10 ul,
+#sec10 ol{
+  list-style-position: inside;
+  margin-left: 0;
+  padding-left: 10px;
+}
+
+/* Podkreślenie jak zaznaczenie ołówkiem */
+.highlight{
+  font-weight: 800;
+  color: var(--ink);
+  background: rgba(184,155,94,0.22);
+  padding: 1px 3px;
+  border-radius: 0;
+}
+
+.quote{
+  font-style: italic;
+  margin: 4px 0 6px 0;
+  color: var(--sepia);
+}
+
+.badge-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:6px;
+  font-size:0.78rem;
+}
+
+.badge{
+  background: transparent;
+  border-radius: 0;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  color: rgba(43,43,43,0.75);
+}
+
+/* Oś czasu jak przypis / adnotacja */
+.timeline{
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 0;
+  background: rgba(0,0,0,0.02);
+  border: 1px dashed rgba(43,43,43,0.35);
+  font-size: 0.88rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.timeline-item{
+  display:flex;
+  align-items:center;
+  gap:4px;
+  padding:3px 7px;
+  border-radius: 0;
+  background: rgba(255,255,255,0.9);
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.timeline-item span{ font-size: 0.8rem; }
+
+/* =========================================================
+   RESPONSYWNOŚĆ
+   ========================================================= */
+@media (max-width: 780px){
+  .hero{ grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 600px){
+  .section-header{ flex-direction: column; align-items: flex-start; }
+  .toggle-btn{ align-self: flex-end; }
+}
+
+/* =========================================================
+   QUIZ
+   ========================================================= */
+.quiz-question{
+  margin-bottom: 12px;
+  padding: 10px;
+  border-radius: 0;
+  background: rgba(0,0,0,0.02);
+  border: 1px solid var(--line-strong);
+  position: relative;
+}
+
+/* „Stempel” sprawdzianu */
+.quiz-question::before{
+  content: "SPRAWDZIAN";
+  position: absolute;
+  top: -10px;
+  right: 14px;
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  padding: 2px 6px;
+  border-radius: 0;
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 900;
+}
+
+.quiz-question p{
+  margin-bottom: 4px;
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.options{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  margin-top:4px;
+}
+
+.option{
+  border-radius: 0;
+  border: 1px solid var(--line);
+  padding: 4px 10px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  font-size:0.92rem;
+  background: rgba(255,255,255,0.92);
+  color: var(--ink);
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
+}
+
+.option:hover{
+  border-color: var(--ink);
+  background: rgba(255,255,255,0.98);
+}
+
+.option input{
+  margin: 0;
+  accent-color: var(--dark-green);
+}
+
+/* odpowiedzi */
+.correct{
+  background: rgba(47,79,58,0.14) !important;
+  border-color: rgba(47,79,58,0.55) !important;
+  color: var(--ink) !important;
+}
+
+.incorrect{
+  background: rgba(107,46,46,0.16) !important;
+  border-color: rgba(107,46,46,0.55) !important;
+  color: var(--ink) !important;
+}
+
+.feedback-text{
+  margin-top: 4px;
+  font-size: 0.86rem;
+  color: var(--burgundy);
+}
+
+/* przyciski */
+.check-btn{
+  margin-top: 10px;
+  padding: 8px 16px;
+  border-radius: 0;
+  border: 1px solid var(--ink);
+  font-size: 0.92rem;
+  cursor: pointer;
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 900;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.check-btn:hover{
+  transform: translateY(-1px);
+  background: #1f1f1f;
+}
+
+.answer-btn{
+  margin-top: 4px;
+  margin-left: 4px;
+  padding: 4px 10px;
+  border-radius: 0;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.95);
+  color: rgba(43,43,43,0.75);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.answer-btn:hover{
+  background: rgba(255,255,255,1);
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.answer{
+  margin-top: 4px;
+  padding: 6px 10px;
+  border-radius: 0;
+  background: rgba(0,0,0,0.02);
+  border: 1px dashed rgba(43,43,43,0.35);
+  font-size: 0.88rem;
+  color: var(--ink);
+  overflow: hidden;
+  max-height: 500px;
+  transition: max-height 0.4s ease-in-out,
+              padding 0.4s ease-in-out,
+              margin-top 0.4s ease-in-out;
+}
+
+#quiz-score{
+  margin-top: 8px;
+  font-size: 0.92rem;
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.strategy-box{
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 0;
+  background: rgba(0,0,0,0.02);
+  border: 1px solid var(--line-strong);
+  font-size: 0.92rem;
+  color: var(--ink);
+}
+
+.two-cols{
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap:10px;
+  margin-top:8px;
+}

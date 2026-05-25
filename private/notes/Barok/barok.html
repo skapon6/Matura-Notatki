@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Barok</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="logo.png">
+  <!-- UŻYJ TEGO SAMEGO CSS CO W INNYCH EPOKACH (TU NIE PODAJEMY CSS) -->
+  <link rel="stylesheet" href="/api/notes-css/Barok/stylbarok.css">
+</head>
+
+<body>
+  <div class="container">
+
+    <!-- HERO -->
+    <div class="hero">
+      <div class="hero-text">
+        <div class="hero-title-main">Barok</div>
+        <div class="hero-title-sub">epoka baroku | przygotowanie do matury 2025/2026 z języka polskiego</div>
+
+        <div class="hero-row">
+          <div class="hero-chip"><span>🕯️</span> vanitas i memento mori</div>
+          <div class="hero-chip"><span>✨</span> koncept, paradoks, kontrast</div>
+          <div class="hero-chip"><span>⛪</span> kontrreformacja</div>
+          <div class="hero-chip"><span>🦚</span> marinizm i kunszt</div>
+          <div class="hero-chip"><span>🏇</span> sarmatyzm</div>
+        </div>
+
+        <div class="hero-quote">
+          „Barok uczy, że świat jest jednocześnie zachwycający i kruchy: olśniewa formą, ale przypomina o przemijaniu.”
+        </div>
+      </div>
+      <div class="watermark"><img src="watermark.png"></div>
+
+      <div class="hero-book">
+        <div class="hero-book-top">
+          <div class="hero-book-title">BAROK</div>
+          <div class="hero-book-author">Europa XVII w., kontrreformacja, sarmatyzm, poezja konceptu</div>
+          <div class="hero-book-divider"></div>
+          <div class="hero-book-badge-row">
+            <div class="hero-book-badge">VANITAS</div>
+            <div class="hero-book-badge">KONCEPTYZM</div>
+            <div class="hero-book-badge">MARINIZM</div>
+            <div class="hero-book-badge">SARMATYZM</div>
+            <div class="hero-book-badge">METAFIZYKA</div>
+          </div>
+        </div>
+
+        <div class="hero-book-bottom">
+          <span>⏳ ok. przełom XVI/XVII w. – poł. XVIII w. (umownie)</span>
+          <span>🎓 zakres maturalny (liceum/technikum)</span>
+        </div>
+        <div class="hero-cityline"></div>
+      </div>
+    </div>
+
+    <!-- TIPS -->
+    <div class="tips">
+      <div class="tips-icon">💡</div>
+      <div>
+        <strong>Jak korzystać z notatki?</strong>
+        1) Najpierw spróbuj samodzielnie przypomnieć treści. <br />
+        2) Dopiero potem kliknij <strong>„Pokaż / ukryj”</strong>. <br />
+        3) Pytania powtórkowe potraktuj jak mini-ustną maturę. <br />
+        4) Na końcu zrób test i przejrzyj strategie.
+      </div>
+    </div>
+
+    <!-- 1. BAROK PODSTAWY -->
+    <section class="section-card">
+      <div class="section-header" onclick="toggleSection('sec1')">
+        <div class="section-title-row">
+          <div class="section-title">
+            <span class="section-icon">📖</span>
+            <span>1. Barok – informacje podstawowe + „Barok w 5 minut”</span>
+          </div>
+          <div class="section-tag">ramy czasowe, światopogląd, historia, kultura, cechy stylu</div>
+        </div>
+        <button class="toggle-btn" type="button">Pokaż / ukryj</button>
+      </div>
+
+      <div class="section-content hidden" id="sec1">
+        <ul>
+          <li><span class="highlight">Nazwa epoki:</span> barok (prawdopodobnie od portug. <em>barroco</em> – „perła o nieregularnym kształcie”). W kulturze: upodobanie do formy „dziwnej”, zaskakującej, dynamicznej.</li>
+
+          <li>
+            <span class="highlight">Ramy czasowe (umowne):</span>
+            <ul>
+              <li>W Europie: zwykle <strong>XVII wiek</strong> i początek XVIII wieku (zależnie od kraju).</li>
+              <li>W Polsce: rozkwit w XVII w. (Rzeczpospolita szlachecka), trwanie części zjawisk do połowy XVIII w.</li>
+              <li><strong>Ważne tło epoki:</strong> wojny, kryzysy, epidemie, niepewność jutra – w sztuce rośnie potrzeba „mocnych emocji” i refleksji nad przemijaniem.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Najważniejsze procesy historyczno-religijne (często przydatne w kontekstach maturalnych):</span>
+            <ul>
+              <li><strong>Kontrreformacja</strong> – odpowiedź Kościoła katolickiego na reformację; sztuka ma poruszać, zachwycać i umacniać wiarę (emocja + obraz + retoryka).</li>
+              <li><strong>Rzeczpospolita szlachecka</strong> – kultura szlachty, idea „złotej wolności”, spory polityczne; powstaje barwna literatura obyczajowa (np. pamiętniki).</li>
+              <li><strong>Rozwój nauki</strong> i zmiana obrazu świata (w Europie): kryzys „pewności” renesansowej, silniejsze poczucie, że człowiek nie panuje nad światem tak, jak marzył humanizm.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Światopogląd baroku – sedno:</span>
+            <ul>
+              <li><strong>Niepokój metafizyczny</strong> – pytania o sens, śmierć, zbawienie, kruchość ludzkiego losu.</li>
+              <li><strong>Rozdarcie</strong>: ciało ↔ dusza, doczesność ↔ wieczność, grzech ↔ łaska, zachwyt światem ↔ świadomość marności.</li>
+              <li><strong>Vanitas</strong> – przekonanie o przemijaniu dóbr doczesnych (uroda, majątek, sława), a więc potrzeba „trzeźwej” oceny życia.</li>
+              <li><strong>Memento mori</strong> – pamiętaj o śmierci; w baroku często łączy się z intensywną zmysłowością: tym mocniej żyjemy, im bardziej czujemy, że czas ucieka.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Styl barokowy (to, co najczęściej „widać” w arkuszach):</span>
+            <ul>
+              <li><strong>Kontrast</strong> i <strong>antyteza</strong> (światło–ciemność, dusza–ciało, życie–śmierć).</li>
+              <li><strong>Paradoks</strong> i <strong>koncept</strong> – pomysł, który zaskakuje odbiorcę, prowadzi do puenty (często intelektualnej, czasem żartobliwej).</li>
+              <li><strong>Retoryczność</strong> – tekst działa jak mowa: apostrofy, pytania retoryczne, wyliczenia, gradacje, mocne pointy.</li>
+              <li><strong>Efektowność</strong> – gra formą (rym, rytm, brzmienie), wyszukane porównania, oksymorony, przerzutnie.</li>
+            </ul>
+          </li>
+        </ul>
+
+        <div class="timeline">
+          <div class="timeline-item"><span>⛪</span><span>kontrreformacja – sztuka „porusza i przekonuje”</span></div>
+          <div class="timeline-item"><span>🕯️</span><span>vanitas – przemijanie jako główny temat</span></div>
+          <div class="timeline-item"><span>✨</span><span>konceptyzm – zaskakujący pomysł i puenta</span></div>
+          <div class="timeline-item"><span>🏇</span><span>sarmatyzm – kultura szlachty, obyczaj, pamiętnikarstwo</span></div>
+          <div class="timeline-item"><span>🎭</span><span>teatr i komedia – satyra obyczajów (kontekst europejski)</span></div>
+        </div>
+
+        <div class="badge-row">
+          <div class="badge">vanitas</div>
+          <div class="badge">memento mori</div>
+          <div class="badge">koncept</div>
+          <div class="badge">kontrreformacja</div>
+          <div class="badge">sarmatyzm</div>
+        </div>
+
+        <hr style="margin:12px 0; border:none; border-top:1px dashed #e5e7eb;" />
+
+        <p class="highlight">Barok w 5 minut – super skrót (wersja maturalna):</p>
+        <ul>
+          <li>Zapamiętaj 3 „silniki” epoki: <strong>niepewność i kryzys</strong>, <strong>religijność/kontrreformacja</strong>, <strong>kultura szlachecka (sarmatyzm)</strong>.</li>
+          <li>Zapamiętaj 3 hasła: <strong>vanitas</strong>, <strong>kontrast</strong>, <strong>koncept</strong>.</li>
+          <li>Zapamiętaj 3 typy barokowej poezji: <strong>metafizyczna</strong> (Sęp-Szarzyński), <strong>refleksyjna</strong> (Naborowski), <strong>dworska/miłosna</strong> (Morsztyn).</li>
+          <li>Zapamiętaj 1 tekst obyczajowy: <strong>Pasek, „Pamiętniki” (fragmenty)</strong> – Sarmata w praktyce.</li>
+          <li>Zapamiętaj 1 europejski kontekst: <strong>Molier, „Skąpiec”</strong> – komedia o wadach i pieniądzu (świetna do argumentów o chciwości i pozorach).</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 2. FILOZOFIA + DUCHOWOŚĆ -->
+    <section class="section-card">
+      <div class="section-header" onclick="toggleSection('sec2')">
+        <div class="section-title-row">
+          <div class="section-title">
+            <span class="section-icon">🧠</span>
+            <span>2. Filozofia i duchowość baroku – niezbędnik maturalny</span>
+          </div>
+          <div class="section-tag">vanitas, niepokój metafizyczny, kontrreformacja, „człowiek w kryzysie”</div>
+        </div>
+        <button class="toggle-btn" type="button">Pokaż / ukryj</button>
+      </div>
+
+      <div class="section-content hidden" id="sec2">
+        <ul>
+          <li>
+            <span class="highlight">Barok a renesans – co się zmienia w spojrzeniu na człowieka?</span>
+            <ul>
+              <li>Renesans częściej ufał harmonii świata i możliwościom rozumu; barok mocniej podkreśla <strong>chwiejność losu</strong> i <strong>kruchość człowieka</strong>.</li>
+              <li>Stąd w baroku: więcej emocji, dramatyzmu, skrajności, a także „walki o sens”.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Vanitas (marność) – jak to działa w tekstach?</span>
+            <ul>
+              <li>To nie jest tylko „smutek” – to <strong>argument</strong>: skoro wszystko przemija, trzeba zapytać o to, co trwałe (wartości, wiara, moralność).</li>
+              <li>W poezji: zestawianie piękna z rozpadem, młodości ze starością, przepychu z grobem.</li>
+              <li>W sztuce: martwe natury z czaszką, klepsydrą, zgaszoną świecą – „lekcja patrzenia” na czas.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">„Niepokój metafizyczny” (częsty trop interpretacyjny):</span>
+            <ul>
+              <li>Podmiot pyta: kim jestem, dokąd zmierzam, co mnie kusi, co mnie ocali?</li>
+              <li>W polskiej literaturze mocno widać to u <strong>Mikołaja Sępa-Szarzyńskiego</strong>: napięcie między pragnieniem dobra a siłą pokus.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Kontrreformacja i retoryka:</span>
+            <ul>
+              <li>Barok lubi język perswazji: „przekonać, poruszyć, zachwycić”.</li>
+              <li>W praktyce: wiele figur retorycznych, dynamiczne obrazy, kontrasty, patos – tekst ma działać jak „mowa”, nie jak spokojny wykład.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Dwie barokowe postawy wobec świata (pomocne do rozprawek):</span>
+            <ul>
+              <li><strong>Postawa ascetyczno-moralna</strong>: świat kusi, ale jest nietrwały → trzeba pamiętać o zbawieniu (vanitas, memento mori).</li>
+              <li><strong>Postawa zmysłowo-dworska</strong>: świat jest grą pozorów i uczuć → liczy się kunszt, miłość, ironia (poezja dworska, konceptyzm).</li>
+            </ul>
+          </li>
+        </ul>
+
+        <div class="badge-row">
+          <div class="badge">vanitas</div>
+          <div class="badge">niepokój metafizyczny</div>
+          <div class="badge">retoryczność</div>
+          <div class="badge">kontrreformacja</div>
+          <div class="badge">kontrast</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. GATUNKI I DZIEŁA -->
+    <section class="section-card">
+      <div class="section-header" onclick="toggleSection('sec3')">
+        <div class="section-title-row">
+          <div class="section-title">
+            <span class="section-icon">🎭</span>
+            <span>3. Najważniejsze gatunki i dzieła baroku (maturalnie)</span>
+          </div>
+          <div class="section-tag">poezja metafizyczna, poezja dworska, pamiętnik, komedia</div>
+        </div>
+        <button class="toggle-btn" type="button">Pokaż / ukryj</button>
+      </div>
+
+      <div class="section-content hidden" id="sec3">
+        <ul>
+          <li>
+            <span class="highlight">Poezja metafizyczna (Mikołaj Sęp-Szarzyński):</span><br />
+            Najczęściej: obraz człowieka jako istoty rozdartej i „walczącej”.
+            <ul>
+              <li><strong>Co umieć na maturę?</strong> rozpoznać: kontrasty, dramatyczne napięcie, słownictwo walki, poczucie zagrożenia i prośbę o łaskę.</li>
+              <li><strong>Motywy:</strong> grzech, pokusa, kruchość życia, pragnienie zbawienia.</li>
+              <li><strong>Uwaga interpretacyjna:</strong> to nie „czysty pesymizm”, tylko próba nazwania kondycji człowieka i drogi ku dobru.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Poezja refleksyjna / filozoficzna (Daniel Naborowski):</span><br />
+            Często łączy <strong>vanitas</strong> z postawą „rozumnego umiaru”: świadomość przemijania ma uczyć mądrego życia.
+            <ul>
+              <li><strong>Co umieć?</strong> wskazać puentę i sens: jak żyć, skoro czas ucieka; jak zachować stałość w zmienności Fortuny.</li>
+              <li><strong>Typowe środki:</strong> wyliczenia, antytezy, rytm argumentacji, sentencje.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Poezja dworska / miłosna (Jan Andrzej Morsztyn):</span><br />
+            Gra uczuciem i formą: miłość jako „teatr”, a wiersz – jako popis inteligencji.
+            <ul>
+              <li><strong>Co umieć?</strong> odczytać koncept (pomysł), dostrzec paradoks/oksymoron, zobaczyć ironię.</li>
+              <li><strong>Tematy:</strong> miłość, zmysłowość, pozory, zabawa słowem, olśniewająca puenta.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Pamiętnik / literatura obyczajowa (Jan Chryzostom Pasek – „Pamiętniki”, fragmenty):</span><br />
+            Tekst świetny do tematów o obyczajach, tożsamości, patriotyzmie, mentalności szlachty.
+            <ul>
+              <li><strong>Sarmata w praktyce:</strong> przywiązanie do tradycji, honor, duma stanowa, rubaszność, religijność, ale też kłótliwość i skłonność do przesady.</li>
+              <li><strong>Język:</strong> gawędziarski, obrazowy, pełen dygresji; narrator buduje własny wizerunek (autokreacja).</li>
+              <li><strong>Na maturze:</strong> pokaż, jak forma pamiętnika wpływa na wiarygodność (subiektywność!) i jak tekst odsłania kulturę epoki.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Komedia (kontekst europejski): Molier – „Skąpiec”</span><br />
+            Komedia charakterów i obyczajów: chciwość jako namiętność niszcząca relacje.
+            <ul>
+              <li><strong>Co umieć?</strong> mechanizm komizmu (sytuacyjny, językowy, postaci), krytykę wad, obraz rodziny i pieniądza.</li>
+              <li><strong>Do rozprawki:</strong> o pieniądzu, pozorach, moralności, konflikcie pokoleń.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Konteksty „na plus” (jeśli potrzebujesz w wypracowaniu):</span>
+            <ul>
+              <li><strong>Piotr Skarga, „Kazania sejmowe” (fragmenty)</strong> – język perswazji, diagnoza chorób państwa, retoryka moralna (często łączone z epoką przełomu i barokową retorycznością).</li>
+              <li><strong>Wacław Potocki</strong> (jeśli omawiacie): satyra społeczna, krytyka wad szlachty (dobry „pomost” do tematów o państwie i obywatelskości).</li>
+            </ul>
+          </li>
+        </ul>
+
+        <div class="badge-row">
+          <div class="badge">Sęp-Szarzyński</div>
+          <div class="badge">Naborowski</div>
+          <div class="badge">Morsztyn</div>
+          <div class="badge">Pasek</div>
+          <div class="badge">Molier</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. TOPOSY I MOTYWY -->
+    <section class="section-card">
+      <div class="section-header" onclick="toggleSection('sec4')">
+        <div class="section-title-row">
+          <div class="section-title">
+            <span class="section-icon">🔍</span>
+            <span>4. Najważniejsze motywy i toposy barokowe</span>
+          </div>
+          <div class="section-tag">vanitas, memento mori, teatr świata, Fortuna, miłość jako gra, kontrast</div>
+        </div>
+        <button class="toggle-btn" type="button">Pokaż / ukryj</button>
+      </div>
+
+      <div class="section-content hidden" id="sec4">
+        <ul>
+          <li>
+            <span class="highlight">Vanitas:</span>
+            <ul>
+              <li>klucz do interpretacji wielu wierszy barokowych: piękno świata jest intensywne, ale nietrwałe.</li>
+              <li>w zadaniach maturalnych: pokaż <strong>jakie dobra</strong> są uznane za marne i <strong>jaki wniosek</strong> etyczny/egzystencjalny z tego wynika.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Memento mori:</span>
+            <ul>
+              <li>barok lubi „ostre przypomnienie” o śmierci: nie po to, by tylko straszyć, ale by wzmocnić refleksję i wybór wartości.</li>
+              <li>często łączy się z obrazami czasu: chwila, zegar, klepsydra, „uciekające życie”.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Theatrum mundi (świat-teatr):</span>
+            <ul>
+              <li>człowiek gra role, świat jest sceną, pozory mylą – to świetne do tematów o fałszu i autokreacji.</li>
+              <li>połączenie z formą: barok lubi maskę, stylizację, efekt.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Fortuna (zmienność losu):</span>
+            <ul>
+              <li>świat jest niestabilny, a człowiek doświadcza nagłych zwrotów – stąd nacisk na umiar, stałość ducha lub (przeciwnie) hedonistyczne „chwytanie chwili”.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Miłość: namiętność, gra, paradoks</span>
+            <ul>
+              <li>w poezji dworskiej uczucie bywa przedstawiane jak sprzeczność: szczęście-cierpienie, niewola-wolność, zachwyt-ból.</li>
+              <li>na maturze: rozpoznaj oksymorony i paradoksy jako „narzędzie opisu” doświadczenia.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Sarmatyzm (motyw obyczaju i tożsamości):</span>
+            <ul>
+              <li>ideologia i styl życia polskiej szlachty: tradycja, religijność, honor, gościnność, ale też skłonność do kłótni, przesady i niechęć do reform.</li>
+              <li>świetnie działa jako kontekst do tematów o społeczeństwie, państwie i mentalności.</li>
+            </ul>
+          </li>
+        </ul>
+
+        <div class="badge-row">
+          <div class="badge">vanitas</div>
+          <div class="badge">memento mori</div>
+          <div class="badge">theatrum mundi</div>
+          <div class="badge">Fortuna</div>
+          <div class="badge">kontrast</div>
+          <div class="badge">sarmatyzm</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. BAROK W PODSTAWIE/LEKTURACH -->
+    <section class="section-card">
+      <div class="section-header" onclick="toggleSection('sec5')">
+        <div class="section-title-row">
+          <div class="section-title">
+            <span class="section-icon">🧩</span>
+            <span>5. Barok w lekturach szkolnych i podstawie programowej (co trzeba umieć)</span>
+          </div>
+          <div class="section-tag">lektury, wiersze barokowe, Pasek, konteksty do wypracowań</div>
+        </div>
+        <button class="toggle-btn" type="button">Pokaż / ukryj</button>
+      </div>
+
+      <div class="section-content hidden" id="sec5">
+        <ul>
+          <li>
+            <span class="highlight">Wybrane wiersze poetów baroku (obowiązkowo):</span>
+            <ul>
+              <li><strong>Mikołaj Sęp-Szarzyński</strong> – umiej opisać obraz człowieka w konflikcie (dusza–ciało) i wskazać środki: kontrast, dramatyczne pytania, słownictwo walki.</li>
+              <li><strong>Daniel Naborowski</strong> – umiej odczytać wątek vanitas i puentę „jak żyć mądrze”; rozpoznaj argumentacyjny tok wypowiedzi.</li>
+              <li><strong>Jan Andrzej Morsztyn</strong> – umiej „wyłapać” koncept: na czym polega zaskakujący pomysł i czemu służy puenta (często ironiczna).</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Jan Chryzostom Pasek – „Pamiętniki” (fragmenty):</span>
+            <ul>
+              <li>umiej scharakteryzować sarmatę (cechy + przykłady zachowań),</li>
+              <li>rozpoznaj narrację gawędziarską i subiektywność (autokreacja),</li>
+              <li>połącz z tematami: obyczaj, patriotyzm, przemoc, honor, religijność, obraz wojen i codzienności.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Molier – „Skąpiec” (kontekst obowiązkowy w kanonie lektur):</span>
+            <ul>
+              <li>zrozum konflikt: pieniądz vs relacje, władza rodzica vs wolność dzieci, pozory vs prawda.</li>
+              <li>umiej wskazać, jak komedia ośmiesza wadę (chciwość) i po co to robi (funkcja moralna i społeczna).</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Piotr Skarga – „Kazania sejmowe” (fragmenty):</span>
+            <ul>
+              <li>umiej rozpoznać retorykę perswazji: apostrofy, wyliczenia, argumenty moralne, ton napomnienia.</li>
+              <li>świetny kontekst do tematów o państwie i odpowiedzialności obywatelskiej.</li>
+            </ul>
+          </li>
+        </ul>
+
+        <div class="strategy-box">
+          <span class="highlight">Jak wykorzystać barok w wypracowaniu maturalnym?</span><br />
+          Odwołując się do baroku:
+          <ul>
+            <li>podaj <strong>konkretnego poetę</strong> i problem (np. vanitas u Naborowskiego, konflikt dusza–ciało u Sępa),</li>
+            <li>nazwij <strong>pojęcie</strong> (vanitas / koncept / kontrast / theatrum mundi),</li>
+            <li>wyjaśnij <strong>funkcję</strong> (po co epoka tak pisze: poruszyć, ostrzec, zachwycić, zmusić do refleksji),</li>
+            <li>zrób mini-porównanie z inną epoką (np. renesansowa harmonia ↔ barokowy niepokój).</li>
+          </ul>
+        </div>
+
+        <div class="badge-row">
+          <div class="badge">Sęp-Szarzyński</div>
+          <div class="badge">Naborowski</div>
+          <div class="badge">Morsztyn</div>
+          <div class="badge">Pasek</div>
+          <div class="badge">„Skąpiec”</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. KONTEKSTY MATURALNE -->
+    <section class="section-card">
+      <div class="section-header" onclick="toggleSection('sec6')">
+        <div class="section-title-row">
+          <div class="section-title">
+            <span class="section-icon">🔗</span>
+            <span>6. Barok jako kontekst maturalny (z czym łączyć)</span>
+          </div>
+          <div class="section-tag">porównania epok, motywy wspólne, szybkie „mosty” do argumentów</div>
+        </div>
+        <button class="toggle-btn" type="button">Pokaż / ukryj</button>
+      </div>
+
+      <div class="section-content hidden" id="sec6">
+        <p><span class="highlight">Na maturze barok najczęściej działa jako kontekst do motywów:</span></p>
+
+        <div class="two-cols">
+          <div>
+            <ul>
+              <li>
+                <span class="highlight">Barok a średniowiecze</span><br />
+                <ul>
+                  <li>wspólne: <strong>memento mori</strong>, refleksja o śmierci i zbawieniu.</li>
+                  <li>różnica: barok częściej łączy lęk i przemijanie z <strong>zmysłowością</strong> i „olśnieniem formą”.</li>
+                </ul>
+              </li>
+
+              <li>
+                <span class="highlight">Barok a renesans</span><br />
+                <ul>
+                  <li>harmonia i umiar ↔ kontrast i niepokój.</li>
+                  <li>wiara w ład świata ↔ poczucie, że świat jest zmienny i pełen sprzeczności.</li>
+                </ul>
+              </li>
+
+              <li>
+                <span class="highlight">Barok a oświecenie</span><br />
+                <ul>
+                  <li>emocja, metafizyka, koncept ↔ rozum, dydaktyzm, satyra społeczna.</li>
+                  <li>barok „porusza i zachwyca”, oświecenie „uczy i naprawia” (częściej wprost).</li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <ul>
+              <li>
+                <span class="highlight">Barok a romantyzm</span><br />
+                <ul>
+                  <li>wspólne: intensywność emocji, wyobraźnia, skrajności.</li>
+                  <li>różnica: romantyzm częściej stawia na jednostkę i wolność, barok częściej na kruchość i moralny rozrachunek.</li>
+                </ul>
+              </li>
+
+              <li>
+                <span class="highlight">Barok a współczesność</span><br />
+                <ul>
+                  <li>„świat-teatr”, autokreacja, pozory – łatwo połączyć z kulturą mediów i wizerunku.</li>
+                  <li>vanitas w nowej formie: konsumpcja, kult młodości, lęk przed przemijaniem.</li>
+                </ul>
+              </li>
+
+              <li>
+                <span class="highlight">Barok a inne sztuki</span><br />
+                <ul>
+                  <li>architektura i malarstwo barokowe: ruch, dynamika, gra światła – podobnie jak w literaturze „efekt” i emocja.</li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="strategy-box">
+          <span class="highlight">Schemat użycia kontekstu barokowego w wypracowaniu:</span>
+          <ol id="fix">
+            <li>Nazwij <strong>motyw</strong> (np. vanitas / pozory / namiętność / pieniądz).</li>
+            <li>Podaj <strong>przykład</strong> (Naborowski / Morsztyn / Sęp / Pasek / Molier).</li>
+            <li>Wyjaśnij <strong>funkcję</strong> (refleksja moralna, perswazja, zachwyt formą, krytyka wady).</li>
+            <li>Połącz z tekstem z tematu: podobieństwo/różnica + 1 zdanie wniosku.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. HASŁA / FORMUŁY -->
+    <section class="section-card">
+      <div class="section-header" onclick="toggleSection('sec7')">
+        <div class="section-title-row">
+          <div class="section-title">
+            <span class="section-icon">📝</span>
+            <span>7. Formuły i hasła do zapamiętania (barok „w pigułce”)</span>
+          </div>
+          <div class="section-tag">pojęcia, które wzmacniają analizę i argument</div>
+        </div>
+        <button class="toggle-btn" type="button">Pokaż / ukryj</button>
+      </div>
+
+      <div class="section-content hidden" id="sec7">
+        <ul>
+          <li><span class="highlight">Vanitas</span> – marność dóbr doczesnych; wszystko przemija.</li>
+          <li><span class="highlight">Memento mori</span> – pamiętaj o śmierci; czas ucieka.</li>
+          <li><span class="highlight">Koncept</span> – zaskakujący pomysł organizujący wiersz, prowadzący do puenty.</li>
+          <li><span class="highlight">Konceptyzm</span> – styl oparty na koncepcie: paradoks, gra intelektu, nieoczywista pointa.</li>
+          <li><span class="highlight">Marinizm</span> – „zachwyt formą”, ozdobność, efekt, błyskotliwy obraz (poetyka zaskoczenia).</li>
+          <li><span class="highlight">Theatrum mundi</span> – świat jako teatr; ludzie grają role, pozory mylą.</li>
+          <li><span class="highlight">Antyteza / kontrast</span> – ulubiony mechanizm epoki (życie–śmierć, dusza–ciało).</li>
+          <li><span class="highlight">Sarmatyzm</span> – kultura i mentalność polskiej szlachty XVII w. (tradycja + obyczaj).</li>
+        </ul>
+
+        <p style="font-size: 0.85rem; color: #6b7280; margin-top: 8px;">
+          Tip: jedno zdanie, które „robi robotę”: „Utwór realizuje barokowy motyw <em>vanitas</em>, pokazując nietrwałość dóbr doczesnych i kierując myśl ku temu, co stałe (wartości/wiara/mądrość)”.
+        </p>
+      </div>
+    </section>
+
+    <!-- 8. PYTANIA POWTÓRKOWE -->
+    <section class="section-card">
+      <div class="section-header" onclick="toggleSection('sec8')">
+        <div class="section-title-row">
+          <div class="section-title">
+            <span class="section-icon">❓</span>
+            <span>8. Pytania powtórkowe (z przykładowymi odpowiedziami)</span>
+          </div>
+          <div class="section-tag">kliknij przycisk, żeby odsłonić odpowiedź</div>
+        </div>
+        <button class="toggle-btn" type="button">Pokaż / ukryj</button>
+      </div>
+
+      <div class="section-content hidden" id="sec8">
+        <ul class="question-list">
+
+          <li>
+            Wyjaśnij różnicę: renesansowa harmonia świata vs barokowy niepokój.
+            <button type="button" class="answer-btn" onclick="toggleAnswer('ans1')">Pokaż / ukryj odpowiedź</button>
+            <div id="ans1" class="answer hidden">
+              Renesans częściej wierzył w ład i możliwości rozumu, a człowieka widział jako istotę zdolną do harmonijnego rozwoju. Barok mocniej podkreśla zmienność losu, kruchość życia i sprzeczności w człowieku (dusza–ciało, doczesność–wieczność), dlatego w tekstach jest więcej kontrastów, emocji i refleksji nad przemijaniem.
+            </div>
+          </li>
+
+          <li>
+            Na czym polega motyw vanitas i jaką ma funkcję?
+            <button type="button" class="answer-btn" onclick="toggleAnswer('ans2')">Pokaż / ukryj odpowiedź</button>
+            <div id="ans2" class="answer hidden">
+              Vanitas to przekonanie o marności dóbr doczesnych (urody, majątku, sławy) i o tym, że wszystko przemija. Funkcja: skłonić do refleksji nad sensem życia, uporządkować hierarchię wartości i przypomnieć o wymiarze moralnym (czasem religijnym) ludzkich wyborów.
+            </div>
+          </li>
+
+          <li>
+            Czym jest koncept i jak go rozpoznać w wierszu?
+            <button type="button" class="answer-btn" onclick="toggleAnswer('ans3')">Pokaż / ukryj odpowiedź</button>
+            <div id="ans3" class="answer hidden">
+              Koncept to zaskakujący pomysł organizujący utwór, prowadzący do puenty. Rozpoznasz go po paradoksie, nieoczywistym porównaniu, błyskotliwej pointzie lub „odwróceniu” sensu w ostatnich wersach. W poezji dworskiej (np. Morsztyn) koncept często jest grą intelektu i emocji.
+            </div>
+          </li>
+
+          <li>
+            Jak w baroku przedstawia się człowieka? Podaj dwa typowe ujęcia.
+            <button type="button" class="answer-btn" onclick="toggleAnswer('ans4')">Pokaż / ukryj odpowiedź</button>
+            <div id="ans4" class="answer hidden">
+              (1) Człowiek rozdarty i walczący – między duszą a ciałem, dobrem a pokusą (poezja metafizyczna, np. Sęp-Szarzyński). (2) Człowiek jako „aktor” w świecie pozorów – emocje i relacje są grą, a forma i wizerunek mają znaczenie (poezja dworska, theatrum mundi).
+            </div>
+          </li>
+
+          <li>
+            Co to jest sarmatyzm i jak go widać w „Pamiętnikach” Paska?
+            <button type="button" class="answer-btn" onclick="toggleAnswer('ans5')">Pokaż / ukryj odpowiedź</button>
+            <div id="ans5" class="answer hidden">
+              Sarmatyzm to kultura i ideologia polskiej szlachty: tradycja, honor, religijność, gościnność, duma stanowa, ale też skłonność do przesady i kłótliwości. U Paska widać gawędziarski styl, autokreację narratora, fascynację przygodą, wojną i obyczajem oraz ocenianie świata z perspektywy szlacheckiej.
+            </div>
+          </li>
+
+          <li>
+            Jaką wadę krytykuje „Skąpiec” Moliera i dlaczego to ważny kontekst?
+            <button type="button" class="answer-btn" onclick="toggleAnswer('ans6')">Pokaż / ukryj odpowiedź</button>
+            <div id="ans6" class="answer hidden">
+              „Skąpiec” krytykuje chciwość, która niszczy relacje i prowadzi do moralnego zubożenia. To ważny kontekst do tematów o pieniądzu, pozorach, konfliktach rodzinnych i o tym, jak namiętność (wada) potrafi podporządkować całe życie człowieka.
+            </div>
+          </li>
+
+        </ul>
+
+        <p style="font-size: 0.85rem; color: #6b7280; margin-top: 8px;">
+          Tip: odpowiadaj w 3 krokach: (1) definicja pojęcia, (2) przykład z utworu, (3) wniosek: „po co to w tekście działa?”.
+        </p>
+      </div>
+    </section>
+
+    <!-- 9. TEST -->
+    <section class="section-card">
+      <div class="section-header" onclick="toggleSection('sec9')">
+        <div class="section-title-row">
+          <div class="section-title">
+            <span class="section-icon">🧪</span>
+            <span>9. Test podsumowujący – 12 pytań</span>
+          </div>
+          <div class="section-tag">jednokrotny wybór (a, b, c, d)</div>
+        </div>
+        <button class="toggle-btn" type="button">Pokaż / ukryj</button>
+      </div>
+
+      <div class="section-content hidden" id="sec9">
+
+        <!-- Q1 -->
+        <div class="quiz-question" data-correct="c">
+          <p><span class="highlight">1.</span> Najbardziej rozpoznawalny motyw baroku związany z przemijaniem to:</p>
+          <div class="options">
+            <label class="option"><input type="radio" name="q1" value="a" /> a) carpe diem</label>
+            <label class="option"><input type="radio" name="q1" value="b" /> b) non omnis moriar</label>
+            <label class="option"><input type="radio" name="q1" value="c" /> c) vanitas</label>
+            <label class="option"><input type="radio" name="q1" value="d" /> d) mesjanizm</label>
+          </div>
+          <div class="feedback-text hidden"></div>
+        </div>
+
+        <!-- Q2 -->
+        <div class="quiz-question" data-correct="b">
+          <p><span class="highlight">2.</span> „Świat jako teatr”, a człowiek jako aktor – topos ten nazywamy:</p>
+          <div class="options">
+            <label class="option"><input type="radio" name="q2" value="a" /> a) deus ex machina</label>
+            <label class="option"><input type="radio" name="q2" value="b" /> b) theatrum mundi</label>
+            <label class="option"><input type="radio" name="q2" value="c" /> c) danse macabre</label>
+            <label class="option"><input type="radio" name="q2" value="d" /> d) deesis</label>
+          </div>
+          <div class="feedback-text hidden"></div>
+        </div>
+
+        <!-- Q3 -->
+        <div class="quiz-question" data-correct="a">
+          <p><span class="highlight">3.</span> Koncept w poezji barokowej to przede wszystkim:</p>
+          <div class="options">
+            <label class="option"><input type="radio" name="q3" value="a" /> a) zaskakujący pomysł prowadzący do puenty</label>
+            <label class="option"><input type="radio" name="q3" value="b" /> b) wierne odtwarzanie rzeczywistości</label>
+            <label class="option"><input type="radio" name="q3" value="c" /> c) brak środków stylistycznych</label>
+            <label class="option"><input type="radio" name="q3" value="d" /> d) wyłącznie patetyczna modlitwa</label>
+          </div>
+          <div class="feedback-text hidden"></div>
+        </div>
+
+        <!-- Q4 -->
+        <div class="quiz-question" data-correct="d">
+          <p><span class="highlight">4.</span> Który zestaw autorów należy do baroku i jest wskazany w kanonie maturalnym (wiersze wybrane)?</p>
+          <div class="options">
+            <label class="option"><input type="radio" name="q4" value="a" /> a) Mickiewicz, Słowacki, Norwid</label>
+            <label class="option"><input type="radio" name="q4" value="b" /> b) Krasicki, Karpiński, Naruszewicz</label>
+            <label class="option"><input type="radio" name="q4" value="c" /> c) Kochanowski, Rej, Modrzewski</label>
+            <label class="option"><input type="radio" name="q4" value="d" /> d) Sęp-Szarzyński, Naborowski, Morsztyn</label>
+          </div>
+          <div class="feedback-text hidden"></div>
+        </div>
+
+        <!-- Q5 -->
+        <div class="quiz-question" data-correct="c">
+          <p><span class="highlight">5.</span> „Pamiętniki” Paska są najczęściej omawiane jako przykład:</p>
+          <div class="options">
+            <label class="option"><input type="radio" name="q5" value="a" /> a) tragedii klasycznej</label>
+            <label class="option"><input type="radio" name="q5" value="b" /> b) eposu rycerskiego</label>
+            <label class="option"><input type="radio" name="q5" value="c" /> c) pamiętnikarstwa i kultury sarmackiej</label>
+            <label class="option"><input type="radio" name="q5" value="d" /> d) średniowiecznej hagiografii</label>
+          </div>
+          <div class="feedback-text hidden"></div>
+        </div>
+
+        <!-- Q6 -->
+        <div class="quiz-question" data-correct="a">
+          <p><span class="highlight">6.</span> Najważniejsza cecha stylu barokowego to często:</p>
+          <div class="options">
+            <label class="option"><input type="radio" name="q6" value="a" /> a) kontrast i antyteza</label>
+            <label class="option"><input type="radio" name="q6" value="b" /> b) całkowity brak emocji</label>
+            <label class="option"><input type="radio" name="q6" value="c" /> c) wyłącznie prostota i minimalizm</label>
+            <label class="option"><input type="radio" name="q6" value="d" /> d) zapis realistyczny bez metafor</label>
+          </div>
+          <div class="feedback-text hidden"></div>
+        </div>
+
+        <!-- Q7 -->
+        <div class="quiz-question" data-correct="b">
+          <p><span class="highlight">7.</span> „Memento mori” oznacza:</p>
+          <div class="options">
+            <label class="option"><input type="radio" name="q7" value="a" /> a) chwytaj dzień</label>
+            <label class="option"><input type="radio" name="q7" value="b" /> b) pamiętaj o śmierci</label>
+            <label class="option"><input type="radio" name="q7" value="c" /> c) nic nie jest pewne</label>
+            <label class="option"><input type="radio" name="q7" value="d" /> d) człowiek miarą wszechrzeczy</label>
+          </div>
+          <div class="feedback-text hidden"></div>
+        </div>
+
+        <!-- Q8 -->
+        <div class="quiz-question" data-correct="d">
+          <p><span class="highlight">8.</span> Komedia Moliera „Skąpiec” najłatwiej wspiera argument o:</p>
+          <div class="options">
+            <label class="option"><input type="radio" name="q8" value="a" /> a) rycerskim honorze</label>
+            <label class="option"><input type="radio" name="q8" value="b" /> b) średniowiecznej ascezie</label>
+            <label class="option"><input type="radio" name="q8" value="c" /> c) micie stworzenia świata</label>
+            <label class="option"><input type="radio" name="q8" value="d" /> d) chciwości i władzy pieniądza</label>
+          </div>
+          <div class="feedback-text hidden"></div>
+        </div>
+
+        <!-- Q9 -->
+        <div class="quiz-question" data-correct="c">
+          <p><span class="highlight">9.</span> Barokowa poezja dworska (np. Morsztyn) najczęściej kojarzy się z:</p>
+          <div class="options">
+            <label class="option"><input type="radio" name="q9" value="a" /> a) kroniką dziejów</label>
+            <label class="option"><input type="radio" name="q9" value="b" /> b) prostą pieśnią ludową</label>
+            <label class="option"><input type="radio" name="q9" value="c" /> c) grą formą, konceptem i ironią</label>
+            <label class="option"><input type="radio" name="q9" value="d" /> d) dokumentem urzędowym</label>
+          </div>
+          <div class="feedback-text hidden"></div>
+        </div>
+
+        <!-- Q10 -->
+        <div class="quiz-question" data-correct="a">
+          <p><span class="highlight">10.</span> Sarmatyzm to przede wszystkim:</p>
+          <div class="options">
+            <label class="option"><input type="radio" name="q10" value="a" /> a) kultura i mentalność polskiej szlachty XVII w.</label>
+            <label class="option"><input type="radio" name="q10" value="b" /> b) filozofia oświecenia</label>
+            <label class="option"><input type="radio" name="q10" value="c" /> c) prąd romantyczny</label>
+            <label class="option"><input type="radio" name="q10" value="d" /> d) antyczny ideał kalokagatii</label>
+          </div>
+          <div class="feedback-text hidden"></div>
+        </div>
+
+        <!-- Q11 -->
+        <div class="quiz-question" data-correct="d">
+          <p><span class="highlight">11.</span> Najbardziej typowa „oś” barokowego konfliktu w poezji metafizycznej to:</p>
+          <div class="options">
+            <label class="option"><input type="radio" name="q11" value="a" /> a) miasto – wieś</label>
+            <label class="option"><input type="radio" name="q11" value="b" /> b) praca – odpoczynek</label>
+            <label class="option"><input type="radio" name="q11" value="c" /> c) natura – technologia</label>
+            <label class="option"><input type="radio" name="q11" value="d" /> d) dusza – ciało</label>
+          </div>
+          <div class="feedback-text hidden"></div>
+        </div>
+
+        <!-- Q12 -->
+        <div class="quiz-question" data-correct="b">
+          <p><span class="highlight">12.</span> Retoryczność baroku oznacza, że tekst często:</p>
+          <div class="options">
+            <label class="option"><input type="radio" name="q12" value="a" /> a) unika perswazji i emocji</label>
+            <label class="option"><input type="radio" name="q12" value="b" /> b) przypomina mowę: apostrofy, pytania, wyliczenia, puenty</label>
+            <label class="option"><input type="radio" name="q12" value="c" /> c) składa się wyłącznie z definicji</label>
+            <label class="option"><input type="radio" name="q12" value="d" /> d) ma zawsze formę kroniki</label>
+          </div>
+          <div class="feedback-text hidden"></div>
+        </div>
+
+        <button class="check-btn" type="button" onclick="checkQuiz()"> ✅ Sprawdź odpowiedzi </button>
+        <div id="quiz-score"></div>
+      </div>
+    </section>
+
+    <!-- 10. TYPOWE ZADANIA I STRATEGIE -->
+    <section class="section-card">
+      <div class="section-header" onclick="toggleSection('sec10')">
+        <div class="section-title-row">
+          <div class="section-title">
+            <span class="section-icon">📚</span>
+            <span>10. Barok w typowych zadaniach maturalnych + strategie</span>
+          </div>
+          <div class="section-tag">jak pisać argumenty i interpretować wiersz barokowy</div>
+        </div>
+        <button class="toggle-btn" type="button">Pokaż / ukryj</button>
+      </div>
+
+      <div class="section-content hidden" id="sec10">
+        <div class="two-cols">
+
+          <div>
+            <p class="highlight">1) Wypracowanie problemowe (motywy i wartości)</p>
+            <ul>
+              <li>Barok „pasuje” do tematów o: <strong>przemijaniu</strong>, <strong>lęku i sensie</strong>, <strong>pieniądzu</strong>, <strong>pozorach</strong>, <strong>namiętnościach</strong>, <strong>tożsamości (sarmatyzm)</strong>.</li>
+              <li>Mocne konteksty: <strong>vanitas</strong> (Naborowski), <strong>konflikt dusza–ciało</strong> (Sęp), <strong>chciwość</strong> („Skąpiec”), <strong>obyczaj szlachecki</strong> (Pasek).</li>
+            </ul>
+
+            <div class="strategy-box">
+              <span class="highlight">Strategia (uniwersalna):</span>
+              <ol>
+                <li>Nazwij problem (np. „pozory”, „pieniądz”, „przemijanie”).</li>
+                <li>Dobierz 1 przykład barokowy (poeta lub Pasek/Molier).</li>
+                <li>Nazwij pojęcie (vanitas / theatrum mundi / koncept) i pokaż, jak działa w tekście.</li>
+                <li>Dodaj 1 porównanie z inną epoką (renesans/średniowiecze/oświecenie) jako wzmocnienie wniosku.</li>
+              </ol>
+            </div>
+          </div>
+
+          <div>
+            <p class="highlight">2) Interpretacja wiersza barokowego (krok po kroku)</p>
+            <ul>
+              <li>Szukaj „wyzwalaczy”: słowa o <strong>czasie</strong>, <strong>śmierci</strong>, <strong>marności</strong>, <strong>walce</strong>, <strong>pokusie</strong>, <strong>pozorach</strong>, <strong>Fortunie</strong>.</li>
+              <li>Barok prawie zawsze ma „mechanizm”: <strong>kontrast</strong> i/lub <strong>puentę</strong>.</li>
+            </ul>
+
+            <div class="strategy-box">
+              <span class="highlight">Strategia interpretacji:</span>
+              <ol>
+                <li>Ustal sytuację liryczną: kto mówi, do kogo, w jakim nastroju.</li>
+                <li>Znajdź oś kontrastu (np. życie–śmierć, ciało–dusza).</li>
+                <li>Sprawdź, czy jest koncept: co zaskakuje i jak prowadzi do puenty.</li>
+                <li>Wniosek: jaki obraz świata i człowieka z tego wynika (vanitas / theatrum mundi / niepokój)?</li>
+              </ol>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- JS (zwijanie sekcji, odpowiedzi, test) -->
+  <script>
+    function toggleSection(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.toggle("hidden");
+    }
+
+    function toggleAnswer(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.toggle("hidden");
+    }
+
+    function checkQuiz() {
+      const questions = document.querySelectorAll(".quiz-question");
+      let score = 0;
+
+      questions.forEach((q) => {
+        const correct = q.getAttribute("data-correct");
+        const name = q.querySelector('input[type="radio"]')?.name;
+        const chosen = name ? document.querySelector(`input[name="${name}"]:checked`) : null;
+
+        const options = q.querySelectorAll(".option");
+        options.forEach(opt => opt.classList.remove("correct","incorrect"));
+
+        const feedback = q.querySelector(".feedback-text");
+        if (feedback) {
+          feedback.classList.add("hidden");
+          feedback.textContent = "";
+        }
+
+        if (chosen) {
+          const chosenLabel = chosen.closest(".option");
+          if (chosen.value === correct) {
+            score++;
+            if (chosenLabel) chosenLabel.classList.add("correct");
+          } else {
+            if (chosenLabel) chosenLabel.classList.add("incorrect");
+            const correctInput = q.querySelector(`input[value="${correct}"]`);
+            const correctLabel = correctInput ? correctInput.closest(".option") : null;
+            if (correctLabel) correctLabel.classList.add("correct");
+            if (feedback) {
+              feedback.classList.remove("hidden");
+              feedback.textContent = "Spróbuj jeszcze raz: sprawdź pojęcia (np. vanitas, koncept, theatrum mundi, sarmatyzm).";
+            }
+          }
+        } else {
+          if (feedback) {
+            feedback.classList.remove("hidden");
+            feedback.textContent = "Nie zaznaczono odpowiedzi.";
+          }
+        }
+      });
+
+      const scoreBox = document.getElementById("quiz-score");
+      if (scoreBox) {
+        scoreBox.textContent = `Wynik: ${score} / ${questions.length}`;
+      }
+    }
+  </script>
+
+  <script>
+    document.addEventListener('contextmenu', event => event.preventDefault());
+    document.addEventListener('copy', e => e.preventDefault());
+    document.addEventListener('cut', e => e.preventDefault());
+    document.addEventListener('paste', e => e.preventDefault());
+  </script>
+</body>
+</html>

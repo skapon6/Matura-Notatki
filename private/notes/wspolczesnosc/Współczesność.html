@@ -1,0 +1,1505 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Współczesność</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="logo.png">
+  <!-- UŻYJ TEGO SAMEGO CSS CO W ANTYKU -->
+  <link rel="stylesheet" href="stylantyk.css">
+  <style>
+    .watermark{
+      position: fixed;
+      opacity: 0.7;
+      bottom: -90px;
+      right: -60px;
+      pointer-events: none;
+      z-index: 1000;
+      filter: grayscale(100%) brightness(0.8) opacity(0.4);
+    }
+
+    /* global */
+    *{
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body{
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif;
+      background-color: #0f1419; /* Ciemny, prawie czarny */
+      padding: 24px;
+      color: #e0e0e0; /* Jasny szary */
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* drobne wyjątki */
+    #fix{ list-style: none; }
+
+    .container{
+      max-width: 1150px;
+      margin: 0 auto 48px auto;
+    }
+
+    /* ===== HERO ===== */
+    .hero{
+      display: grid;
+      grid-template-columns: minmax(0, 3fr) minmax(280px, 2fr);
+      gap: 24px;
+      margin-bottom: 32px;
+      align-items: stretch;
+    }
+
+    .hero-text{
+      padding: 28px 32px;
+      background: rgba(25, 35, 50, 0.6);
+      border-radius: 8px;
+      border: 1px solid #00d9ff;
+      box-shadow: 0 0 20px rgba(0, 217, 255, 0.1), 0 2px 5px rgba(0,0,0,0.3);
+      backdrop-filter: blur(10px);
+    }
+
+    .hero-title-main{
+      font-family: "Arial", "Helvetica Neue", sans-serif;
+      font-size: 3rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      color: #00d9ff; /* Neon Teal */
+      text-shadow: 0 0 20px rgba(0, 217, 255, 0.4);
+      border-bottom: 2px solid #ff006e; /* Neon Pink */
+      padding-bottom: 8px;
+      display: inline-block;
+    }
+
+    .hero-title-sub{
+      font-size: 1rem;
+      color: #b0b0b0;
+      margin-top: 16px;
+      margin-bottom: 24px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    .hero-row{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+      font-size: 0.9rem;
+    }
+
+    .hero-chip{
+      padding: 7px 14px;
+      border-radius: 999px;
+      background: rgba(0, 217, 255, 0.08);
+      border: 1px solid rgba(0, 217, 255, 0.4);
+      color: #00d9ff;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.3s ease;
+      font-weight: 500;
+    }
+
+    .hero-chip:hover{
+      background: rgba(0, 217, 255, 0.15);
+      box-shadow: 0 0 10px rgba(0, 217, 255, 0.3);
+    }
+
+    .hero-chip span{
+      font-size: 1rem;
+      opacity: 0.9;
+    }
+
+    .hero-quote{
+      margin-top: 20px;
+      font-size: 1rem;
+      font-style: italic;
+      border-left: 3px solid #ff006e;
+      padding-left: 18px;
+      color: #d0d0d0;
+    }
+
+    /* ===== "KSIĘGA" ===== */
+    .hero-book{
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border-radius: 8px;
+      padding: 24px 22px;
+      position: relative;
+      box-shadow: 0 0 30px rgba(0, 217, 255, 0.2), 0 4px 15px rgba(0,0,0,0.5);
+      color: #f0f0f0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      border: 1px solid #00d9ff;
+    }
+
+    .hero-book::before{
+      content: "";
+      position: absolute;
+      inset: 12px;
+      border-radius: 2px;
+      border: 1px solid rgba(0, 217, 255, 0.3);
+      pointer-events: none;
+      opacity: 0.6;
+    }
+
+    .hero-book-top{ z-index: 1; }
+
+    .hero-book-title{
+      font-family: "Arial", "Helvetica Neue", sans-serif;
+      font-weight: 800;
+      font-size: 1.6rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      color: #00d9ff;
+      text-shadow: 0 0 15px rgba(0, 217, 255, 0.3);
+    }
+
+    .hero-book-author{
+      font-family: inherit;
+      font-size: 0.9rem;
+      opacity: 0.75;
+      margin-bottom: 16px;
+      color: #b0b0b0;
+    }
+
+    .hero-book-divider{
+      height: 1px;
+      background: linear-gradient(to right, #00d9ff, #ff006e, transparent);
+      margin: 12px 0 16px 0;
+      opacity: 0.6;
+    }
+
+    .hero-book-badge-row{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 0.8rem;
+    }
+
+    .hero-book-badge{
+      border-radius: 4px;
+      padding: 5px 10px;
+      background: #ff006e;
+      border: none;
+      color: #1a1a2e;
+      font-weight: 700;
+    }
+
+    .hero-book-bottom{
+      z-index: 1;
+      font-size: 0.8rem;
+      margin-top: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      color: #00d9ff;
+      opacity: 0.7;
+    }
+
+    .hero-cityline{ display: none; }
+
+    /* ===== TIPS ===== */
+    .tips{
+      background: rgba(25, 35, 50, 0.5);
+      border-radius: 8px;
+      padding: 16px 20px;
+      font-size: 0.95rem;
+      margin-bottom: 24px;
+      border: 1px solid rgba(0, 217, 255, 0.2);
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      color: #d0d0d0;
+    }
+
+    .tips strong{ color: #00d9ff; font-weight: 700; }
+
+    .tips-icon{
+      font-size: 1.5rem;
+      margin-top: 2px;
+      color: #ff006e;
+    }
+
+    /* ===== SEKCJE ===== */
+    .section-card{
+      background: rgba(25, 35, 50, 0.4);
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin-bottom: 18px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      border: 1px solid rgba(0, 217, 255, 0.15);
+      color: #e0e0e0;
+      transition: all 0.3s ease;
+    }
+
+    .section-card:hover{
+      border-color: #00d9ff;
+      box-shadow: 0 0 15px rgba(0, 217, 255, 0.2), 0 2px 8px rgba(0,0,0,0.3);
+      transform: translateY(-2px);
+    }
+
+    .section-card::before{ display: none; }
+
+    .section-header{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      cursor: pointer;
+    }
+
+    .section-title-row{
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .section-title{
+      font-family: "Arial", "Helvetica Neue", sans-serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #00d9ff;
+    }
+
+    .section-icon{
+      font-size: 1.3rem;
+      color: #ff006e;
+      filter: none;
+    }
+
+    .section-tag{
+      font-size: 0.85rem;
+      color: #808080;
+      margin-top: 2px;
+    }
+
+    /* przycisk w stylu epoki */
+    .toggle-btn{
+      border: 1px solid #00d9ff;
+      border-radius: 4px;
+      padding: 8px 18px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      background: transparent;
+      color: #00d9ff;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      font-weight: 700;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    .toggle-btn:hover{
+      background: rgba(0, 217, 255, 0.1);
+      border-color: #ff006e;
+      color: #ff006e;
+      box-shadow: 0 0 10px rgba(255, 0, 110, 0.3);
+    }
+
+    .section-content{
+      margin-top: 20px;
+      font-size: 1rem;
+      line-height: 1.75;
+      color: #d0d0d0;
+      border-top: 1px solid rgba(0, 217, 255, 0.1);
+      padding-top: 20px;
+      overflow: hidden;
+      max-height: 5000px;
+      transition: max-height 0.4s ease-in-out, padding-top 0.4s ease, margin-top 0.4s ease;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    .hidden{
+      max-height: 0;
+      padding-top: 0;
+      margin-top: 0;
+      overflow: hidden;
+      border-top-width: 0;
+    }
+
+    /* listy */
+    ul{
+      margin-left: 24px;
+      margin-top: 12px;
+      list-style-type: '→ ';
+      padding-left: 8px;
+    }
+
+    li{ margin-bottom: 10px; }
+
+    #sec10 ul,
+    #sec10 ol{
+      list-style-position: inside;
+      margin-left: 0;
+      padding-left: 0;
+    }
+
+    .highlight{
+      font-weight: 700;
+      color: #00d9ff;
+      background: rgba(0, 217, 255, 0.15);
+      padding: 2px 5px;
+      border-radius: 2px;
+      text-shadow: 0 0 5px rgba(0, 217, 255, 0.2);
+    }
+
+    .quote{
+      font-style: italic;
+      margin: 8px 0 12px 0;
+      color: #b0b0b0;
+    }
+
+    .badge-row{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+      font-size: 0.8rem;
+    }
+
+    .badge{
+      background: rgba(255, 0, 110, 0.1);
+      border-radius: 4px;
+      padding: 6px 12px;
+      border: 1px solid rgba(255, 0, 110, 0.3);
+      color: #ff006e;
+    }
+
+    .timeline{
+      margin-top: 16px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      background: rgba(0, 217, 255, 0.05);
+      border: 1px solid rgba(0, 217, 255, 0.15);
+      font-size: 0.9rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .timeline-item{
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 4px;
+      background: rgba(255, 0, 110, 0.08);
+      border: 1px solid rgba(255, 0, 110, 0.2);
+      color: #e0e0e0;
+    }
+
+    .timeline-item span{ font-size: 0.9rem; }
+
+    /* responsywność */
+    @media (max-width: 780px){
+      .hero{ grid-template-columns: minmax(0, 1fr); }
+      body { padding: 16px; }
+    }
+
+    @media (max-width: 600px){
+      .section-header{
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .toggle-btn{ margin-top: 12px; align-self: flex-start; }
+      .hero-title-main { font-size: 2.5rem; }
+    }
+
+    /* ===== QUIZ ===== */
+    .quiz-question{
+      margin-bottom: 16px;
+      padding: 16px 20px;
+      border-radius: 4px;
+      background: rgba(255, 0, 110, 0.05);
+      border: 1px solid rgba(255, 0, 110, 0.15);
+      position: relative;
+    }
+
+    .quiz-question::before{ display: none; }
+
+    .quiz-question p{
+      margin-bottom: 12px;
+      color: #00d9ff;
+      font-weight: 700;
+    }
+
+    .options{
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .option{
+      border-radius: 6px;
+      border: 1px solid rgba(0, 217, 255, 0.2);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.95rem;
+      background: rgba(25, 35, 50, 0.3);
+      color: #d0d0d0;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .option:hover{
+      border-color: #00d9ff;
+      background: rgba(0, 217, 255, 0.1);
+      box-shadow: 0 0 10px rgba(0, 217, 255, 0.1);
+    }
+
+    .option input{
+      margin: 0;
+      accent-color: #00d9ff;
+      transform: scale(1.1);
+      filter: none;
+    }
+
+    /* feedback */
+    .correct{
+      background: rgba(0, 217, 100, 0.15) !important;
+      border-color: rgba(0, 217, 100, 0.4) !important;
+      color: #00d964 !important;
+    }
+
+    .incorrect{
+      background: rgba(255, 0, 110, 0.15) !important;
+      border-color: rgba(255, 0, 110, 0.4) !important;
+      color: #ff4081 !important;
+    }
+
+    .feedback-text{
+      margin-top: 10px;
+      padding: 8px 12px;
+      border-radius: 4px;
+      background-color: rgba(255, 0, 110, 0.15);
+      font-size: 0.9rem;
+      color: #ff4081;
+    }
+
+    .check-btn{
+      margin-top: 16px;
+      padding: 12px 24px;
+      border-radius: 4px;
+      border: 1px solid #ff006e;
+      font-size: 1rem;
+      cursor: pointer;
+      background: #ff006e;
+      color: #1a1a2e;
+      font-weight: 700;
+      transition: all 0.2s ease;
+      box-shadow: 0 0 15px rgba(255, 0, 110, 0.2);
+    }
+
+    .check-btn:hover{
+      background: #ff4081;
+      border-color: #ff4081;
+      transform: translateY(-2px);
+      box-shadow: 0 0 20px rgba(255, 0, 110, 0.4);
+    }
+
+    .answer-btn{
+      margin-top: 8px;
+      margin-left: 0;
+      padding: 6px 12px;
+      border-radius: 4px;
+      border: 1px solid rgba(0, 217, 255, 0.2);
+      background: transparent;
+      color: #00d9ff;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .answer-btn:hover{
+      background: rgba(0, 217, 255, 0.1);
+      color: #00d9ff;
+      border-color: #00d9ff;
+    }
+
+    .answer{
+      margin-top: 12px;
+      padding: 12px 16px;
+      border-radius: 6px;
+      background: rgba(0, 217, 255, 0.05);
+      border: 1px solid rgba(0, 217, 255, 0.15);
+      font-size: 0.95rem;
+      color: #d0d0d0;
+      overflow: hidden;
+      max-height: 500px;
+      transition: all 0.4s ease-in-out;
+    }
+
+    .answer.hidden{ display: none; }
+
+    #quiz-score{
+      margin-top: 16px;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #00d9ff;
+    }
+
+    .strategy-box{
+      margin-top: 16px;
+      padding: 16px 20px;
+      border-radius: 8px;
+      background: rgba(255, 0, 110, 0.05);
+      border: 2px double rgba(0, 217, 255, 0.2);
+      font-size: 1rem;
+      color: #d0d0d0;
+    }
+
+    .two-cols{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-top: 16px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+    <!-- HERO -->
+    <div class="hero">
+      <div class="hero-text">
+        <div class="hero-title-main">Współczesność</div>
+        <div class="hero-title-sub">literatura współczesna | przygotowanie do matury 2025/2026 z języka polskiego</div>
+
+        <div class="hero-row">
+          <div class="hero-chip"><span>🌍</span> globalizacja i transformacja</div>
+          <div class="hero-chip"><span>🧩</span> postmodernizm i ironia</div>
+          <div class="hero-chip"><span>📺</span> media, popkultura, internet</div>
+          <div class="hero-chip"><span>🧠</span> egzystencjalizm i kryzys wartości</div>
+          <div class="hero-chip"><span>🗞️</span> reportaż i literatura faktu</div>
+        </div>
+
+        <div class="hero-quote">
+          „Współczesność to epoka pytań: o wolność, tożsamość, prawdę i sens — w świecie, w którym informacji jest więcej niż pewności.”
+        </div>
+      </div>
+
+      <div class="hero-book">
+        <div class="hero-book-top">
+          <div class="hero-book-title">WSPÓŁCZESNOŚĆ</div>
+          <div class="hero-book-author">1945–1989 i po 1989 | literatura, kultura, media | matura: motywy + lektury</div>
+          <div class="hero-book-divider"></div>
+          <div class="hero-book-badge-row">
+            <div class="hero-book-badge">DYSTOPIA</div>
+            <div class="hero-book-badge">ABSURD</div>
+            <div class="hero-book-badge">REPORTAŻ</div>
+            <div class="hero-book-badge">IRONIA</div>
+            <div class="hero-book-badge">TOŻSAMOŚĆ</div>
+          </div>
+        </div>
+
+        <div class="hero-book-bottom">
+          <span>⏳ 1945–dziś (z podziałem: 1945–1989 / po 1989)</span>
+          <span>🎓 zakres maturalny (liceum/technikum)</span>
+        </div>
+        <div class="hero-cityline"></div>
+      </div>
+    </div>
+
+    <!-- TIPS -->
+    <div class="tips">
+      <div class="tips-icon">💡</div>
+      <div>
+        <strong>Jak korzystać z notatki?</strong>
+        1) Najpierw spróbuj samodzielnie przypomnieć treści. <br />
+        2) Dopiero potem kliknij <strong>„Pokaż / ukryj”</strong>. <br />
+        3) Pytania powtórkowe potraktuj jak mini-ustną maturę. <br />
+        4) Na końcu zrób test i przejrzyj strategie.
+      </div>
+    </div>
+
+    <!-- 1. WSPÓŁCZESNOŚĆ PODSTAWY -->
+    <section class="section-card">
+      <div class="section-header" onclick="toggleSection('sec1')">
+        <div class="section-title-row">
+          <div class="section-title">
+            <span class="section-icon">📖</span>
+            <span>1. Współczesność – informacje podstawowe + „Współczesność w 5 minut” (wersja rozszerzona)</span>
+          </div>
+          <div class="section-tag">ramy czasowe, periodyzacja, tło kulturowe, media, język</div>
+        </div>
+        <button class="toggle-btn" type="button">Pokaż / ukryj</button>
+      </div>
+
+      <div class="section-content hidden" id="sec1">
+        <ul>
+          <li><span class="highlight">Nazwa epoki:</span> <strong>współczesność</strong> – umowne określenie literatury po II wojnie światowej, ale w tej notatce skupiamy się na problemach <strong>społecznych, kulturowych i cywilizacyjnych</strong> (bez wątków wojny i okupacji).</li>
+
+          <li>
+            <span class="highlight">Ramy czasowe (umowne, maturalne):</span>
+            <ul>
+              <li><strong>1945–1989</strong> – literatura w realiach państwa autorytarnego/PRL: napięcie między jednostką a systemem, kontrola języka i informacji, cenzura, „życie w dwóch obiegach”.</li>
+              <li><strong>po 1989</strong> – wolny rynek, pluralizm poglądów, eksplozja mediów, kultura masowa, globalizacja, migracje, internet.</li>
+              <li><strong>XXI wiek</strong> – cyfrowość, social media, polaryzacja, ekonomia uwagi, AI i kryzys zaufania do informacji (fake news, bańki informacyjne).</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Co jest „kluczem” epoki (na maturę):</span>
+            <ul>
+              <li><strong>kryzys wielkich narracji</strong> – nieufność wobec jednej „prawdy” o świecie; częściej pytania niż gotowe odpowiedzi.</li>
+              <li><strong>pluralizm stylów</strong> – obok realizmu istnieje groteska, absurd, parabola, dystopia, reportaż, hybrydy gatunkowe.</li>
+              <li><strong>walka o język</strong> – język może <em>opisywać</em> rzeczywistość, ale też ją <em>tworzyć</em> i <em>manipulować</em> nią (propaganda, nowomowa, marketing, media).</li>
+              <li><strong>człowiek w świecie nadmiaru</strong> – informacji, bodźców, ról społecznych; temat tożsamości i samotności w tłumie.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Najważniejsze „hasła klucze” (do wypracowania):</span>
+            <ul>
+              <li><strong>dystopia / antyutopia</strong> – ostrzegawcza wizja państwa/kultury (kontrola, strach, przemoc symboliczna).</li>
+              <li><strong>absurd i groteska</strong> – pokazują pęknięcie sensu, śmieszność i grozę jednocześnie; demaskują mechanizmy władzy i konformizmu.</li>
+              <li><strong>postmodernizm</strong> – ironia, gra z konwencją, intertekstualność, mieszanie „wysokiego” z „popularnym”.</li>
+              <li><strong>reportaż / literatura faktu</strong> – prawdziwe zdarzenia i opisy świata jako materiał do refleksji moralnej i poznawczej.</li>
+              <li><strong>tożsamość</strong> – kim jestem w świecie wielu ról (praca, rodzina, sieć), w świecie migracji i kultur.</li>
+              <li><strong>kryzys autorytetów</strong> – spór o prawdę, wartości i wspólnotę.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Język i komunikacja (częsty temat zadań):</span>
+            <ul>
+              <li><strong>nowomowa</strong> i manipulacja – słowa przykrywają fakty, zmieniają znaczenia, „uspokajają sumienie”.</li>
+              <li><strong>perswazja i propaganda</strong> – emocje zamiast argumentów, etykietowanie, „my–oni”, uproszczenia.</li>
+              <li><strong>media</strong> – tempo informacji vs. głębia rozumienia; problem wiarygodności źródeł.</li>
+            </ul>
+          </li>
+        </ul>
+
+        <div class="timeline">
+          <div class="timeline-item"><span>🏙️</span><span>1945–1989 – napięcie jednostka–system; rola języka i cenzury</span></div>
+          <div class="timeline-item"><span>🧭</span><span>1989 – transformacja: wolność słowa, pluralizm, rynek</span></div>
+          <div class="timeline-item"><span>🌐</span><span>lata 90./2000 – globalizacja, popkultura, nowe tożsamości</span></div>
+          <div class="timeline-item"><span>📱</span><span>XXI w. – internet, social media, ekonomia uwagi</span></div>
+          <div class="timeline-item"><span>🤖</span><span>dziś – kryzys zaufania do informacji, „wojny narracji” i algorytmy</span></div>
+        </div>
+
+        <div class="badge-row">
+          <div class="badge">dystopia</div>
+          <div class="badge">absurd</div>
+          <div class="badge">groteska</div>
+          <div class="badge">reportaż</div>
+          <div class="badge">tożsamość</div>
+        </div>
+
+        <hr style="margin:12px 0; border:none; border-top:1px dashed #e5e7eb;" />
+
+        <p class="highlight">Współczesność w 5 minut – super skrót (wersja maturalna):</p>
+        <ul>
+          <li>Zapamiętaj 3 cechy: <strong>pluralizm</strong> (wiele stylów), <strong>gra z formą</strong> (ironia, intertekstualność), <strong>tematy aktualne</strong> (media, wolność, tożsamość).</li>
+          <li>Zapamiętaj 3 „mocne narzędzia” interpretacji: <strong>język jako władza</strong>, <strong>człowiek w kryzysie sensu</strong>, <strong>świat jako system kontroli/informacji</strong>.</li>
+          <li>Zapamiętaj 3 gatunki: <strong>dystopia</strong>, <strong>dramat absurdu</strong>, <strong>reportaż</strong>.</li>
+          <li>Zapamiętaj 3 lektury-kotwice (bez wątków wojny/okupacji): <strong>Camus „Dżuma”</strong>, <strong>Orwell „Rok 1984”</strong>, <strong>Mrożek „Tango”</strong>.</li>
+          <li>Zapamiętaj 1 zdanie-klucz: <strong>Współczesność pokazuje, jak język, media i systemy społeczne wpływają na wolność i tożsamość człowieka.</strong></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 2. FILOZOFIA + ŚWIATOPOGLĄD -->
+    <section class="section-card">
+      <div class="section-header" onclick="toggleSection('sec2')">
+        <div class="section-title-row">
+          <div class="section-title">
+            <span class="section-icon">🧠</span>
+            <span>2. Idee i światopogląd współczesności – niezbędnik maturalny</span>
+          </div>
+          <div class="section-tag">egzystencjalizm, totalitaryzm, postmodernizm, etyka, media</div>
+        </div>
+        <button class="toggle-btn" type="button">Pokaż / ukryj</button>
+      </div>
+
+      <div class="section-content hidden" id="sec2">
+        <ul>
+          <li>
+            <span class="highlight">Egzystencjalizm (Camus jako najważniejszy „most”):</span>
+            <ul>
+              <li><strong>Absurd</strong> – człowiek pragnie sensu, a świat nie daje prostych odpowiedzi. Sens trzeba <strong>wypracować</strong> działaniem i odpowiedzialnością.</li>
+              <li><strong>Wolność i wybór</strong> – nawet w sytuacjach trudnych człowiek odpowiada za postawę (solidarność, uczciwość, odwaga cywilna).</li>
+              <li><strong>Etyka codzienności</strong> – „heroizm” to często zwykła praca, pomoc, wierność wartościom, a nie patos.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Myślenie o państwie i władzy (Orwell jako model):</span>
+            <ul>
+              <li><strong>kontrola informacji</strong> – kto kontroluje język i przekaz, ten kontroluje społeczeństwo.</li>
+              <li><strong>nowomowa</strong> – ograniczenie słów ogranicza myślenie; zmiana nazw zmienia ocenę moralną („eufemizmy” i „marketing polityczny”).</li>
+              <li><strong>inwigilacja i strach</strong> – nie tylko przemoc fizyczna; równie groźna jest presja społeczna i konformizm.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Postmodernizm (w praktyce szkolnej):</span>
+            <ul>
+              <li><strong>ironia</strong> i dystans – autor „mruga do czytelnika”, pokazuje, że świat jest złożony, a proste hasła bywają fałszywe.</li>
+              <li><strong>intertekstualność</strong> – tekst rozmawia z innymi tekstami (aluzje, cytaty, przeróbki mitów i klasyki).</li>
+              <li><strong>mieszanie rejestrów</strong> – obok kultury wysokiej pojawia się popkultura (reklama, seriale, memy) – i to też jest „materiał” do analizy.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Kultura mediów i cyfrowość (temat „na teraz”):</span>
+            <ul>
+              <li><strong>ekonomia uwagi</strong> – walka o kliknięcie; emocja wygrywa z argumentem.</li>
+              <li><strong>bańki informacyjne</strong> – algorytmy wzmacniają to, co już lubimy; rośnie polaryzacja.</li>
+              <li><strong>krytyczne myślenie</strong> – kompetencja kluczowa: odróżnianie opinii od faktów, weryfikacja źródeł, rozpoznawanie perswazji.</li>
+            </ul>
+          </li>
+        </ul>
+
+        <div class="badge-row">
+          <div class="badge">egzystencjalizm</div>
+          <div class="badge">absurd</div>
+          <div class="badge">nowomowa</div>
+          <div class="badge">intertekstualność</div>
+          <div class="badge">kultura mediów</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. GATUNKI I DZIEŁA -->
+    <section class="section-card">
+      <div class="section-header" onclick="toggleSection('sec3')">
+        <div class="section-title-row">
+          <div class="section-title">
+            <span class="section-icon">🎭</span>
+            <span>3. Najważniejsze gatunki i dzieła współczesności (wersja rozszerzona)</span>
+          </div>
+          <div class="section-tag">dystopia, parabola, dramat absurdu, reportaż, opowiadanie, esej</div>
+        </div>
+        <button class="toggle-btn" type="button">Pokaż / ukryj</button>
+      </div>
+
+      <div class="section-content hidden" id="sec3">
+        <ul>
+          <li>
+            <span class="highlight">Dystopia / antyutopia:</span><br />
+            Gatunek ostrzegawczy: pokazuje, do czego prowadzi <strong>kontrola</strong>, <strong>manipulacja</strong>, <strong>zanik prywatności</strong>.
+            <ul>
+              <li><strong>George Orwell – „Rok 1984”</strong> – modelowy tekst o języku jako narzędziu władzy (nowomowa), o fałszowaniu historii i przemocy psychicznej.</li>
+              <li>Na maturze: umiej wskazać mechanizmy: <strong>propaganda</strong>, <strong>inwigilacja</strong>, <strong>dezinformacja</strong>, <strong>pęknięcie prawdy</strong>.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Parabola egzystencjalna:</span><br />
+            Historia, która działa jak „model świata”: w prostym zdarzeniu ukrywa <strong>pytania moralne</strong>.
+            <ul>
+              <li><strong>Albert Camus – „Dżuma”</strong> – opowieść o wspólnocie w sytuacji granicznej: solidarność, odpowiedzialność, sens działania.</li>
+              <li>Na maturze: pokaż, że to nie „historia o chorobie”, tylko o <strong>postawie człowieka</strong> wobec zła/chaosu.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Dramat absurdu / groteska:</span><br />
+            Forma, która demaskuje mechanizmy społeczne, konformizm, kryzys wartości – przez śmiech, przerysowanie i „nielogiczność”.
+            <ul>
+              <li><strong>Sławomir Mrożek – „Tango”</strong> – konflikt pokoleń i chaos norm: co się dzieje, gdy wolność staje się brakiem zasad?</li>
+              <li>Na maturze: bardzo ważne pojęcia: <strong>groteska</strong>, <strong>absurd</strong>, <strong>demaskacja</strong>, <strong>konflikt wartości</strong>.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Opowiadanie współczesne (krótka forma – dużo sensu):</span>
+            <ul>
+              <li><strong>Olga Tokarczuk – „Profesor Andrews w Warszawie”</strong> – doświadczenie obcości, zagubienia, inności; miasto jako labirynt i próba komunikacji.</li>
+              <li><strong>Andrzej Stasiuk – „Miejsce”</strong> – pamięć przestrzeni i codzienność; prowincja jako „mikroświat”, w którym widać przemiany cywilizacyjne.</li>
+              <li>Na maturze: ćwicz interpretację symboli (miejsce/miasto/droga) i narracji (co narrator ujawnia, a co ukrywa).</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Reportaż / literatura faktu:</span><br />
+            Świat realny jako materiał do refleksji (etyka opisu, odpowiedzialność za słowo, selekcja faktów).
+            <ul>
+              <li><strong>Ryszard Kapuściński – „Podróże z Herodotem” (fragmenty)</strong> – rozmowa reportera z tradycją opisywania świata; podróż jako poznanie Innego i samego siebie.</li>
+              <li>Na maturze: zwróć uwagę na: <strong>subiektywność</strong>, <strong>kompozycję</strong>, <strong>tezy o kulturze</strong>, <strong>relację „ja–świat”</strong>.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Proza „życia codziennego” i język epoki:</span>
+            <ul>
+              <li><strong>Marek Nowakowski – „Górą ‘Edek’”</strong> – obserwacja społeczeństwa, mechanizmów społecznych i języka codzienności; ważny jest <strong>realizm dialogu</strong> i portret środowiska.</li>
+              <li>Na maturze: pokaż, jak język bohaterów ujawnia wartości, aspiracje, lęki i hierarchie.</li>
+            </ul>
+          </li>
+        </ul>
+
+        <div class="badge-row">
+          <div class="badge">„Rok 1984”</div>
+          <div class="badge">„Dżuma”</div>
+          <div class="badge">„Tango”</div>
+          <div class="badge">Tokarczuk</div>
+          <div class="badge">Stasiuk</div>
+          <div class="badge">Kapuściński</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. TOPOSY I MOTYWY -->
+    <section class="section-card">
+      <div class="section-header" onclick="toggleSection('sec4')">
+        <div class="section-title-row">
+          <div class="section-title">
+            <span class="section-icon">🔍</span>
+            <span>4. Najważniejsze motywy i toposy współczesności (must have na maturę)</span>
+          </div>
+          <div class="section-tag">wolność, tożsamość, język i władza, konformizm, kryzys wartości, miasto/podróż</div>
+        </div>
+        <button class="toggle-btn" type="button">Pokaż / ukryj</button>
+      </div>
+
+      <div class="section-content hidden" id="sec4">
+        <ul>
+          <li>
+            <span class="highlight">Motyw wolności i odpowiedzialności:</span>
+            <ul>
+              <li>wolność jako <strong>wybór</strong> (Camus) – liczy się działanie i solidarność.</li>
+              <li>wolność jako <strong>chaos norm</strong> (Mrożek) – brak zasad może prowadzić do dominacji siły i prymitywizmu.</li>
+              <li>wolność jako <strong>iluzja</strong> (Orwell) – system może „produkować” pozorną zgodę poprzez język i strach.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Motyw języka jako narzędzia władzy:</span>
+            <ul>
+              <li><strong>nowomowa</strong> i eufemizmy – zmiana słów = zmiana oceny moralnej.</li>
+              <li><strong>fałszowanie pamięci</strong> – kontrola tego, „co było”, daje władzę nad tym, „co jest”.</li>
+              <li>na maturze: rozpoznawaj perswazję, manipulację, propagandę, etykietowanie.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Motyw konformizmu i presji społecznej:</span>
+            <ul>
+              <li>„łatwiej się dostosować niż ryzykować” – ale cena to utrata siebie.</li>
+              <li>groteska często pokazuje, jak „normalność” bywa przemocą wobec inności.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Motyw kryzysu autorytetów i wartości:</span>
+            <ul>
+              <li>zanik wspólnego języka wartości (co jest dobre? co jest prawdziwe?).</li>
+              <li>świat „po wielkich ideologiach”: jednostka musi budować sens bez prostych map.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Motyw tożsamości / obcości:</span>
+            <ul>
+              <li>„kim jestem” w świecie ról i masek; doświadczenie wyobcowania w mieście (Tokarczuk).</li>
+              <li>pamięć miejsca i przynależność (Stasiuk) – przestrzeń jako nośnik historii osobistej.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Motyw podróży i poznania świata:</span>
+            <ul>
+              <li>podróż jako <strong>poznanie Innego</strong> (Kapuściński) i sprawdzian własnych uprzedzeń.</li>
+              <li>podróż jako <strong>metafora dojrzewania</strong> – zmiana perspektywy, uczenie się złożoności.</li>
+            </ul>
+          </li>
+        </ul>
+
+        <div class="badge-row">
+          <div class="badge">wolność</div>
+          <div class="badge">język i władza</div>
+          <div class="badge">konformizm</div>
+          <div class="badge">tożsamość</div>
+          <div class="badge">obcość</div>
+          <div class="badge">podróż</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. WSPÓŁCZESNOŚĆ W LEKTURACH I PODSTAWIE -->
+    <section class="section-card">
+      <div class="section-header" onclick="toggleSection('sec5')">
+        <div class="section-title-row">
+          <div class="section-title">
+            <span class="section-icon">🧩</span>
+            <span>5. Współczesność w lekturach szkolnych i podstawie programowej (co trzeba umieć)</span>
+          </div>
+          <div class="section-tag">lektury, analiza problemów, język, konteksty, argumentacja</div>
+        </div>
+        <button class="toggle-btn" type="button">Pokaż / ukryj</button>
+      </div>
+
+      <div class="section-content hidden" id="sec5">
+        <ul>
+          <li>
+            <span class="highlight">George Orwell – „Rok 1984”</span> (lektura obowiązkowa):
+            <ul>
+              <li>umiej opisać <strong>mechanizmy kontroli</strong>: inwigilacja, propaganda, nowomowa, fałszowanie historii.</li>
+              <li>umiej wyjaśnić, dlaczego język jest ważny: <strong>zawęża myślenie</strong>, tworzy „prawdę urzędową”.</li>
+              <li>na maturze: połącz z tematem wolności, prawdy, manipulacji, konformizmu.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Albert Camus – „Dżuma”</span> (lektura obowiązkowa):
+            <ul>
+              <li>umiej wskazać, że to <strong>parabola</strong>: w centrum jest postawa człowieka i wspólnoty.</li>
+              <li>klucz: <strong>solidarność</strong>, <strong>odpowiedzialność</strong>, <strong>etyka działania</strong>, „zwykły heroizm”.</li>
+              <li>na maturze: świetne do tematów o dobru, sensie, moralności codzienności.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Sławomir Mrożek – „Tango”</span> (lektura obowiązkowa):
+            <ul>
+              <li>rozumiej konflikt: <strong>porządek vs chaos</strong>, tradycja vs „wolność bez granic”.</li>
+              <li>umiej nazwać konwencję: <strong>groteska</strong> i <strong>absurd</strong> jako narzędzia krytyki społecznej.</li>
+              <li>na maturze: idealne do tematów o wartościach, wychowaniu, buncie, kryzysie norm.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Marek Nowakowski – „Górą ‘Edek’”</span> (opowiadanie obowiązkowe):
+            <ul>
+              <li>skup się na <strong>realizmie języka</strong> i portrecie środowiska; pokazuj, co mówi styl wypowiedzi bohaterów.</li>
+              <li>na maturze: wykorzystuj jako przykład analizy języka, relacji władzy „na co dzień”, społecznej hierarchii.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Andrzej Stasiuk – „Miejsce”</span> (opowiadanie obowiązkowe):
+            <ul>
+              <li>motywy: <strong>pamięć przestrzeni</strong>, codzienność, przemiany cywilizacyjne, „małe historie”.</li>
+              <li>na maturze: interpretuj symbolikę miejsca, czasu, detalu.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Olga Tokarczuk – „Profesor Andrews w Warszawie”</span> (opowiadanie obowiązkowe):
+            <ul>
+              <li>motywy: <strong>obcość</strong>, komunikacja, zagubienie, miasto-labirynt.</li>
+              <li>na maturze: pokaż, jak doświadczenie „inności” ujawnia mechanizmy społeczne i psychologiczne.</li>
+            </ul>
+          </li>
+
+          <li>
+            <span class="highlight">Ryszard Kapuściński – „Podróże z Herodotem” (fragmenty)</span> (obowiązkowe):
+            <ul>
+              <li>reportaż jako rozmowa z tradycją (Herodot) i z teraźniejszością.</li>
+              <li>na maturze: argumentuj o poznaniu świata, spotkaniu kultur, odpowiedzialności za opis.</li>
+            </ul>
+          </li>
+        </ul>
+
+        <div class="strategy-box">
+          <span class="highlight">Jak wykorzystać współczesność w wypracowaniu maturalnym?</span><br />
+          Najprościej działa schemat:
+          <ul>
+            <li>nazwij <strong>problem</strong> (np. wolność, prawda, tożsamość, presja społeczna),</li>
+            <li>dobierz <strong>lekturę kotwicę</strong> (Orwell/Camus/Mrożek),</li>
+            <li>nazwij <strong>narzędzie interpretacji</strong> (nowomowa, parabola, groteska),</li>
+            <li>wyciągnij <strong>wniosek</strong>: co tekst mówi o człowieku i świecie dziś.</li>
+          </ul>
+        </div>
+
+        <div class="badge-row">
+          <div class="badge">„Rok 1984”</div>
+          <div class="badge">„Dżuma”</div>
+          <div class="badge">„Tango”</div>
+          <div class="badge">Nowakowski</div>
+          <div class="badge">Stasiuk</div>
+          <div class="badge">Tokarczuk</div>
+          <div class="badge">Kapuściński</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. KONTEKSTY MATURALNE -->
+    <section class="section-card">
+      <div class="section-header" onclick="toggleSection('sec6')">
+        <div class="section-title-row">
+          <div class="section-title">
+            <span class="section-icon">🔗</span>
+            <span>6. Współczesność jako kontekst maturalny (rozszerzone przykłady)</span>
+          </div>
+          <div class="section-tag">z czym łączyć współczesność w interpretacji i rozprawce</div>
+        </div>
+        <button class="toggle-btn" type="button">Pokaż / ukryj</button>
+      </div>
+
+      <div class="section-content hidden" id="sec6">
+        <p><span class="highlight">Współczesność najczęściej działa jako kontekst do tematów o języku, wolności, moralności i tożsamości:</span></p>
+
+        <div class="two-cols">
+          <div>
+            <ul>
+              <li>
+                <span class="highlight">Współczesność a romantyzm</span><br />
+                <ul>
+                  <li>romantyczny bunt i wolność ↔ współczesny bunt wobec systemów/mediów i presji społecznej.</li>
+                  <li>jednostka kontra zbiorowość: dziś często zamiast „narodu” pojawia się „system” lub „opinia publiczna”.</li>
+                </ul>
+              </li>
+
+              <li>
+                <span class="highlight">Współczesność a pozytywizm</span><br />
+                <ul>
+                  <li>praca u podstaw ↔ współczesna etyka codziennego działania (Camus: robić swoje, pomagać, być odpowiedzialnym).</li>
+                  <li>realizm społeczny ↔ realizm języka i obyczaju (Nowakowski).</li>
+                </ul>
+              </li>
+
+              <li>
+                <span class="highlight">Współczesność a dwudziestolecie międzywojenne</span><br />
+                <ul>
+                  <li>eksperyment artystyczny ↔ postmodernistyczna gra formą (ironia, mieszanie stylów).</li>
+                  <li>miasto i nowoczesność ↔ dzisiejsze doświadczenie metropolii i obcości (Tokarczuk).</li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <ul>
+              <li>
+                <span class="highlight">Współczesność a kultura popularna</span><br />
+                <ul>
+                  <li>dystopie w serialach/filmach ↔ Orwell jako „matryca” opisu kontroli i manipulacji.</li>
+                  <li>mem, skrót, slogan ↔ temat perswazji i uproszczeń (jak język skraca myślenie).</li>
+                </ul>
+              </li>
+
+              <li>
+                <span class="highlight">Współczesność a filozofia/etyka</span><br />
+                <ul>
+                  <li>sens i absurd ↔ egzystencjalizm (Camus) – człowiek tworzy sens w działaniu.</li>
+                  <li>prawda i manipulacja ↔ etyka słowa, odpowiedzialność za informację.</li>
+                </ul>
+              </li>
+
+              <li>
+                <span class="highlight">Współczesność a reportaż / literatura faktu</span><br />
+                <ul>
+                  <li>jak opisać „Innego” bez uprzedzeń? (Kapuściński) – aktualne w tematach o migracji i globalizacji.</li>
+                  <li>wiarygodność narratora, selekcja faktów – powiąż z krytycznym myśleniem.</li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="strategy-box">
+          <span class="highlight">Schemat użycia kontekstu współczesnego w wypracowaniu:</span>
+          <ol id="fix">
+            <li>Nazwij <strong>problem</strong> (np. prawda i język, wolność, tożsamość).</li>
+            <li>Podaj <strong>tekst kotwicę</strong> (Orwell / Camus / Mrożek).</li>
+            <li>Wyjaśnij <strong>mechanizm</strong> (nowomowa / parabola / groteska).</li>
+            <li>Dodaj <strong>wniosek</strong>: co to mówi o człowieku dziś.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. FORMUŁY / HASŁA -->
+    <section class="section-card">
+      <div class="section-header" onclick="toggleSection('sec7')">
+        <div class="section-title-row">
+          <div class="section-title">
+            <span class="section-icon">📝</span>
+            <span>7. Formuły i hasła do zapamiętania (które „robią robotę” w argumentacji)</span>
+          </div>
+          <div class="section-tag">krótkie pojęcia, które wzmacniają analizę</div>
+        </div>
+        <button class="toggle-btn" type="button">Pokaż / ukryj</button>
+      </div>
+
+      <div class="section-content hidden" id="sec7">
+        <ul>
+          <li><span class="highlight">Dystopia</span> – ostrzegawcza wizja świata, w którym kontrola niszczy wolność.</li>
+          <li><span class="highlight">Nowomowa</span> – język, który ogranicza myślenie i maskuje prawdę.</li>
+          <li><span class="highlight">Parabola</span> – opowieść „model”, która uogólnia sensy moralne (Camus).</li>
+          <li><span class="highlight">Absurd</span> – pęknięcie sensu; świat nie daje prostych odpowiedzi.</li>
+          <li><span class="highlight">Groteska</span> – śmieszne i straszne naraz; demaskuje mechanizmy społeczne (Mrożek).</li>
+          <li><span class="highlight">Intertekstualność</span> – tekst rozmawia z innymi tekstami (aluzje, cytaty, przeróbki).</li>
+          <li><span class="highlight">Konformizm</span> – podporządkowanie się presji grupy kosztem własnych wartości.</li>
+          <li><span class="highlight">Kultura mediów</span> – informacja jako władza; emocja często wypiera argument.</li>
+        </ul>
+
+        <p style="font-size: 0.85rem; color: #6b7280; margin-top: 8px;">
+          Tip: jedno mocne zdanie do rozprawki: „Utwór pokazuje, że kontrola języka jest kontrolą myślenia, dlatego walka o prawdę zaczyna się od nazywania rzeczy po imieniu”.
+        </p>
+      </div>
+    </section>
+
+    <!-- 8. PYTANIA POWTÓRKOWE -->
+    <section class="section-card">
+      <div class="section-header" onclick="toggleSection('sec8')">
+        <div class="section-title-row">
+          <div class="section-title">
+            <span class="section-icon">❓</span>
+            <span>8. Pytania powtórkowe (z przykładowymi odpowiedziami)</span>
+          </div>
+          <div class="section-tag">kliknij przycisk, żeby odsłonić odpowiedź</div>
+        </div>
+        <button class="toggle-btn" type="button">Pokaż / ukryj</button>
+      </div>
+
+      <div class="section-content hidden" id="sec8">
+        <ul class="question-list">
+
+          <li>
+            Wyjaśnij: czym jest dystopia i po co się ją pisze?
+            <button type="button" class="answer-btn" onclick="toggleAnswer('ans1')">Pokaż / ukryj odpowiedź</button>
+            <div id="ans1" class="answer hidden">
+              Dystopia to ostrzegawcza wizja świata, w którym jednostka traci wolność (np. przez kontrolę informacji, inwigilację, presję). Pisze się ją, by pokazać konsekwencje pewnych mechanizmów społecznych i pobudzić krytyczne myślenie.
+            </div>
+          </li>
+
+          <li>
+            Na czym polega nowomowa i dlaczego jest groźna?
+            <button type="button" class="answer-btn" onclick="toggleAnswer('ans2')">Pokaż / ukryj odpowiedź</button>
+            <div id="ans2" class="answer hidden">
+              Nowomowa zmienia i zawęża znaczenia słów, przez co ogranicza myślenie. Jest groźna, bo pozwala manipulować oceną moralną i „produkować” oficjalną prawdę, utrudniając sprzeciw.
+            </div>
+          </li>
+
+          <li>
+            Dlaczego „Dżuma” to parabola, a nie tylko powieść o epidemii?
+            <button type="button" class="answer-btn" onclick="toggleAnswer('ans3')">Pokaż / ukryj odpowiedź</button>
+            <div id="ans3" class="answer hidden">
+              Bo choroba jest modelem sytuacji granicznej: sprawdza postawy ludzi. Sens utworu dotyczy moralności, solidarności, odpowiedzialności i sposobu tworzenia sensu przez działanie.
+            </div>
+          </li>
+
+          <li>
+            Co daje groteska w „Tangu” – po co autor „śmieszy”, skoro temat jest poważny?
+            <button type="button" class="answer-btn" onclick="toggleAnswer('ans4')">Pokaż / ukryj odpowiedź</button>
+            <div id="ans4" class="answer hidden">
+              Groteska demaskuje mechanizmy społeczne: pokazuje je w krzywym zwierciadle, dzięki czemu lepiej widać absurd norm, konformizm i ryzyko, że chaos wartości kończy się dominacją siły.
+            </div>
+          </li>
+
+          <li>
+            Jak połączyć Tokarczuk („Profesor Andrews…”) z motywem tożsamości?
+            <button type="button" class="answer-btn" onclick="toggleAnswer('ans5')">Pokaż / ukryj odpowiedź</button>
+            <div id="ans5" class="answer hidden">
+              Bohater doświadcza obcości i zagubienia, co uruchamia pytania: kim jestem w nowej przestrzeni, jak buduję relacje i komunikację, co mnie określa (język, kultura, pamięć).
+            </div>
+          </li>
+
+          <li>
+            Co w reportażu (Kapuściński) jest ważniejsze: „fakty” czy „sposób opisu”?
+            <button type="button" class="answer-btn" onclick="toggleAnswer('ans6')">Pokaż / ukryj odpowiedź</button>
+            <div id="ans6" class="answer hidden">
+              Jedno i drugie. Fakty są podstawą, ale sposób opisu decyduje o sensie: selekcja, perspektywa narratora, etyka mówienia o Innych i odpowiedzialność za słowo.
+            </div>
+          </li>
+
+        </ul>
+
+        <p style="font-size: 0.85rem; color: #6b7280; margin-top: 8px;">
+          Tip: odpowiadaj w 3 krokach: (1) definicja, (2) przykład z lektury, (3) wniosek – „co to mówi o człowieku dziś?”.
+        </p>
+      </div>
+    </section>
+
+    <!-- 9. TEST -->
+    <section class="section-card">
+      <div class="section-header" onclick="toggleSection('sec9')">
+        <div class="section-title-row">
+          <div class="section-title">
+            <span class="section-icon">🧪</span>
+            <span>9. Test podsumowujący – 12 pytań</span>
+          </div>
+          <div class="section-tag">jednokrotny wybór (a, b, c, d)</div>
+        </div>
+        <button class="toggle-btn" type="button">Pokaż / ukryj</button>
+      </div>
+
+      <div class="section-content hidden" id="sec9">
+
+        <!-- Q1 -->
+        <div class="quiz-question" data-correct="c">
+          <p><span class="highlight">1.</span> Dystopia to:</p>
+          <div class="options">
+            <label class="option"><input type="radio" name="q1" value="a" /> a) opowieść o idealnym państwie</label>
+            <label class="option"><input type="radio" name="q1" value="b" /> b) komedia obyczajowa</label>
+            <label class="option"><input type="radio" name="q1" value="c" /> c) ostrzegawcza wizja świata ograniczającego wolność</label>
+            <label class="option"><input type="radio" name="q1" value="d" /> d) kronika historyczna</label>
+          </div>
+          <div class="feedback-text hidden"></div>
+        </div>
+
+        <!-- Q2 -->
+        <div class="quiz-question" data-correct="b">
+          <p><span class="highlight">2.</span> Nowomowa w „Roku 1984” służy przede wszystkim:</p>
+          <div class="options">
+            <label class="option"><input type="radio" name="q2" value="a" /> a) upiększaniu języka poetyckiego</label>
+            <label class="option"><input type="radio" name="q2" value="b" /> b) ograniczeniu myślenia i manipulacji oceną moralną</label>
+            <label class="option"><input type="radio" name="q2" value="c" /> c) tworzeniu komizmu sytuacyjnego</label>
+            <label class="option"><input type="radio" name="q2" value="d" /> d) budowaniu archaizacji</label>
+          </div>
+          <div class="feedback-text hidden"></div>
+        </div>
+
+        <!-- Q3 -->
+        <div class="quiz-question" data-correct="d">
+          <p><span class="highlight">3.</span> „Dżuma” Camusa jest najczęściej odczytywana jako:</p>
+          <div class="options">
+            <label class="option"><input type="radio" name="q3" value="a" /> a) sielanka</label>
+            <label class="option"><input type="radio" name="q3" value="b" /> b) epopeja narodowa</label>
+            <label class="option"><input type="radio" name="q3" value="c" /> c) romans</label>
+            <label class="option"><input type="radio" name="q3" value="d" /> d) parabola o postawie człowieka i wspólnoty</label>
+          </div>
+          <div class="feedback-text hidden"></div>
+        </div>
+
+        <!-- Q4 -->
+        <div class="quiz-question" data-correct="a">
+          <p><span class="highlight">4.</span> Groteska to konwencja łącząca:</p>
+          <div class="options">
+            <label class="option"><input type="radio" name="q4" value="a" /> a) śmieszność i grozę, przerysowanie i krytykę</label>
+            <label class="option"><input type="radio" name="q4" value="b" /> b) wyłącznie patos i powagę</label>
+            <label class="option"><input type="radio" name="q4" value="c" /> c) tylko realizm i dokument</label>
+            <label class="option"><input type="radio" name="q4" value="d" /> d) wyłącznie liryzm</label>
+          </div>
+          <div class="feedback-text hidden"></div>
+        </div>
+
+        <!-- Q5 -->
+        <div class="quiz-question" data-correct="c">
+          <p><span class="highlight">5.</span> „Tango” Mrożka najtrafniej opisuje temat:</p>
+          <div class="options">
+            <label class="option"><input type="radio" name="q5" value="a" /> a) ideału rycerskiego</label>
+            <label class="option"><input type="radio" name="q5" value="b" /> b) sarmatyzmu</label>
+            <label class="option"><input type="radio" name="q5" value="c" /> c) kryzysu norm i konfliktu wartości</label>
+            <label class="option"><input type="radio" name="q5" value="d" /> d) mitu arkadyjskiego</label>
+          </div>
+          <div class="feedback-text hidden"></div>
+        </div>
+
+        <!-- Q6 -->
+        <div class="quiz-question" data-correct="b">
+          <p><span class="highlight">6.</span> Intertekstualność to:</p>
+          <div class="options">
+            <label class="option"><input type="radio" name="q6" value="a" /> a) brak odniesień do innych tekstów</label>
+            <label class="option"><input type="radio" name="q6" value="b" /> b) dialog tekstu z innymi tekstami (aluzje, cytaty, przeróbki)</label>
+            <label class="option"><input type="radio" name="q6" value="c" /> c) wyłącznie rymy i rytm</label>
+            <label class="option"><input type="radio" name="q6" value="d" /> d) pisanie w języku staropolskim</label>
+          </div>
+          <div class="feedback-text hidden"></div>
+        </div>
+
+        <!-- Q7 -->
+        <div class="quiz-question" data-correct="d">
+          <p><span class="highlight">7.</span> Reportaż literacki najczęściej łączy:</p>
+          <div class="options">
+            <label class="option"><input type="radio" name="q7" value="a" /> a) fikcję fantastyczną i baśń</label>
+            <label class="option"><input type="radio" name="q7" value="b" /> b) lirykę i tragedię</label>
+            <label class="option"><input type="radio" name="q7" value="c" /> c) dramat i epopeję</label>
+            <label class="option"><input type="radio" name="q7" value="d" /> d) fakty z refleksją autora i kompozycją artystyczną</label>
+          </div>
+          <div class="feedback-text hidden"></div>
+        </div>
+
+        <!-- Q8 -->
+        <div class="quiz-question" data-correct="a">
+          <p><span class="highlight">8.</span> W „Roku 1984” szczególnie ważny jest problem:</p>
+          <div class="options">
+            <label class="option"><input type="radio" name="q8" value="a" /> a) prawdy i manipulacji informacją</label>
+            <label class="option"><input type="radio" name="q8" value="b" /> b) mitu arkadyjskiego</label>
+            <label class="option"><input type="radio" name="q8" value="c" /> c) średniowiecznego teocentryzmu</label>
+            <label class="option"><input type="radio" name="q8" value="d" /> d) rycerskiego honoru</label>
+          </div>
+          <div class="feedback-text hidden"></div>
+        </div>
+
+        <!-- Q9 -->
+        <div class="quiz-question" data-correct="c">
+          <p><span class="highlight">9.</span> Parabola to utwór, który:</p>
+          <div class="options">
+            <label class="option"><input type="radio" name="q9" value="a" /> a) opisuje wyłącznie wydarzenia historyczne</label>
+            <label class="option"><input type="radio" name="q9" value="b" /> b) zawsze jest komedią</label>
+            <label class="option"><input type="radio" name="q9" value="c" /> c) uogólnia sensy i prowadzi do wniosków moralnych</label>
+            <label class="option"><input type="radio" name="q9" value="d" /> d) jest pamiętnikiem</label>
+          </div>
+          <div class="feedback-text hidden"></div>
+        </div>
+
+        <!-- Q10 -->
+        <div class="quiz-question" data-correct="b">
+          <p><span class="highlight">10.</span> Motyw tożsamości w prozie współczesnej często dotyczy:</p>
+          <div class="options">
+            <label class="option"><input type="radio" name="q10" value="a" /> a) wyłącznie genealogii rodów</label>
+            <label class="option"><input type="radio" name="q10" value="b" /> b) pytania „kim jestem” w świecie ról, mediów i zmian</label>
+            <label class="option"><input type="radio" name="q10" value="c" /> c) tylko historii antycznej</label>
+            <label class="option"><input type="radio" name="q10" value="d" /> d) rycerstwa i feudalizmu</label>
+          </div>
+          <div class="feedback-text hidden"></div>
+        </div>
+
+        <!-- Q11 -->
+        <div class="quiz-question" data-correct="a">
+          <p><span class="highlight">11.</span> Współczesność w szkole często poznajesz przez teksty, które:</p>
+          <div class="options">
+            <label class="option"><input type="radio" name="q11" value="a" /> a) mieszają style i pokazują aktualne problemy cywilizacyjne</label>
+            <label class="option"><input type="radio" name="q11" value="b" /> b) zawsze idealizują świat</label>
+            <label class="option"><input type="radio" name="q11" value="c" /> c) są wyłącznie mitologią</label>
+            <label class="option"><input type="radio" name="q11" value="d" /> d) są tylko kroniką średniowieczną</label>
+          </div>
+          <div class="feedback-text hidden"></div>
+        </div>
+
+        <!-- Q12 -->
+        <div class="quiz-question" data-correct="d">
+          <p><span class="highlight">12.</span> Najbardziej „maturalne” połączenie lektura → problem to:</p>
+          <div class="options">
+            <label class="option"><input type="radio" name="q12" value="a" /> a) „Tango” → etos rycerski</label>
+            <label class="option"><input type="radio" name="q12" value="b" /> b) „Dżuma” → sarmatyzm</label>
+            <label class="option"><input type="radio" name="q12" value="c" /> c) „Rok 1984” → mit arkadyjski</label>
+            <label class="option"><input type="radio" name="q12" value="d" /> d) „Rok 1984” → język i władza / manipulacja prawdą</label>
+          </div>
+          <div class="feedback-text hidden"></div>
+        </div>
+
+        <button class="check-btn" type="button" onclick="checkQuiz()"> ✅ Sprawdź odpowiedzi </button>
+        <div id="quiz-score"></div>
+      </div>
+    </section>
+
+    <!-- 10. TYPOWE ZADANIA I STRATEGIE -->
+    <section class="section-card">
+      <div class="section-header" onclick="toggleSection('sec10')">
+        <div class="section-title-row">
+          <div class="section-title">
+            <span class="section-icon">📚</span>
+            <span>10. Współczesność w typowych zadaniach maturalnych + strategie</span>
+          </div>
+          <div class="section-tag">jak pisać argumenty i interpretować teksty współczesne</div>
+        </div>
+        <button class="toggle-btn" type="button">Pokaż / ukryj</button>
+      </div>
+
+      <div class="section-content hidden" id="sec10">
+        <div class="two-cols">
+
+          <div>
+            <p class="highlight">1) Wypracowanie problemowe (motywy i wartości)</p>
+            <ul>
+              <li>Tematy często krążą wokół: <strong>wolności</strong>, <strong>prawdy</strong>, <strong>odpowiedzialności</strong>, <strong>tożsamości</strong>, <strong>kryzysu wartości</strong>.</li>
+              <li>Współczesność daje „mocne argumenty”: <strong>Orwell (język i władza)</strong>, <strong>Camus (etyka działania)</strong>, <strong>Mrożek (normy i chaos)</strong>.</li>
+            </ul>
+
+            <div class="strategy-box">
+              <span class="highlight">Strategia (uniwersalna):</span>
+              <ol>
+                <li>Nazwij problem (np. „Jak bronić prawdy?”).</li>
+                <li>Wybierz lekturę kotwicę: „Rok 1984” (nowomowa, manipulacja).</li>
+                <li>Dodaj kontrapunkt: „Dżuma” (odpowiedzialność i solidarność).</li>
+                <li>Wniosek: pokaż, że wolność wymaga i <strong>języka</strong>, i <strong>postawy</strong>.</li>
+              </ol>
+            </div>
+          </div>
+
+          <div>
+            <p class="highlight">2) Interpretacja utworu (proza/poezja/esej)</p>
+            <ul>
+              <li>Szukaj „wyzwalaczy”: słowa o kontroli, strachu, informacji, normach, wstydzie, winie, obcości.</li>
+              <li>Zwracaj uwagę na: <strong>ironię</strong>, <strong>groteskę</strong>, narratora, symbole (miasto, dom, droga, miejsce).</li>
+            </ul>
+
+            <div class="strategy-box">
+              <span class="highlight">Strategia interpretacji „krok po kroku”:</span>
+              <ol>
+                <li>Ustal sytuację: kto mówi, z jakiej perspektywy, do kogo.</li>
+                <li>Określ konwencję: realizm / groteska / parabola / reportaż.</li>
+                <li>Wypisz 3 środki i ich funkcje (np. ironia → dystans; powtórzenia → presja; metafora → uogólnienie).</li>
+                <li>Wniosek: co tekst mówi o wolności/tożsamości/prawdzie dziś.</li>
+              </ol>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- JS (jak w Antyku: zwijanie sekcji, odpowiedzi, test) -->
+  <script>
+    function toggleSection(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.toggle("hidden");
+    }
+
+    function toggleAnswer(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.toggle("hidden");
+    }
+
+    function checkQuiz() {
+      const questions = document.querySelectorAll(".quiz-question");
+      let score = 0;
+
+      questions.forEach((q) => {
+        const correct = q.getAttribute("data-correct");
+        const name = q.querySelector('input[type="radio"]')?.name;
+        const chosen = name ? document.querySelector(`input[name="${name}"]:checked`) : null;
+
+        const options = q.querySelectorAll(".option");
+        options.forEach(opt => opt.classList.remove("correct","incorrect"));
+
+        const feedback = q.querySelector(".feedback-text");
+        if (feedback) {
+          feedback.classList.add("hidden");
+          feedback.textContent = "";
+        }
+
+        if (chosen) {
+          const chosenLabel = chosen.closest(".option");
+          if (chosen.value === correct) {
+            score++;
+            if (chosenLabel) chosenLabel.classList.add("correct");
+          } else {
+            if (chosenLabel) chosenLabel.classList.add("incorrect");
+            const correctInput = q.querySelector(`input[value="${correct}"]`);
+            const correctLabel = correctInput ? correctInput.closest(".option") : null;
+            if (correctLabel) correctLabel.classList.add("correct");
+            if (feedback) {
+              feedback.classList.remove("hidden");
+              feedback.textContent = "Spróbuj jeszcze raz: powtórz pojęcia (dystopia, nowomowa, groteska, parabola).";
+            }
+          }
+        } else {
+          if (feedback) {
+            feedback.classList.remove("hidden");
+            feedback.textContent = "Nie zaznaczono odpowiedzi.";
+          }
+        }
+      });
+
+      const scoreBox = document.getElementById("quiz-score");
+      if (scoreBox) {
+        scoreBox.textContent = `Wynik: ${score} / ${questions.length}`;
+      }
+    }
+  </script>
+</body>
+</html>
