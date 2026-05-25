@@ -1,12 +1,45 @@
+// app/notes/page.tsx
 export const revalidate = 0
 export const dynamic = 'force-dynamic'
 
-import { supabase } from '../lib/supabase'
+import { getSupabaseServer } from '../lib/supabaseServer'
+import { createClient } from '@supabase/supabase-js'
+
+// Tworzymy klienta admina do bezpiecznego sprawdzenia profilu bez barier RLS
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export default async function NotesPage() {
-  const { data: notes, error } = await supabase
-    .from('notes')
-    .select('*')
+  // 1. Pobieramy serwerowego klienta Supabase
+  const supabase = await getSupabaseServer()
+
+  // 2. Pobieramy aktualnie zalogowanego użytkownika
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // 3. Sprawdzamy status płatności użytkownika
+  let hasAccess = false
+  if (user) {
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('subscription_status')
+      .eq('id', user.id)
+      .single()
+      
+    if (profile?.subscription_status === 'paid') {
+      hasAccess = true
+    }
+  }
+
+  // 4. Budujemy zapytanie do bazy: 
+  // Jeśli brak premium -> pobieramy TYLKO darmowe notatki (is_free = true)
+  let query = supabase.from('notes').select('*')
+  if (!hasAccess) {
+    query = query.eq('is_free', true)
+  }
+
+  const { data: notes, error } = await query
 
   if (error) {
     return (
@@ -26,8 +59,7 @@ export default async function NotesPage() {
     );
   }
 
-  // Filter only Polish language notes
-      const polishNotes = notes || [];
+  const polishNotes = notes || [];
 
   return (
     <div className="min-h-screen bg-[#14100e] text-stone-200 font-sans flex flex-col transition-colors duration-500">
@@ -99,62 +131,75 @@ export default async function NotesPage() {
           </p>
         </div>
 
+        {/* PRZYTULNY BANER REKLAMOWY DLA UŻYTKOWNIKÓW FREE */}
+        {!hasAccess && (
+          <div className="rounded-2xl p-5 border border-amber-950/30 bg-amber-950/5 text-center flex flex-col items-center gap-3 shadow-md">
+            <span className="text-2xl">🔒</span>
+            <p className="text-xs text-amber-500 font-semibold">
+              Przeglądasz wersję demonstracyjną. Aby odblokować pełną bazę wszystkich notatek maturalnych bez ograniczeń, wykup dostęp premium.
+            </p>
+            <a
+              href="/"
+              className="px-4 py-2 text-xs font-bold bg-[#c68a4c] hover:bg-[#d99c5d] text-stone-950 rounded-xl transition-all hover:scale-105 shadow-md"
+            >
+              Uzyskaj Pełny Dostęp Premium 🔑
+            </a>
+          </div>
+        )}
+
         {/* Dynamic Notes List */}
         <div className="flex flex-col gap-5">
           {polishNotes && polishNotes.length > 0 ? (
             polishNotes.map((note) => {
-              // Extract subject for a custom emoji
-              const subjectLower = note.subject?.toLowerCase() || '';
-              let emoji = '📕';
-              let subjectColor = 'text-rose-400';
+              const emoji = '📕';
+              const subjectColor = 'text-rose-400';
 
               return (
-                
-                <a key={note.id} href={`/notes/${note.slug}`}target="_blank" rel="noopener noreferrer"><article
-                  key={note.id}
-                  className="rounded-2xl border border-amber-950/30 bg-[#1f1915]/90 p-6 hover:scale-[1.01] hover:shadow-lg transition-all duration-300 relative overflow-hidden group"
-                >
-                  {/* Decorative corner warm gradient */}
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/[0.02] rounded-full blur-2xl group-hover:bg-amber-500/[0.04] transition-all pointer-events-none" />
+                <a key={note.id} href={`/notes/${note.slug}`} target="_blank" rel="noopener noreferrer">
+                  <article
+                    className="rounded-2xl border border-amber-950/30 bg-[#1f1915]/90 p-6 hover:scale-[1.01] hover:shadow-lg transition-all duration-300 relative overflow-hidden group"
+                  >
+                    {/* Decorative corner warm gradient */}
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/[0.02] rounded-full blur-2xl group-hover:bg-amber-500/[0.04] transition-all pointer-events-none" />
 
-                  {/* Header metadata of the card */}
-                  <div className="flex items-center justify-between text-xs font-semibold text-stone-400">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-base">{emoji}</span>
-                      <span className={`uppercase tracking-wider ${subjectColor}`}>{note.subject}</span>
+                    {/* Header metadata of the card */}
+                    <div className="flex items-center justify-between text-xs font-semibold text-stone-400">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-base">{emoji}</span>
+                        <span className={`uppercase tracking-wider ${subjectColor}`}>{note.subject || "Język Polski"}</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-1.5 text-[11px] text-stone-500">
+                        <span>⏱️ 5-10 min czytania</span>
+                      </div>
                     </div>
-                    
-                    {/* Fake read time indicator to keep it cozy */}
-                    <div className="flex items-center gap-1.5 text-[11px] text-stone-500">
-                      <span>⏱️ 5-10 min czytania</span>
+
+                    {/* Note Title */}
+                    <h3 className="text-lg font-bold text-stone-100 font-serif mt-3 tracking-tight group-hover:text-amber-200 transition-colors">
+                      {note.title}
+                    </h3>
+
+                    {/* Main Content Body */}
+                    <p className="text-xs text-stone-300/95 leading-relaxed mt-3.5 whitespace-pre-line font-sans border-l-2 border-amber-900/30 pl-3">
+                      {note.content}
+                    </p>
+
+                    {/* Card footer details */}
+                    <div className="border-t border-stone-800/40 mt-5 pt-3.5 flex items-center justify-between text-[11px] text-stone-500">
+                      <div className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
+                        <span>Baza wiedzy CKE 2026</span>
+                      </div>
+                      <span className="font-serif italic text-amber-500/70">Wiedza Szyta na Miarę</span>
                     </div>
-                  </div>
-
-                  {/* Note Title */}
-                  <h3 className="text-lg font-bold text-stone-100 font-serif mt-3 tracking-tight group-hover:text-amber-200 transition-colors">
-                    {note.title}
-                  </h3>
-
-                  {/* Main Content Body */}
-                  <p className="text-xs text-stone-300/95 leading-relaxed mt-3.5 whitespace-pre-line font-sans border-l-2 border-amber-900/30 pl-3">
-                    {note.content}
-                  </p>
-
-                  {/* Card footer details */}
-                  <div className="border-t border-stone-800/40 mt-5 pt-3.5 flex items-center justify-between text-[11px] text-stone-500">
-                    <div className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
-                      <span>Baza wiedzy CKE 2026</span>
-                    </div>
-                    <span className="font-serif italic text-amber-500/70">Wiedza Szyta na Miarę</span>
-                  </div>
-                </article></a>
+                  </article>
+                </a>
               );
             })
           ) : (
             <div className="rounded-2xl border border-dashed border-stone-850 p-12 text-center text-stone-500 bg-[#1f1915]/40">
               <span className="text-3xl block mb-2">📭</span>
-              Brak notatek z języka polskiego w bazie danych. Dodaj je w panelu Supabase.
+              Brak darmowych notatek z języka polskiego w bazie danych. Odblokuj Premium, aby zobaczyć pełną bazę!
             </div>
           )}
         </div>

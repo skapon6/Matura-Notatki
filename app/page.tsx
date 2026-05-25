@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "./lib/supabase";
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 // Cozy quotes for Matura students
@@ -14,7 +15,32 @@ const COZY_QUOTES = [
   { text: "Krok po kroku i dojdziesz do celu. Matura to tylko kolejny przystanek.", author: "Wiedza Szyta na Miarę" }
 ];
 
+// Słownik tłumaczący błędy z języka angielskiego na polski
+const translateAuthError = (message: string): string => {
+  const msg = message.toLowerCase();
+  
+  if (msg.includes("user already registered") || msg.includes("already exists")) {
+    return "Użytkownik o tym adresie e-mail już istnieje!";
+  }
+  if (msg.includes("password should be at least")) {
+    return "Hasło musi mieć co najmniej 6 znaków!";
+  }
+  if (msg.includes("invalid login credentials")) {
+    return "Niepoprawny adres e-mail lub hasło!";
+  }
+  if (msg.includes("signup requires a valid email")) {
+    return "Wprowadź poprawny adres e-mail!";
+  }
+  if (msg.includes("email rate limit exceeded") || msg.includes("rate limit")) {
+    return "Zbyt wiele prób w krótkim czasie. Odczekaj chwilę!";
+  }
+  
+  // Jeśli pojawi się inny błąd, którego nie znamy, zwracamy go w oryginale
+  return message;
+};
+
 export default function Home() {
+  const router = useRouter();
   // Theme state
   const [cozyTheme, setCozyTheme] = useState<"library" | "rainy" | "fireplace">("library");
   
@@ -40,6 +66,19 @@ export default function Home() {
   const [isRegisterForm, setIsRegisterForm] = useState(false);
   const [authFormLoading, setAuthFormLoading] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
+
+  // SYSTEM PRZYTULNYCH POWIADOMIEŃ (ZAMIAST BRZYDKICH ALERTÓW)
+  const [cozyNotification, setCozyNotification] = useState<{
+    message: string;
+    type: "success" | "error" | "info";
+  } | null>(null);
+
+  const triggerNotification = (message: string, type: "success" | "error" | "info" = "info") => {
+    setCozyNotification({ message, type });
+    setTimeout(() => {
+      setCozyNotification(null);
+    }, 4500);
+  };
 
   // Sprawdzanie stanu zalogowania i płatności
   useEffect(() => {
@@ -104,9 +143,9 @@ export default function Home() {
         password: authPassword,
       });
       if (error) {
-        alert('Błąd rejestracji: ' + error.message);
+        triggerNotification(translateAuthError(error.message), 'error');
       } else {
-        alert('Konto zostało pomyślnie utworzone! Możesz się teraz zalogować.');
+        triggerNotification('Konto zostało pomyślnie utworzone! Możesz się teraz zalogować.', 'success');
         setIsRegisterForm(false);
       }
     } else {
@@ -115,7 +154,9 @@ export default function Home() {
         password: authPassword,
       });
       if (error) {
-        alert('Błąd logowania: ' + error.message);
+        triggerNotification(translateAuthError(error.message), 'error');
+      } else {
+        triggerNotification('Zalogowano pomyślnie!', 'success');
       }
     }
     setAuthFormLoading(false);
@@ -131,31 +172,26 @@ export default function Home() {
       if (data.url) {
         window.location.href = data.url;
       } else {
-        alert('Wystąpił błąd podczas generowania płatności: ' + (data.error || 'Brak linku'));
+        triggerNotification('Wystąpił błąd podczas generowania płatności: ' + (data.error || 'Brak linku'), 'error');
       }
     } catch (err) {
       console.error(err);
-      alert('Błąd połączenia z serwerem płatności.');
+      triggerNotification('Błąd połączenia z serwerem płatności.', 'error');
     } finally {
       setPaymentLoading(false);
     }
   };
 
   // Pobieranie notatek
-// Pobieranie notatek (Zabezpieczone pobieranie darmowych / płatnych)
+// Pobieranie notatek (Zabezpieczone i zoptymalizowane pod kątem widoczności karty)
+// Pobieranie notatek (Zoptymalizowana, bezbłędna wersja)
+// Pobieranie wszystkich notatek (płatne będą zablokowane na ekranie)
   useEffect(() => {
     async function fetchNotes() {
       setLoading(true)
       try {
-        let query = supabase.from("notes").select("*");
-
-        // ZMIANA TUTAJ: Jeśli użytkownik NIE MA premium, 
-        // pobieramy z bazy tylko te notatki, które oznaczyliśmy jako darmowe (is_free = true)
-        if (!hasAccess) {
-          query = query.eq('is_free', true);
-        }
-
-        const { data, error } = await query;
+        // Pobieramy wszystkie notatki, aby darmowy użytkownik widział całe Archiwum Wiedzy
+        const { data, error } = await supabase.from("notes").select("*");
 
         if (!error && data) {
           setNotes(data as any[]);
@@ -168,8 +204,6 @@ export default function Home() {
     }
 
     fetchNotes()
-    document.addEventListener('visibilitychange', fetchNotes)
-    return () => document.removeEventListener('visibilitychange', fetchNotes)
   }, [hasAccess])
 
   // Pomodoro state
@@ -207,11 +241,11 @@ export default function Home() {
       if (pomodoroMode === "work") {
         setPomodoroMode("break");
         setTimeLeft(5 * 60);
-        alert("Czas na przerwę! Napij się herbaty ☕");
+        triggerNotification("Czas na przerwę! Napij się herbaty ☕", "success");
       } else {
         setPomodoroMode("work");
         setTimeLeft(25 * 60);
-        alert("Czas wracać do pracy! Skupienie 📚");
+        triggerNotification("Czas wracać do pracy! Skupienie 📚", "info");
       }
     }
     return () => {
@@ -327,13 +361,18 @@ export default function Home() {
   };
 
   // Epochs keywords mapping for smart dynamic searching
+// Pełna mapa epok maturalnych do wyszukiwania
   const epochKeywords: Record<string, string[]> = {
-    "Barok": ["barok", "vanitas", "konceptyzm", "sarmatyzm", "marinizm"],
-    "Romantyzm": ["romantyzm", "kordian", "mickiewicz", "słowacki", "dziady", "pan tadeusz"],
-    "Pozytywizm": ["pozytywizm", "lalka", "prus", "orzeszkowa", "nad niemnem", "mendel gdanski"],
-    "Młoda Polska": ["młoda polska", "wesele", "wyspiański", "ludzie bezdomni", "chłopi", "reymont"],
-    "Dwudziestolecie": ["dwudziestolecie", "ferdydurke", "gombrowicz", "przedwiośnie", "żeromski", "granica", "nałkowska"],
-    "Współczesność": ["współczesność", "tango", "mrożek", "ocalenie", "szymborska", "różewicz", "herbert"]
+    "Antyk": ["antyk", "starożytność", "mitologia", "homer", "sofokles", "biblia", "mit", "jan kochanowski odprawa"],
+    "Średniowiecze": ["średniowiecze", "bogurodzica", "lament swietokrzyski", "pieśń o rolandzie", "rozmowa mistrza polikarpa"],
+    "Renesans": ["renesans", "odrodzenie", "kochanowski", "treny", "szachy", "odprawa posłów"],
+    "Barok": ["barok", "vanitas", "konceptyzm", "sarmatyzm", "marinizm", "paski", "morsztyn"],
+    "Oświecenie": ["oświecenie", "krasicki", "monachomachia", "hymn do miłości", "żona modna", "powrót posła"],
+    "Romantyzm": ["romantyzm", "kordian", "mickiewicz", "słowacki", "dziady", "pan tadeusz", "ballady i romanse"],
+    "Pozytywizm": ["pozytywizm", "lalka", "prus", "orzeszkowa", "nad niemnem", "mendel gdanski", "gloria victis"],
+    "Młoda Polska": ["młoda polska", "wesele", "wyspiański", "ludzie bezdomni", "chłopi", "reymont", "padewski"],
+    "Dwudziestolecie": ["dwudziestolecie", "ferdydurke", "gombrowicz", "przedwiośnie", "żeromski", "granica", "nałkowska", "skamander"],
+    "Współczesność": ["współczesność", "tango", "mrożek", "ocalenie", "szymborska", "różewicz", "herbert", "inny świat", "opoowiadania borowskiego"]
   };
 
   // Filter notes based on search & subject (epoch) selection
@@ -440,36 +479,22 @@ export default function Home() {
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-500 ${currentTheme.bg} text-stone-200 font-sans`}>
-      {/* Dynamic Embedded Keyframe Animations for Steam Effect */}
+      {/* Dynamic Embedded Keyframe Animations for Steam Effect & Slide-In Notification */}
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes steam {
-          0% {
-            transform: translateY(0) scaleX(1);
-            opacity: 0;
-          }
-          15% {
-            opacity: 0.4;
-          }
-          50% {
-            transform: translateY(-10px) scaleX(1.3);
-            opacity: 0.2;
-          }
-          100% {
-            transform: translateY(-22px) scaleX(0.7);
-            opacity: 0;
-          }
+          0% { transform: translateY(0) scaleX(1); opacity: 0; }
+          15% { opacity: 0.4; }
+          50% { transform: translateY(-10px) scaleX(1.3); opacity: 0.2; }
+          100% { transform: translateY(-22px) scaleX(0.7); opacity: 0; }
         }
-        .steam-line {
-          animation: steam 3.5s infinite ease-in-out;
+        @keyframes slideIn {
+          0% { transform: translateY(30px) scale(0.95); opacity: 0; }
+          100% { transform: translateY(0) scale(1); opacity: 1; }
         }
-        .steam-line-2 {
-          animation: steam 3.5s infinite ease-in-out;
-          animation-delay: 1.2s;
-        }
-        .steam-line-3 {
-          animation: steam 3.5s infinite ease-in-out;
-          animation-delay: 2.2s;
-        }
+        .steam-line { animation: steam 3.5s infinite ease-in-out; }
+        .steam-line-2 { animation: steam 3.5s infinite ease-in-out; animation-delay: 1.2s; }
+        .steam-line-3 { animation: steam 3.5s infinite ease-in-out; animation-delay: 2.2s; }
+        .animate-slide-in { animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
       `}} />
 
       {/* HEADER SECTION */}
@@ -524,15 +549,26 @@ export default function Home() {
                 <span className={`w-2 h-2 rounded-full ${hasAccess ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
                 <span>{user.email.split('@')[0]} ({hasAccess ? 'Premium' : 'Darmowy'})</span>
               </div>
-              <button
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                  window.location.reload();
-                }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold border border-red-900/30 bg-red-950/20 text-red-400 hover:bg-red-900 hover:text-white transition-all`}
-              >
-                Wyloguj
-              </button>
+                <button
+                    onClick={async () => {
+                      try {
+                        // Próbujemy wylogować użytkownika w chmurze
+                        await supabase.auth.signOut();
+                      } catch (err) {
+                        // Jeśli użytkownik nie istnieje w bazie (lub nie ma internetu), ignorujemy błąd sieciowy
+                        console.warn("Wylogowanie w chmurze pominięte (użytkownik prawdopodobnie usunięty z bazy):", err);
+                      } finally {
+                        // Te linijki wykonają się ZAWSZE. Gwarantuje to, że przeglądarka 
+                        // i tak zapomni sesję i natychmiast pokaże ekran logowania!
+                        setUser(null);
+                        setHasAccess(false);
+                        router.refresh();
+                      }
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold border border-red-900/30 bg-red-950/20 text-red-400 hover:bg-red-900 hover:text-white transition-all`}
+                  >
+                    Wyloguj
+                </button>
             </div>
           ) : (
             <div className={`hidden sm:flex items-center gap-2 px-3 py-1 text-xs rounded-full bg-stone-900/60 border ${currentTheme.cardBorder}`}>
@@ -701,9 +737,9 @@ export default function Home() {
                   <button 
                     onClick={() => {
                       if (!hasAccess) {
-                        alert("🔒 Ta opcja wymaga konta Premium. Kliknij 'Uzyskaj Pełny Dostęp' u góry strony, aby odblokować!");
+                        triggerNotification("🔒 Ta opcja wymaga konta Premium. Kliknij 'Uzyskaj Pełny Dostęp' u góry strony, aby odblokować!", "error");
                       } else {
-                        alert("Statystyki Twoich postępów zostaną wkrótce zsynchronizowane!");
+                        triggerNotification("Statystyki Twoich postępów zostaną wkrótce zsynchronizowane!", "info");
                       }
                     }}
                     className="flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-900/60 group transition-all text-left w-full"
@@ -720,9 +756,9 @@ export default function Home() {
                   <button 
                     onClick={() => {
                       if (!hasAccess) {
-                        alert("🔒 Szybkie Fiszki są dostępne w wersji Premium!");
+                        triggerNotification("🔒 Szybkie Fiszki są dostępne w wersji Premium!", "error");
                       } else {
-                        alert("Moduł Quizów i Fiszarek w przygotowaniu! Wróć niebawem 🦉");
+                        triggerNotification("Moduł Quizów i Fiszarek w przygotowaniu! Wróć niebawem 🦉", "info");
                       }
                     }}
                     className="flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-900/60 group transition-all text-left w-full"
@@ -738,7 +774,7 @@ export default function Home() {
                 </nav>
               </div>
 
-              {/* AI Essay Card - Cozy Style (Blokowana jeśli brak hasAccess) */}
+              {/* AI Essay Card - Cozy Style */}
               <div className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-5 relative overflow-hidden transition-colors duration-500 group`}>
                 <div className="absolute top-0 right-0 w-24 h-24 bg-purple-600/5 rounded-full blur-2xl group-hover:bg-purple-600/10 transition-all duration-500" />
                 
@@ -772,9 +808,9 @@ export default function Home() {
                 <button
                   onClick={() => {
                     if (!hasAccess) {
-                      alert("🔒 To narzędzie AI jest dostępne tylko dla kont Premium. Kliknij 'Uzyskaj Pełny Dostęp' u góry strony, aby je odblokować!");
+                      triggerNotification("🔒 To narzędzie AI jest dostępne tylko dla kont Premium. Kliknij 'Uzyskaj Pełny Dostęp' u góry strony, aby je odblokować!", "error");
                     } else {
-                      alert("Inteligentne sprawdzanie wypracowań będzie dostępne już wkrótce! Baza wiedzy o kryteriach CKE jest właśnie przygotowywana.");
+                      triggerNotification("Inteligentne sprawdzanie wypracowań będzie dostępne już wkrótce! Baza wiedzy o kryteriach CKE jest właśnie przygotowywana.", "info");
                     }
                   }}
                   className={`w-full mt-4 py-2 rounded-xl text-xs font-bold text-purple-200 border border-purple-900/60 bg-purple-950/20 hover:bg-[#2c1b3d] hover:text-white transition-all`}
@@ -847,11 +883,10 @@ export default function Home() {
                   </div>
                 ) : filteredNotes.length > 0 ? (
                   filteredNotes.map((note) => {
-                   const handleNoteClick = (e: React.MouseEvent) => {
-                      // Jeśli użytkownik nie ma premium, ale notatka JEST darmowa, pozwalamy na kliknięcie!
-                      if (!hasAccess && !note.is_free) { 
+                    const handleNoteClick = (e: React.MouseEvent) => {
+                      if (!hasAccess && !note.is_free) {
                         e.preventDefault();
-                        alert("🔒 Ta notatka wymaga konta Premium. Kliknij 'Uzyskaj Pełny Dostęp' u góry strony, aby odblokować całą bazę!");
+                        triggerNotification("🔒 Ta notatka wymaga konta Premium. Kliknij 'Uzyskaj Pełny Dostęp' u góry strony, aby odblokować całą bazę notatek!", "error");
                       }
                     };
 
@@ -961,179 +996,206 @@ export default function Home() {
                       onClick={() => switchPomodoroMode("break")}
                       className={`text-[10px] px-2 py-0.5 rounded-md font-semibold transition-all ${
                         pomodoroMode === "break"
-                          ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
-                          : "bg-transparent text-stone-500 hover:text-stone-300"
-                      }`}
-                    >
-                      Relaks
-                    </button>
-                  </div>
-                </div>
-
-                <div className="bg-stone-900/60 border border-stone-800/80 rounded-2xl p-4 text-center">
-                  <span className="text-3xl font-extrabold tracking-widest text-stone-100 font-mono drop-shadow-sm select-none">
-                    {formatTime(timeLeft)}
-                  </span>
-                  <p className="text-[10px] text-stone-500 mt-1">
-                    {pomodoroMode === "work" ? "Czas na głębokie skupienie 📚" : "Czas na chwilę wytchnienia ☕"}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 mt-3.5">
-                  <button
-                    onClick={toggleTimer}
-                    className={`py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                      timerRunning
-                        ? "bg-stone-800 text-stone-300 border border-stone-700 hover:bg-stone-700"
-                        : `${currentTheme.accentBg} text-stone-950 ${currentTheme.accentHover} shadow-md`
-                    }`}
-                  >
-                    {timerRunning ? (
-                      <>
-                        <span>⏸️</span> Pauza
-                      </>
-                    ) : (
-                      <>
-                        <span>▶️</span> Start
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    onClick={resetTimer}
-                    className="py-2 rounded-xl text-xs font-bold bg-stone-900 hover:bg-stone-850 border border-stone-800/60 text-stone-400 hover:text-stone-200 transition-all flex items-center justify-center gap-1"
-                  >
-                    <span>🔄</span> Reset
-                  </button>
-                </div>
-              </div>
-
-              {/* Cytat Dnia z przyciskiem rotacji */}
-              <div 
-                onClick={rotateQuote}
-                className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-5 cursor-pointer relative overflow-hidden transition-all duration-300 hover:scale-[1.01]`}
-              >
-                <div className="flex items-center justify-between text-xs text-stone-500 mb-2">
-                  <span>💡 Mądrość na dziś</span>
-                  <span className="text-[10px] text-amber-500/80">kliknij po kolejny →</span>
-                </div>
-                
-                <p className="text-xs text-stone-300 font-serif leading-relaxed italic">
-                  &quot;{COZY_QUOTES[quoteIndex].text}&quot;
-                </p>
-                
-                <p className="text-[10px] text-stone-500 mt-2 text-right">
-                  — {COZY_QUOTES[quoteIndex].author}
-                </p>
-              </div>
-            </section>
-          </main>
-        </>
-      )}
-
-      {/* CLIMATIC SETTINGS OVERLAY / DIALOG MODAL */}
-      {isSettingsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-fade-in">
-          <div className={`w-full max-w-md bg-[#1f1915] border border-amber-950/40 rounded-3xl p-6 shadow-2xl relative`}>
-            <button
-              onClick={() => setIsSettingsOpen(false)}
-              className="absolute top-4 right-4 text-stone-400 hover:text-stone-100 text-lg transition-colors"
-            >
-              ✕
-            </button>
-
-            <h3 className="text-lg font-bold font-serif text-stone-100 flex items-center gap-2 mb-2">
-              ☕ Ustawienia Twojej Kawiarni Nauki
-            </h3>
-            <p className="text-xs text-stone-400 mb-5">
-              Dostosuj otoczenie do własnego tempa. Zmiana klimatu wpływa na tło strony oraz rodzaj odtwarzanego szumu.
-            </p>
-
-            <div className="flex flex-col gap-3">
-              <label className="text-xs font-semibold text-amber-500 uppercase tracking-widest">
-                Wybierz Motyw Wizualny i Dźwiękowy
-              </label>
-
-              <div className="grid grid-cols-1 gap-2.5">
-                <button
-                  onClick={() => setCozyTheme("library")}
-                  className={`flex items-center justify-between p-3.5 rounded-2xl border text-left transition-all ${
-                    cozyTheme === "library"
-                      ? "border-amber-500 bg-[#c68a4c]/10 text-stone-200"
-                      : "border-stone-800 bg-stone-900/60 text-stone-400 hover:border-stone-700 hover:text-stone-200"
+                      ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
+                      : "bg-transparent text-stone-500 hover:text-stone-300"
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">🍂</span>
-                    <div>
-                      <p className="text-xs font-bold">Ciepła Biblioteka (Domyślny)</p>
-                      <p className="text-[10px] text-stone-500">Cynamonowe barwy, delikatny szum papieru</p>
-                    </div>
-                  </div>
-                  {cozyTheme === "library" && <span className="text-amber-500 text-xs">●</span>}
-                </button>
-
-                <button
-                  onClick={() => setCozyTheme("rainy")}
-                  className={`flex items-center justify-between p-3.5 rounded-2xl border text-left transition-all ${
-                    cozyTheme === "rainy"
-                      ? "border-sky-500 bg-sky-950/15 text-stone-200"
-                      : "border-stone-800 bg-stone-900/60 text-stone-400 hover:border-stone-700 hover:text-stone-200"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">🌧️</span>
-                    <div>
-                      <p className="text-xs font-bold">Deszczowy Wieczór</p>
-                      <p className="text-[10px] text-stone-500">Głębokie chłodne szarości, szum deszczu za oknem</p>
-                    </div>
-                  </div>
-                  {cozyTheme === "rainy" && <span className="text-sky-500 text-xs">●</span>}
-                </button>
-
-                <button
-                  onClick={() => setCozyTheme("fireplace")}
-                  className={`flex items-center justify-between p-3.5 rounded-2xl border text-left transition-all ${
-                    cozyTheme === "fireplace"
-                      ? "border-red-600 bg-red-950/15 text-stone-200"
-                      : "border-stone-800 bg-stone-900/60 text-stone-400 hover:border-stone-700 hover:text-stone-200"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">🔥</span>
-                    <div>
-                      <p className="text-xs font-bold">Kominek w Schronisku</p>
-                      <p className="text-[10px] text-stone-500">Ciepła powłoka węglowa, trzaski płonącego drewna</p>
-                    </div>
-                  </div>
-                  {cozyTheme === "fireplace" && <span className="text-red-500 text-xs">●</span>}
+                  Relaks
                 </button>
               </div>
             </div>
 
-            <div className="mt-6 pt-4 border-t border-stone-800 flex justify-end">
+            <div className="bg-stone-900/60 border border-stone-800/80 rounded-2xl p-4 text-center">
+              <span className="text-3xl font-extrabold tracking-widest text-stone-100 font-mono drop-shadow-sm select-none">
+                {formatTime(timeLeft)}
+              </span>
+              <p className="text-[10px] text-stone-500 mt-1">
+                {pomodoroMode === "work" ? "Czas na głębokie skupienie 📚" : "Czas na chwilę wytchnienia ☕"}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 mt-3.5">
               <button
-                onClick={() => setIsSettingsOpen(false)}
-                className="px-5 py-2 rounded-xl text-xs font-bold bg-amber-500 text-stone-950 hover:bg-amber-400 transition-all active:scale-95"
+                onClick={toggleTimer}
+                className={`py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                  timerRunning
+                    ? "bg-stone-800 text-stone-300 border border-stone-700 hover:bg-stone-700"
+                    : `${currentTheme.accentBg} text-stone-950 ${currentTheme.accentHover} shadow-md`
+                }`}
               >
-                Zamknij i Zastosuj
+                {timerRunning ? (
+                  <>
+                    <span>⏸️</span> Pauza
+                  </>
+                ) : (
+                  <>
+                    <span>▶️</span> Start
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={resetTimer}
+                className="py-2 rounded-xl text-xs font-bold bg-stone-900 hover:bg-stone-850 border border-stone-800/60 text-stone-400 hover:text-stone-200 transition-all flex items-center justify-center gap-1"
+              >
+                <span>🔄</span> Reset
               </button>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* FOOTER */}
-      <footer className={`border-t ${currentTheme.cardBorder} mt-auto py-6 px-6 text-center text-xs ${currentTheme.subText} transition-colors duration-500 bg-stone-950/20`}>
-        <div className="max-w-7xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p>© 2026 Wiedza Szyta na Miarę. Stworzone z miłości do spokojnej nauki.</p>
-          <div className="flex gap-4">
-            <button onClick={() => alert("Regulamin platformy w trakcie sporządzania 📜")} className="hover:text-stone-100 transition-colors">Regulamin</button>
-            <button onClick={() => alert("Polityka prywatności gwarantuje pełne bezpieczeństwo danych 🔒")} className="hover:text-stone-100 transition-colors">Prywatność</button>
-            <a href="mailto:kontakt@wiedzaszytanamiare.pl" className="hover:text-stone-100 transition-colors">Kontakt</a>
+          {/* Cytat Dnia z przyciskiem rotacji */}
+          <div 
+            onClick={rotateQuote}
+            className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-5 cursor-pointer relative overflow-hidden transition-all duration-300 hover:scale-[1.01]`}
+          >
+            <div className="flex items-center justify-between text-xs text-stone-500 mb-2">
+              <span>💡 Mądrość na dziś</span>
+              <span className="text-[10px] text-amber-500/80">kliknij po kolejny →</span>
+            </div>
+            
+            <p className="text-xs text-stone-300 font-serif leading-relaxed italic">
+              &quot;{COZY_QUOTES[quoteIndex].text}&quot;
+            </p>
+            
+            <p className="text-[10px] text-stone-500 mt-2 text-right">
+              — {COZY_QUOTES[quoteIndex].author}
+            </p>
+          </div>
+        </section>
+      </main>
+    </>
+  )}
+
+  {/* CLIMATIC SETTINGS OVERLAY / DIALOG MODAL */}
+  {isSettingsOpen && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-fade-in">
+      <div className={`w-full max-w-md bg-[#1f1915] border border-amber-950/40 rounded-3xl p-6 shadow-2xl relative`}>
+        <button
+          onClick={() => setIsSettingsOpen(false)}
+          className="absolute top-4 right-4 text-stone-400 hover:text-stone-100 text-lg transition-colors"
+        >
+          ✕
+        </button>
+
+        <h3 className="text-lg font-bold font-serif text-stone-100 flex items-center gap-2 mb-2">
+          ☕ Ustawienia Twojej Kawiarni Nauki
+        </h3>
+        <p className="text-xs text-stone-400 mb-5">
+          Dostosuj otoczenie do własnego tempa. Zmiana klimatu wpływa na tło strony oraz rodzaj odtwarzanego szumu.
+        </p>
+
+        <div className="flex flex-col gap-3">
+          <label className="text-xs font-semibold text-amber-500 uppercase tracking-widest">
+            Wybierz Motyw Wizualny i Dźwiękowy
+          </label>
+
+          <div className="grid grid-cols-1 gap-2.5">
+            <button
+              onClick={() => setCozyTheme("library")}
+              className={`flex items-center justify-between p-3.5 rounded-2xl border text-left transition-all ${
+                cozyTheme === "library"
+                  ? "border-amber-500 bg-[#c68a4c]/10 text-stone-200"
+                  : "border-stone-800 bg-stone-900/60 text-stone-400 hover:border-stone-700 hover:text-stone-200"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-xl">🍂</span>
+                <div>
+                  <p className="text-xs font-bold">Ciepła Biblioteka (Domyślny)</p>
+                  <p className="text-[10px] text-stone-500">Cynamonowe barwy, delikatny szum papieru</p>
+                </div>
+              </div>
+              {cozyTheme === "library" && <span className="text-amber-500 text-xs">●</span>}
+            </button>
+
+            <button
+              onClick={() => setCozyTheme("rainy")}
+              className={`flex items-center justify-between p-3.5 rounded-2xl border text-left transition-all ${
+                cozyTheme === "rainy"
+                  ? "border-sky-500 bg-sky-950/15 text-stone-200"
+                  : "border-stone-800 bg-stone-900/60 text-stone-400 hover:border-stone-700 hover:text-stone-200"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-xl">🌧️</span>
+                <div>
+                  <p className="text-xs font-bold">Deszczowy Wieczór</p>
+                  <p className="text-[10px] text-stone-500">Głębokie chłodne szarości, szum deszczu za oknem</p>
+                </div>
+              </div>
+              {cozyTheme === "rainy" && <span className="text-sky-500 text-xs">●</span>}
+            </button>
+
+            <button
+              onClick={() => setCozyTheme("fireplace")}
+              className={`flex items-center justify-between p-3.5 rounded-2xl border text-left transition-all ${
+                cozyTheme === "fireplace"
+                  ? "border-red-600 bg-red-950/15 text-stone-200"
+                  : "border-stone-800 bg-stone-900/60 text-stone-400 hover:border-stone-700 hover:text-stone-200"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-xl">🔥</span>
+                <div>
+                  <p className="text-xs font-bold">Kominek w Schronisku</p>
+                  <p className="text-[10px] text-stone-500">Ciepła powłoka węglowa, trzaski płonącego drewna</p>
+                </div>
+              </div>
+              {cozyTheme === "fireplace" && <span className="text-red-500 text-xs">●</span>}
+            </button>
           </div>
         </div>
-      </footer>
+
+        <div className="mt-6 pt-4 border-t border-stone-800 flex justify-end">
+          <button
+            onClick={() => setIsSettingsOpen(false)}
+            className="px-5 py-2 rounded-xl text-xs font-bold bg-amber-500 text-stone-950 hover:bg-amber-400 transition-all active:scale-95"
+          >
+            Zamknij i Zastosuj
+          </button>
+        </div>
+      </div>
     </div>
-  );
+  )}
+
+  {/* FOOTER */}
+  <footer className={`border-t ${currentTheme.cardBorder} mt-auto py-6 px-6 text-center text-xs ${currentTheme.subText} transition-colors duration-500 bg-stone-950/20`}>
+    <div className="max-w-7xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-3">
+      <p>© 2026 Wiedza Szyta na Miarę. Stworzone z miłości do spokojnej nauki.</p>
+      <div className="flex gap-4">
+        <button onClick={() => alert("Regulamin platformy w trakcie sporządzania 📜")} className="hover:text-stone-100 transition-colors">Regulamin</button>
+        <button onClick={() => alert("Polityka prywatności gwarantuje pełne bezpieczeństwo danych 🔒")} className="hover:text-stone-100 transition-colors">Prywatność</button>
+        <a href="mailto:kontakt@wiedzaszytanamiare.pl" className="hover:text-stone-100 transition-colors">Kontakt</a>
+      </div>
+    </div>
+  </footer>
+
+  {/* PRZYTULNE POWIADOMIENIE (ZAMIAST BRZYDKIEGO ALERTU) */}
+  {cozyNotification && (
+    <div className="fixed bottom-6 right-6 z-50 animate-slide-in">
+      <div className={`flex items-center gap-3.5 px-5 py-4 rounded-2xl border shadow-2xl backdrop-blur-md max-w-sm ${
+        cozyNotification.type === 'success'
+          ? 'bg-emerald-950/90 border-emerald-500/30 text-emerald-200'
+          : cozyNotification.type === 'error'
+          ? 'bg-red-950/90 border-red-500/30 text-red-200'
+          : 'bg-[#251b15]/95 border-amber-950/40 text-stone-200'
+      }`}>
+        <span className="text-xl">
+          {cozyNotification.type === 'success' ? '✨' : cozyNotification.type === 'error' ? '⚠️' : '☕'}
+        </span>
+        <p className="text-xs font-semibold leading-relaxed pr-2">
+          {cozyNotification.message}
+        </p>
+        <button 
+          onClick={() => setCozyNotification(null)}
+          className="text-stone-400 hover:text-stone-100 text-xs ml-auto font-bold focus:outline-none"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+  )}
+
+</div>
+);
 }
