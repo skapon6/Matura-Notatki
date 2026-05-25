@@ -15,6 +15,7 @@ const COZY_QUOTES = [
   { text: "Krok po kroku i dojdziesz do celu. Matura to tylko kolejny przystanek.", author: "Wiedza Szyta na Miarę" }
 ];
 
+
 // Słownik tłumaczący błędy z języka angielskiego na polski
 const translateAuthError = (message: string): string => {
   const msg = message.toLowerCase();
@@ -43,6 +44,9 @@ export default function Home() {
   const router = useRouter();
   // Theme state
   const [cozyTheme, setCozyTheme] = useState<"library" | "rainy" | "fireplace">("library");
+
+  const [newPassword, setNewPassword] = useState("");
+  const [passwordChangeLoading, setPasswordChangeLoading] = useState(false);
   
   // Settings modal
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -81,45 +85,24 @@ export default function Home() {
   };
 
   // Sprawdzanie stanu zalogowania i płatności
+// 1. Bezpieczny nasłuchiwalnik samego logowania (bez zapytań do bazy, aby zapobiec zawieszaniu Supabase!)
   useEffect(() => {
-    async function checkUserAndAccess() {
+    async function checkInitialSession() {
       setAuthLoading(true);
       const { data: { session } } = await supabase.auth.getSession();
-      
       if (session?.user) {
         setUser(session.user);
-        
-        // Pobieramy profil, aby sprawdzić czy zapłacił
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('subscription_status')
-          .eq('id', session.user.id)
-          .single();
-          
-        if (profile?.subscription_status === 'paid') {
-          setHasAccess(true);
-        } else {
-          setHasAccess(false);
-        }
       } else {
         setUser(null);
-        setHasAccess(false);
       }
       setAuthLoading(false);
     }
     
-    checkUserAndAccess();
+    checkInitialSession();
     
-    // Słuchamy zmian stanu logowania w czasie rzeczywistym
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         setUser(session.user);
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('subscription_status')
-          .eq('id', session.user.id)
-          .single();
-        setHasAccess(profile?.subscription_status === 'paid');
       } else {
         setUser(null);
         setHasAccess(false);
@@ -131,6 +114,28 @@ export default function Home() {
       subscription.unsubscribe();
     };
   }, []);
+
+  // 2. Osobny proces pobierania profilu (uruchamia się automatycznie tylko gdy 'user' się zmieni)
+  useEffect(() => {
+    async function fetchUserProfile() {
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('subscription_status')
+          .eq('id', user.id)
+          .single();
+          
+        if (profile?.subscription_status === 'paid' || profile?.subscription_status === 'admin') {
+          setHasAccess(true);
+        } else {
+          setHasAccess(false);
+        }
+      } else {
+        setHasAccess(false);
+      }
+    }
+    fetchUserProfile();
+  }, [user]);
 
   // Obsługa logowania / rejestracji
   const handleAuthSubmit = async (e: React.FormEvent) => {
@@ -179,6 +184,36 @@ export default function Home() {
       triggerNotification('Błąd połączenia z serwerem płatności.', 'error');
     } finally {
       setPaymentLoading(false);
+    }
+  };
+
+  // Funkcja zmiany hasła użytkownika
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (newPassword.length < 6) {
+      triggerNotification("Hasło musi mieć co najmniej 6 znaków!", "error");
+      return;
+    }
+
+    setPasswordChangeLoading(true);
+    try {
+      // Wywołujemy oficjalną funkcję Supabase do aktualizacji danych użytkownika
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) {
+        triggerNotification(translateAuthError(error.message), "error");
+      } else {
+        triggerNotification("Hasło zostało pomyślnie zmienione! 🔑", "success");
+        setNewPassword(""); // Czyścimy pole tekstowe po sukcesie
+      }
+    } catch (err) {
+      console.error(err);
+      triggerNotification("Wystąpił błąd podczas zmiany hasła.", "error");
+    } finally {
+      setPasswordChangeLoading(false);
     }
   };
 
@@ -362,17 +397,19 @@ export default function Home() {
 
   // Epochs keywords mapping for smart dynamic searching
 // Pełna mapa epok maturalnych do wyszukiwania
+// Pełna, chronologiczna mapa epok maturalnych do wyszukiwania
   const epochKeywords: Record<string, string[]> = {
-    "Antyk": ["antyk", "starożytność", "mitologia", "homer", "sofokles", "biblia", "mit", "jan kochanowski odprawa"],
-    "Średniowiecze": ["średniowiecze", "bogurodzica", "lament swietokrzyski", "pieśń o rolandzie", "rozmowa mistrza polikarpa"],
-    "Renesans": ["renesans", "odrodzenie", "kochanowski", "treny", "szachy", "odprawa posłów"],
-    "Barok": ["barok", "vanitas", "konceptyzm", "sarmatyzm", "marinizm", "paski", "morsztyn"],
-    "Oświecenie": ["oświecenie", "krasicki", "monachomachia", "hymn do miłości", "żona modna", "powrót posła"],
-    "Romantyzm": ["romantyzm", "kordian", "mickiewicz", "słowacki", "dziady", "pan tadeusz", "ballady i romanse"],
-    "Pozytywizm": ["pozytywizm", "lalka", "prus", "orzeszkowa", "nad niemnem", "mendel gdanski", "gloria victis"],
-    "Młoda Polska": ["młoda polska", "wesele", "wyspiański", "ludzie bezdomni", "chłopi", "reymont", "padewski"],
-    "Dwudziestolecie": ["dwudziestolecie", "ferdydurke", "gombrowicz", "przedwiośnie", "żeromski", "granica", "nałkowska", "skamander"],
-    "Współczesność": ["współczesność", "tango", "mrożek", "ocalenie", "szymborska", "różewicz", "herbert", "inny świat", "opoowiadania borowskiego"]
+    "Antyk": ["antyk", "starożytność", "mitologia", "homer", "sofokles", "biblia", "mit", "antygona", "król edyp", "iliada", "odyseja"],
+    "Średniowiecze": ["średniowiecze", "bogurodzica", "lament swietokrzyski", "pieśń o rolandzie", "rozmowa mistrza polikarpa", "gall anonim"],
+    "Renesans": ["renesans", "odrodzenie", "kochanowski", "treny", "szachy", "odprawa posłów", "fraszki", "pieśni", "mikołaj rej", "szekspir", "makbet"],
+    "Barok": ["barok", "vanitas", "konceptyzm", "sarmatyzm", "marinizm", "paski", "morsztyn", "naborowski", "skąpiec", "molier"],
+    "Oświecenie": ["oświecenie", "krasicki", "monachomachia", "hymn do miłości", "żona modna", "powrót posła", "bajki"],
+    "Romantyzm": ["romantyzm", "kordian", "mickiewicz", "słowacki", "dziady", "pan tadeusz", "ballady i romanse", "nie-boska komedia", "krasiński"],
+    "Pozytywizm": ["pozytywizm", "lalka", "prus", "orzeszkowa", "nad niemnem", "mendel gdanski", "gloria victis", "potop", "sienkiewicz"],
+    "Młoda Polska": ["młoda polska", "wesele", "wyspiański", "ludzie bezdomni", "chłopi", "reymont", "deszcz jesienny", "tetmajer", "kasprowicz"],
+    "Dwudziestolecie": ["dwudziestolecie", "ferdydurke", "gombrowicz", "przedwiośnie", "żeromski", "granica", "nałkowska", "skamander", "schulz", "sklepy cynamonowe"],
+    "Wojna i okupacja": ["wojna", "okupacja", "kamienie na szaniec", "baczyński", "borowski", "opoowiadania borowskiego", "inny świat", "grudziński"],
+    "Współczesność": ["współczesność", "tango", "mrożek", "ocalenie", "szymborska", "różewicz", "herbert", "rok 1984", "orwell", "dżuma", "camus"]
   };
 
   // Filter notes based on search & subject (epoch) selection
@@ -400,11 +437,17 @@ export default function Home() {
     return note.era ? `Epoka: ${note.era}` : '';
   };
 
-  const filteredNotes = notes.filter((note) => {
+    const filteredNotes = notes.filter((note) => {
     const titleLower = (note.title || "").toLowerCase();
     const contentString = typeof note.content === 'string' ? note.content : JSON.stringify(note.content || "");
     const contentLower = contentString.toLowerCase();
-    const textToSearch = `${titleLower} ${contentLower}`;
+    
+    // ZMIANA TUTAJ: Zamieniamy tablicę tagów (chips) na jeden ciąg tekstowy rozdzielony spacjami
+    const chipsString = Array.isArray(note.chips) ? note.chips.join(" ") : "";
+    const chipsLower = chipsString.toLowerCase();
+    
+    // Łączymy wszystko razem: tytuł + treść + słowa kluczowe (tagi)
+    const textToSearch = `${titleLower} ${contentLower} ${chipsLower}`;
     
     const matchesSearch = textToSearch.includes(searchQuery.toLowerCase());
     
@@ -847,7 +890,20 @@ export default function Home() {
 
                 {/* Quick subject filter chips */}
                 <div className="flex flex-wrap gap-2 pt-1 border-t border-stone-800/40">
-                  {["Wszystkie", "Barok", "Romantyzm", "Pozytywizm", "Młoda Polska", "Dwudziestolecie", "Współczesność"].map((subject) => (
+                  {[
+                      "Wszystkie", 
+                      "Antyk", 
+                      "Średniowiecze", 
+                      "Renesans", 
+                      "Barok", 
+                      "Oświecenie", 
+                      "Romantyzm", 
+                      "Pozytywizm", 
+                      "Młoda Polska", 
+                      "Dwudziestolecie", 
+                      "Wojna i okupacja", 
+                      "Współczesność"
+                    ].map((subject) => (
                     <button
                       key={subject}
                       onClick={() => setSelectedSubject(subject)}
@@ -1145,6 +1201,36 @@ export default function Home() {
             </button>
           </div>
         </div>
+        {/* Sekcja zmiany hasła (Widoczna tylko dla zalogowanych użytkowników) */}
+            {user && (
+              <div className="mt-6 pt-5 border-t border-stone-800 flex flex-col gap-3">
+                <label className="text-xs font-semibold text-amber-500 uppercase tracking-widest">
+                  Konto i Bezpieczeństwo
+                </label>
+                <form onSubmit={handlePasswordChange} className="flex flex-col gap-2">
+                  <p className="text-[10px] text-stone-500 leading-relaxed">
+                    Wpisz nowe, bezpieczne hasło (minimum 6 znaków):
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="password"
+                      placeholder="Nowe hasło"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      required
+                      className="flex-1 bg-stone-900 border border-stone-800 rounded-xl py-2 px-3 text-xs text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60"
+                    />
+                    <button
+                      type="submit"
+                      disabled={passwordChangeLoading}
+                      className="px-4 py-2 bg-stone-900 hover:bg-stone-850 border border-stone-800 text-stone-300 hover:text-stone-100 text-xs font-bold rounded-xl transition-all disabled:bg-gray-500"
+                    >
+                      {passwordChangeLoading ? "Zmienianie..." : "Zmień"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
 
         <div className="mt-6 pt-4 border-t border-stone-800 flex justify-end">
           <button
