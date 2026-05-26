@@ -1,7 +1,6 @@
-// app/api/checkout/route.ts
 import { NextResponse } from 'next/server'
 import { getSupabaseServer } from '@/app/lib/supabaseServer'
-import { createClient } from '@supabase/supabase-js' // Dodajemy import standardowego klienta dla admina
+import { createClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
@@ -12,8 +11,16 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
+    // Odczytujemy przesłany pakiet z body żądania
+    const { tier } = await request.json()
+
+    // Walidacja przesłanego pakietu
+    if (!tier || !['mini', 'medium', 'premium'].includes(tier)) {
+      return NextResponse.json({ error: 'Niepoprawny pakiet subskrypcji!' }, { status: 400 })
+    }
+
     const supabase = await getSupabaseServer()
 
     // 1. Sprawdzamy, który użytkownik wysłał prośbę o zakup
@@ -21,6 +28,23 @@ export async function POST() {
 
     if (!user) {
       return NextResponse.json({ error: 'Musisz być zalogowany!' }, { status: 401 })
+    }
+
+    // MAPOWANIE PAKIETÓW NA IDENTYFIKATORY CEN ZE STRIPE
+    // Zastąp poniższe wartości rzeczywistymi identyfikatorami cen (Price ID) z Twojego panelu Stripe
+    const PRICE_IDS: Record<string, string> = {
+      mini: 'price_1TbQ9904jpvEtRODKKge92mt',       // np. 'price_1...'
+      medium: 'price_1TbQ8m04jpvEtROD7jxGIlBO',   // np. 'price_2...'
+      premium: 'price_1Tb2pg04jpvEtROD0DSO03r2',       // Twój aktualny Price ID
+    }
+
+    const priceId = PRICE_IDS[tier]
+
+    if (!priceId || priceId.startsWith('TU_WPISZ')) {
+      return NextResponse.json(
+        { error: `Brak skonfigurowanego Price ID dla pakietu: ${tier}.` }, 
+        { status: 400 }
+      )
     }
 
     // 2. Szukamy profilu użytkownika w bazie używając admina (aby na pewno odczytać dane)
@@ -50,18 +74,28 @@ export async function POST() {
         })
     }
 
-    // 4. Tworzymy sesję płatności (koszyk) w Stripe
+    // 4. Tworzymy sesję płatności (koszyk) w Stripe z wybranym priceId
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ['card', 'blik', 'p24'],
       line_items: [
         {
-          // Twój właściwy Price ID pobrany ze Stripe
-          price: 'price_1Tb2pg04jpvEtROD0DSO03r2', 
+          price: priceId,
           quantity: 1,
         },
       ],
       mode: 'payment',
+      // PRZEKAZYWANIE METADANYCH: Bardzo ważne dla webhooka, który przetwarza udaną płatność
+      metadata: {
+        supabase_user_id: user.id,
+        tier: tier // Przekazujemy informację o wybranym pakiecie (mini/medium/premium)
+      },
+      payment_intent_data: {
+        metadata: {
+          supabase_user_id: user.id,
+          tier: tier
+        }
+      },
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/?payment=success`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/?payment=canceled`,
     })

@@ -1,4 +1,3 @@
-// app/notes/page.tsx
 export const revalidate = 0
 export const dynamic = 'force-dynamic'
 
@@ -23,12 +22,26 @@ export default async function NotesPage() {
   if (user) {
     const { data: profile } = await supabaseAdmin
       .from('profiles')
-      .select('subscription_status')
+      .select('subscription_status, expires_at') // <--- Pobieramy status oraz datę wygaśnięcia
       .eq('id', user.id)
       .single()
       
-    if (profile?.subscription_status === 'paid') {
-      hasAccess = true
+    if (profile) {
+      const activeStatuses = ['mini', 'medium', 'premium', 'admin', 'paid']
+      const isStatusActive = activeStatuses.includes(profile.subscription_status)
+      
+      // Sprawdzamy, czy subskrypcja nie wygasła
+      let isExpired = false
+      if (profile.expires_at) {
+        const expirationTime = new Date(profile.expires_at).getTime()
+        const currentTime = new Date().getTime()
+        isExpired = currentTime > expirationTime
+      }
+      
+      // Dostęp jest aktywny, gdy status jest poprawny i pakiet nie wygasł
+      if (isStatusActive && !isExpired) {
+        hasAccess = true
+      }
     }
   }
 
@@ -140,7 +153,7 @@ export default async function NotesPage() {
             </p>
             <a
               href="/"
-              className="px-4 py-2 text-xs font-bold bg-[#c68a4c] hover:bg-[#d99c5d] text-stone-950 rounded-xl transition-all hover:scale-105 shadow-md"
+              className="px-4 py-2 text-xs font-bold bg-[#c68a4c] hover:bg-[#d99d5d] text-stone-950 rounded-xl transition-all hover:scale-105 shadow-md"
             >
               Uzyskaj Pełny Dostęp Premium 🔑
             </a>

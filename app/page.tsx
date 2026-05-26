@@ -15,7 +15,6 @@ const COZY_QUOTES = [
   { text: "Krok po kroku i dojdziesz do celu. Matura to tylko kolejny przystanek.", author: "Wiedza Szyta na Miarę" }
 ];
 
-
 // Słownik tłumaczący błędy z języka angielskiego na polski
 const translateAuthError = (message: string): string => {
   const msg = message.toLowerCase();
@@ -36,7 +35,6 @@ const translateAuthError = (message: string): string => {
     return "Zbyt wiele prób w krótkim czasie. Odczekaj chwilę!";
   }
   
-  // Jeśli pojawi się inny błąd, którego nie znamy, zwracamy go w oryginale
   return message;
 };
 
@@ -45,13 +43,11 @@ export default function Home() {
   // Theme state
   const [cozyTheme, setCozyTheme] = useState<"library" | "rainy" | "fireplace">("library");
 
-    // Stan do przechowywania profilu (w tym essay_credits jako tokenów)
+  // Stan do przechowywania profilu (w tym essay_credits jako tokenów)
   const [profile, setProfile] = useState<any>(null);
 
   // Stan do przechowywania listy ostatnich ocenionych rozprawek
   const [recentEssays, setRecentEssays] = useState<any[]>([]);
-
-  
 
   const [newPassword, setNewPassword] = useState("");
   const [passwordChangeLoading, setPasswordChangeLoading] = useState(false);
@@ -79,7 +75,7 @@ export default function Home() {
   const [authFormLoading, setAuthFormLoading] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
 
-  // SYSTEM PRZYTULNYCH POWIADOMIEŃ (ZAMIAST BRZYDKICH ALERTÓW)
+  // SYSTEM PRZYTULNYCH POWIADOMIEŃ
   const [cozyNotification, setCozyNotification] = useState<{
     message: string;
     type: "success" | "error" | "info";
@@ -91,57 +87,8 @@ export default function Home() {
       setCozyNotification(null);
     }, 4500);
   };
-  // 1. Pobieranie profilu użytkownika (kredyty/tokeny) po zmianie zalogowanego konta
-useEffect(() => {
-  async function fetchUserProfile() {
-    if (user) {
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('subscription_status, essay_credits')
-        .eq('id', user.id)
-        .single();
-        
-      if (profileData) {
-        setProfile(profileData);
-        if (profileData.subscription_status === 'paid' || profileData.subscription_status === 'admin') {
-          setHasAccess(true);
-        } else {
-          setHasAccess(false);
-        }
-      } else {
-        setProfile(null);
-        setHasAccess(false);
-      }
-    } else {
-      setProfile(null);
-      setHasAccess(false);
-    }
-  }
-  fetchUserProfile();
-}, [user]);
 
-// 2. Pobieranie ostatnich ocenionych wypracowań z bazy danych
-useEffect(() => {
-  async function fetchRecentEssays() {
-    if (user) {
-      const { data, error } = await supabase
-        .from("essay_evaluations")
-        .select("id, topic, score")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(3); // Pobiera 3 ostatnio ocenione prace
-        
-      if (data && !error) {
-        setRecentEssays(data);
-      }
-    } else {
-      setRecentEssays([]);
-    }
-  }
-  fetchRecentEssays();
-}, [user]);
-  // Sprawdzanie stanu zalogowania i płatności
-// 1. Bezpieczny nasłuchiwalnik samego logowania (bez zapytań do bazy, aby zapobiec zawieszaniu Supabase!)
+  // 1. Bezpieczny nasłuchiwalnik samego logowania
   useEffect(() => {
     async function checkInitialSession() {
       setAuthLoading(true);
@@ -171,26 +118,67 @@ useEffect(() => {
     };
   }, []);
 
-  // 2. Osobny proces pobierania profilu (uruchamia się automatycznie tylko gdy 'user' się zmieni)
+  // 2. Jednolity proces pobierania profilu (z uwzględnieniem daty wygaśnięcia dostępu)
   useEffect(() => {
     async function fetchUserProfile() {
       if (user) {
-        const { data: profile } = await supabase
+        const { data: profileData } = await supabase
           .from('profiles')
-          .select('subscription_status')
+          .select('subscription_status, essay_credits, expires_at')
           .eq('id', user.id)
           .single();
           
-        if (profile?.subscription_status === 'paid' || profile?.subscription_status === 'admin') {
-          setHasAccess(true);
+        if (profileData) {
+          setProfile(profileData);
+          
+          const activeStatuses = ['mini', 'medium', 'premium', 'admin', 'paid'];
+          const isStatusActive = activeStatuses.includes(profileData.subscription_status);
+          
+          // Sprawdzamy w czasie rzeczywistym, czy data ważności już minęła
+          let isExpired = false;
+          if (profileData.expires_at) {
+            const expirationTime = new Date(profileData.expires_at).getTime();
+            const currentTime = new Date().getTime();
+            isExpired = currentTime > expirationTime;
+          }
+          
+          // Dostęp jest aktywny tylko jeśli status się zgadza i czas nie upłynął
+          if (isStatusActive && !isExpired) {
+            setHasAccess(true);
+          } else {
+            setHasAccess(false);
+          }
         } else {
+          setProfile(null);
           setHasAccess(false);
         }
       } else {
+        setProfile(null);
         setHasAccess(false);
       }
     }
     fetchUserProfile();
+  }, [user]);
+
+  // 3. Pobieranie ostatnich ocenionych wypracowań z bazy danych
+  useEffect(() => {
+    async function fetchRecentEssays() {
+      if (user) {
+        const { data, error } = await supabase
+          .from("essay_evaluations")
+          .select("id, topic, score")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(3); // Pobiera 3 ostatnio ocenione prace
+          
+        if (data && !error) {
+          setRecentEssays(data);
+        }
+      } else {
+        setRecentEssays([]);
+      }
+    }
+    fetchRecentEssays();
   }, [user]);
 
   // Obsługa logowania / rejestracji
@@ -223,11 +211,20 @@ useEffect(() => {
     setAuthFormLoading(false);
   };
 
-  // Obsługa inicjalizacji płatności Stripe
-  const handlePaymentInit = async () => {
+  const [activePaymentTier, setActivePaymentTier] = useState<string | null>(null);
+
+  // Obsługa inicjalizacji płatności Stripe dla wybranego pakietu
+  const handlePaymentInit = async (tier: 'mini' | 'medium' | 'premium') => {
     setPaymentLoading(true);
+    setActivePaymentTier(tier);
     try {
-      const response = await fetch('/api/checkout', { method: 'POST' });
+      const response = await fetch('/api/checkout', { 
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ tier })
+      });
       const data = await response.json();
       
       if (data.url) {
@@ -240,6 +237,7 @@ useEffect(() => {
       triggerNotification('Błąd połączenia z serwerem płatności.', 'error');
     } finally {
       setPaymentLoading(false);
+      setActivePaymentTier(null);
     }
   };
 
@@ -254,7 +252,6 @@ useEffect(() => {
 
     setPasswordChangeLoading(true);
     try {
-      // Wywołujemy oficjalną funkcję Supabase do aktualizacji danych użytkownika
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
       });
@@ -263,7 +260,7 @@ useEffect(() => {
         triggerNotification(translateAuthError(error.message), "error");
       } else {
         triggerNotification("Hasło zostało pomyślnie zmienione! 🔑", "success");
-        setNewPassword(""); // Czyścimy pole tekstowe po sukcesie
+        setNewPassword("");
       }
     } catch (err) {
       console.error(err);
@@ -280,7 +277,6 @@ useEffect(() => {
       return;
     }
     
-    // Zezwalamy na wejście do edytora rozprawek każdemu zalogowanemu użytkownikowi
     if (path === "/ocenianie-rozprawek") {
       router.push(path);
     } else if (!hasAccess) {
@@ -294,16 +290,11 @@ useEffect(() => {
   };
 
   // Pobieranie notatek
-// Pobieranie notatek (Zabezpieczone i zoptymalizowane pod kątem widoczności karty)
-// Pobieranie notatek (Zoptymalizowana, bezbłędna wersja)
-// Pobieranie wszystkich notatek (płatne będą zablokowane na ekranie)
   useEffect(() => {
     async function fetchNotes() {
       setLoading(true)
       try {
-        // Pobieramy wszystkie notatki, aby darmowy użytkownik widział całe Archiwum Wiedzy
         const { data, error } = await supabase.from("notes").select("*");
-
         if (!error && data) {
           setNotes(data as any[]);
         }
@@ -446,7 +437,6 @@ useEffect(() => {
     }
   };
 
-  // Re-sync ambient sound when theme changes
   useEffect(() => {
     if (ambientSoundActive) {
       toggleAmbientSound();
@@ -471,9 +461,6 @@ useEffect(() => {
     setMugMessage(messages[clicks % messages.length]);
   };
 
-  // Epochs keywords mapping for smart dynamic searching
-// Pełna mapa epok maturalnych do wyszukiwania
-// Pełna, chronologiczna mapa epok maturalnych do wyszukiwania
   const epochKeywords: Record<string, string[]> = {
     "Antyk": ["antyk", "starożytność", "mitologia", "homer", "sofokles", "biblia", "mit", "antygona", "król edyp", "iliada", "odyseja"],
     "Średniowiecze": ["średniowiecze", "bogurodzica", "lament swietokrzyski", "pieśń o rolandzie", "rozmowa mistrza polikarpa", "gall anonim"],
@@ -488,7 +475,6 @@ useEffect(() => {
     "Współczesność": ["współczesność", "tango", "mrożek", "ocalenie", "szymborska", "różewicz", "herbert", "rok 1984", "orwell", "dżuma", "camus"]
   };
 
-  // Filter notes based on search & subject (epoch) selection
   const getExcerpt = (note: any) => {
     if (note.excerpt && typeof note.excerpt === 'string') return note.excerpt;
     const content = note.content;
@@ -513,16 +499,14 @@ useEffect(() => {
     return note.era ? `Epoka: ${note.era}` : '';
   };
 
-    const filteredNotes = notes.filter((note) => {
+  const filteredNotes = notes.filter((note) => {
     const titleLower = (note.title || "").toLowerCase();
     const contentString = typeof note.content === 'string' ? note.content : JSON.stringify(note.content || "");
     const contentLower = contentString.toLowerCase();
     
-    // ZMIANA TUTAJ: Zamieniamy tablicę tagów (chips) na jeden ciąg tekstowy rozdzielony spacjami
     const chipsString = Array.isArray(note.chips) ? note.chips.join(" ") : "";
     const chipsLower = chipsString.toLowerCase();
     
-    // Łączymy wszystko razem: tytuł + treść + słowa kluczowe (tagi)
     const textToSearch = `${titleLower} ${contentLower} ${chipsLower}`;
     
     const matchesSearch = textToSearch.includes(searchQuery.toLowerCase());
@@ -536,7 +520,6 @@ useEffect(() => {
     return matchesSearch && matchesSubject;
   });
 
-  // Get dynamic background and border color classes based on theme
   const getThemeClasses = () => {
     switch (cozyTheme) {
       case "rainy":
@@ -584,7 +567,6 @@ useEffect(() => {
 
   const currentTheme = getThemeClasses();
 
-  // Wczytywanie stanu auth
   if (authLoading) {
     return (
       <div className="min-h-screen bg-[#14100e] text-stone-200 flex flex-col items-center justify-center p-8">
@@ -598,7 +580,6 @@ useEffect(() => {
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-500 ${currentTheme.bg} text-stone-200 font-sans`}>
-      {/* Dynamic Embedded Keyframe Animations for Steam Effect & Slide-In Notification */}
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes steam {
           0% { transform: translateY(0) scaleX(1); opacity: 0; }
@@ -618,7 +599,6 @@ useEffect(() => {
 
       {/* HEADER SECTION */}
       <header className={`border-b ${currentTheme.cardBorder} px-6 py-4 flex items-center justify-between backdrop-blur-md sticky top-0 z-40 transition-colors duration-500`}>
-        {/* Left: Settings Button */}
         <button
           onClick={() => setIsSettingsOpen(true)}
           className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 transition-all text-sm font-medium ${currentTheme.subText} hover:text-stone-100`}
@@ -630,7 +610,6 @@ useEffect(() => {
           Ustawienia Klimatu
         </button>
 
-        {/* Center: Branding */}
         <div className="flex flex-col items-center select-none">
           <div className="flex items-center gap-2">
             <span className="text-2xl">📖</span>
@@ -643,7 +622,6 @@ useEffect(() => {
           </span>
         </div>
 
-        {/* Right: Ambient Sound Indicator & Profile Quick Stats */}
         <div className="flex items-center gap-3">
           <button
             onClick={toggleAmbientSound}
@@ -664,30 +642,34 @@ useEffect(() => {
           
           {user ? (
             <div className="flex items-center gap-2">
-              <div className={`hidden sm:flex items-center gap-2 px-3 py-1 text-xs rounded-full bg-stone-900/60 border ${currentTheme.cardBorder}`}>
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1 text-xs rounded-full bg-stone-900/60 border border-stone-800">
                 <span className={`w-2 h-2 rounded-full ${hasAccess ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-                <span>{user.email.split('@')[0]} ({hasAccess ? 'Premium' : 'Darmowy'})</span>
+                <span>
+                  {user.email.split('@')[0]} (
+                  {!hasAccess 
+                    ? 'Darmowy' 
+                    : profile?.subscription_status 
+                      ? (profile.subscription_status.charAt(0).toUpperCase() + profile.subscription_status.slice(1)) 
+                      : 'Premium'}
+                  )
+                </span>
               </div>
-                <button
-                    onClick={async () => {
-                      try {
-                        // Próbujemy wylogować użytkownika w chmurze
-                        await supabase.auth.signOut();
-                      } catch (err) {
-                        // Jeśli użytkownik nie istnieje w bazie (lub nie ma internetu), ignorujemy błąd sieciowy
-                        console.warn("Wylogowanie w chmurze pominięte (użytkownik prawdopodobnie usunięty z bazy):", err);
-                      } finally {
-                        // Te linijki wykonają się ZAWSZE. Gwarantuje to, że przeglądarka 
-                        // i tak zapomni sesję i natychmiast pokaże ekran logowania!
-                        setUser(null);
-                        setHasAccess(false);
-                        router.refresh();
-                      }
-                    }}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold border border-red-900/30 bg-red-950/20 text-red-400 hover:bg-red-900 hover:text-white transition-all`}
-                  >
-                    Wyloguj
-                </button>
+              <button
+                onClick={async () => {
+                  try {
+                    await supabase.auth.signOut();
+                  } catch (err) {
+                    console.warn("Wylogowanie w chmurze pominięte:", err);
+                  } finally {
+                    setUser(null);
+                    setHasAccess(false);
+                    router.refresh();
+                  }
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold border border-red-900/30 bg-red-950/20 text-red-400 hover:bg-red-900 hover:text-white transition-all`}
+              >
+                Wyloguj
+              </button>
             </div>
           ) : (
             <div className={`hidden sm:flex items-center gap-2 px-3 py-1 text-xs rounded-full bg-stone-900/60 border ${currentTheme.cardBorder}`}>
@@ -700,12 +682,7 @@ useEffect(() => {
 
       {/* RENDEROWANIE GŁÓWNEGO WIDOKU */}
       {!user ? (
-        /* ==========================================
-           SYTUACJA 1: Użytkownik NIE JEST zalogowany
-           (Strona powitalna z formularzem logowania)
-           ========================================== */
         <main className="max-w-4xl mx-auto w-full p-6 flex flex-col md:flex-row items-center justify-center gap-12 flex-1">
-          {/* Lewa kolumna: Tekst powitalny */}
           <div className="max-w-md text-center md:text-left">
             <span className="text-xs font-semibold uppercase tracking-widest text-amber-500 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
               Matura 2026
@@ -721,7 +698,6 @@ useEffect(() => {
             </div>
           </div>
 
-          {/* Prawa kolumna: Formularz logowania / rejestracji */}
           <div className={`w-full max-w-sm rounded-3xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-6 sm:p-8 shadow-xl ${currentTheme.glow}`}>
             <form onSubmit={handleAuthSubmit} className="flex flex-col gap-4">
               <h3 className="text-xl font-bold text-stone-100 font-serif text-center">
@@ -766,11 +742,8 @@ useEffect(() => {
           </div>
         </main>
       ) : (
-        /* ==========================================
-           UŻYTKOWNIK ZALOGOWANY (Główna aplikacja)
-           ========================================== */
         <>
-          {/* DASHBOARD HERO BANNER (Dostosowany pod kątem braku płatności) */}
+          {/* DASHBOARD HERO BANNER */}
           <div className={`max-w-7xl mx-auto w-full px-6 pt-6`}>
             <div className={`relative rounded-3xl overflow-hidden p-6 sm:p-8 border ${currentTheme.cardBorder} ${currentTheme.cardBg} transition-all duration-500 shadow-xl ${currentTheme.glow} flex flex-col md:flex-row items-center justify-between gap-6`}>
               <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl -z-10 pointer-events-none" />
@@ -784,10 +757,20 @@ useEffect(() => {
                 {hasAccess ? (
                   <>
                     <h2 className="text-3xl sm:text-4xl font-bold text-stone-100 mt-3 leading-tight font-serif tracking-tight">
-                      Witaj w pakiecie Premium! 🚀
+                      {profile?.subscription_status === 'mini' && "Witaj w pakiecie Mini! 🚀"}
+                      {profile?.subscription_status === 'medium' && "Witaj w pakiecie Medium! 🚀"}
+                      {profile?.subscription_status === 'premium' && "Witaj w pakiecie Premium! 🚀"}
+                      {!['mini', 'medium', 'premium'].includes(profile?.subscription_status) && "Witaj w swoim panelu! 🚀"}
                     </h2>
                     <p className={`mt-3 text-sm sm:text-base ${currentTheme.subText} leading-relaxed`}>
-                      Twój jednorazowy zakup odblokował pełny, nielimitowany dostęp do bazy wiedzy oraz wszystkich modułów AI. Miłej nauki w najprzytulniejszym kąciku w sieci!
+                      {profile?.subscription_status === 'mini' && 
+                        "Twój miesięczny dostęp odblokował pełną bazę wiedzy oraz wszystkie moduły AI. Powodzenia w nauce w najprzytulniejszym kąciku w sieci!"}
+                      {profile?.subscription_status === 'medium' && 
+                        "Twój 3-miesięczny pakiet odblokował pełną bazę wiedzy oraz wszystkie moduły AI. Powodzenia w nauce w najprzytulniejszym kąciku w sieci!"}
+                      {profile?.subscription_status === 'premium' && 
+                        "Twój dożywotni zakup odblokował pełny, nielimitowany dostęp do bazy wiedzy oraz wszystkich modułów AI na zawsze!"}
+                      {!['mini', 'medium', 'premium'].includes(profile?.subscription_status) && 
+                        "Twój profil posiada pełny dostęp do bazy wiedzy i wszystkich funkcjonalności sztucznej inteligencji."}
                     </p>
                   </>
                 ) : (
@@ -798,32 +781,112 @@ useEffect(() => {
                     <p className={`mt-3 text-sm sm:text-base ${currentTheme.subText} leading-relaxed`}>
                       Masz darmowe konto, które pozwala na przeglądanie kącika. Aby odblokować wszystkie notatki z lektur, moduł oceniania wypracowań AI oraz sprawić, by kłódeczki zniknęły – kliknij przycisk poniżej!
                     </p>
-                    <div className="mt-5 flex justify-center md:justify-start">
-                      <button
-                        onClick={handlePaymentInit}
-                        disabled={paymentLoading}
-                        className={`px-6 py-3 rounded-xl ${currentTheme.accentBg} text-stone-950 font-bold shadow-md ${currentTheme.accentHover} hover:scale-105 active:scale-98 transition-all flex items-center gap-2`}
-                      >
-                        <span>🛒</span>
-                        {paymentLoading ? "Przygotowywanie..." : "Uzyskaj Pełny Dostęp (80 zł)"}
-                      </button>
+                    <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+                      {/* Pakiet MINI */}
+                      <div className="bg-stone-900/60 border border-stone-800/80 p-5 rounded-2xl flex flex-col justify-between">
+                        <div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded">MINI</span>
+                            <span className="text-stone-400 text-xs">1 miesiąc</span>
+                          </div>
+                          <p className="text-lg font-bold text-stone-100 mt-2">29 zł</p>
+                          <ul className="text-[11px] text-stone-400 mt-3 space-y-1.5">
+                            <li>📚 Pełna baza wiedzy i notatek</li>
+                            <li>✍️ <strong>5 tokenów</strong> do rozprawki</li>
+                            <li>⚡ Dostęp na 30 dni</li>
+                          </ul>
+                        </div>
+                        <button
+                          onClick={() => handlePaymentInit('mini')}
+                          disabled={paymentLoading}
+                          className={`w-full mt-4 py-2 rounded-xl text-xs font-bold bg-stone-800 hover:bg-stone-750 text-stone-200 transition-all active:scale-98`}
+                        >
+                          {activePaymentTier === 'mini' ? "Ładowanie..." : "Wybierz Mini"}
+                        </button>
+                      </div>
+
+                      {/* Pakiet MEDIUM */}
+                      <div className="bg-amber-950/20 border border-amber-900/40 p-5 rounded-2xl flex flex-col justify-between relative overflow-hidden">
+                        <div className="absolute top-0 right-0 bg-amber-500 text-stone-950 text-[9px] font-bold px-2 py-0.5 rounded-bl">POLECANY</div>
+                        <div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">MEDIUM</span>
+                            <span className="text-stone-400 text-xs">3 miesiące</span>
+                          </div>
+                          <p className="text-lg font-bold text-stone-100 mt-2">59 zł</p>
+                          <ul className="text-[11px] text-stone-400 mt-3 space-y-1.5">
+                            <li>📚 Pełna baza wiedzy i notatek</li>
+                            <li>✍️ <strong>10 tokenów</strong> do rozprawki</li>
+                            <li>⚡ Dostęp na 90 dni</li>
+                          </ul>
+                        </div>
+                        <button
+                          onClick={() => handlePaymentInit('medium')}
+                          disabled={paymentLoading}
+                          className={`w-full mt-4 py-2 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-500 text-stone-950 transition-all active:scale-98`}
+                        >
+                          {activePaymentTier === 'medium' ? "Ładowanie..." : "Wybierz Medium"}
+                        </button>
+                      </div>
+
+                      {/* Pakiet PREMIUM */}
+                      <div className="bg-purple-950/20 border border-purple-900/40 p-5 rounded-2xl flex flex-col justify-between">
+                        <div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs font-bold text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded">PREMIUM</span>
+                            <span className="text-stone-400 text-xs">Na zawsze</span>
+                          </div>
+                          <p className="text-lg font-bold text-stone-100 mt-2">89 zł</p>
+                          <ul className="text-[11px] text-stone-400 mt-3 space-y-1.5">
+                            <li>📚 Pełna baza wiedzy i notatek</li>
+                            <li>✍️ <strong>10 tokenów</strong> do rozprawki</li>
+                            <li>♾️ Dostęp <strong>dożywotni</strong></li>
+                          </ul>
+                        </div>
+                        <button
+                          onClick={() => handlePaymentInit('premium')}
+                          disabled={paymentLoading}
+                          className={`w-full mt-4 py-2 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white transition-all active:scale-98`}
+                        >
+                          {activePaymentTier === 'premium' ? "Ładowanie..." : "Wybierz Premium"}
+                        </button>
+                      </div>
                     </div>
                   </>
                 )}
               </div>
 
               <div className="flex flex-col items-center md:items-end justify-center text-center md:text-right border-t md:border-t-0 md:border-l border-stone-800/80 pt-4 md:pt-0 md:pl-8">
-                <span className="text-3xl font-extrabold bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">
-                  {hasAccess ? "PREMIUM" : "FREE"}
+                <span className="text-3xl font-extrabold bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent uppercase">
+                  {!hasAccess && "FREE"}
+                  {hasAccess && (profile?.subscription_status || "PREMIUM")}
                 </span>
+                
                 <span className="text-xs font-medium uppercase tracking-widest text-stone-400 mt-1">
                   Twój Plan
                 </span>
+                
                 <div className="flex gap-1 mt-2 text-amber-500 text-xs">
-                  <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+                  {profile?.subscription_status === 'mini' && <><span>★</span><span>★</span><span>★</span></>}
+                  {profile?.subscription_status === 'medium' && <><span>★</span><span>★</span><span>★</span><span>★</span></>}
+                  {(profile?.subscription_status === 'premium' || !hasAccess || !['mini', 'medium'].includes(profile?.subscription_status)) && (
+                    <><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></>
+                  )}
                 </div>
+                
                 <span className="text-[11px] text-stone-500 mt-1">
-                  {hasAccess ? "Dostęp dożywotni bez reklam" : "Zyskaj pełną moc nauki"}
+                  {!hasAccess && "Zyskaj pełną moc nauki"}
+                  {hasAccess && profile?.subscription_status === 'mini' && (
+                    profile?.expires_at 
+                      ? `Wygasa: ${new Date(profile.expires_at).toLocaleDateString('pl-PL')}` 
+                      : "Dostęp ważny na 30 dni"
+                  )}
+                  {hasAccess && profile?.subscription_status === 'medium' && (
+                    profile?.expires_at 
+                      ? `Wygasa: ${new Date(profile.expires_at).toLocaleDateString('pl-PL')}` 
+                      : "Dostęp ważny na 90 dni"
+                  )}
+                  {hasAccess && (profile?.subscription_status === 'premium' || !['mini', 'medium'].includes(profile?.subscription_status)) && "Dostęp dożywotni bez reklam"}
                 </span>
               </div>
             </div>
@@ -835,63 +898,61 @@ useEffect(() => {
             {/* LEFT COLUMN: NAVIGATION & AI ESSAY PLACEHOLDER */}
             <section className="lg:col-span-3 flex flex-col gap-6">
               {/* Navigation Panel */}
-                <div className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-4 transition-colors duration-500`}>
-                  <h3 className="text-xs uppercase tracking-widest text-amber-500 font-semibold mb-3 px-1">
-                    Nawigacja
-                  </h3>
-                  <nav className="flex flex-col gap-1">
-                    <Link 
-                      href="/notes" 
-                      className={`flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-900/60 group transition-all`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-lg">📚</span>
-                        <span className="text-sm font-medium group-hover:text-amber-400 transition-colors">Wszystkie Notatki</span>
-                      </div>
-                      <span className="text-xs bg-stone-900 border border-stone-800 text-amber-500/80 px-2 py-0.5 rounded-full">
-                        {notes.length}
-                      </span>
-                    </Link>
+              <div className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-4 transition-colors duration-500`}>
+                <h3 className="text-xs uppercase tracking-widest text-amber-500 font-semibold mb-3 px-1">
+                  Nawigacja
+                </h3>
+                <nav className="flex flex-col gap-1">
+                  <Link 
+                    href="/notes" 
+                    className={`flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-900/60 group transition-all`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">📚</span>
+                      <span className="text-sm font-medium group-hover:text-amber-400 transition-colors">Wszystkie Notatki</span>
+                    </div>
+                    <span className="text-xs bg-stone-900 border border-stone-800 text-amber-500/80 px-2 py-0.5 rounded-full">
+                      {notes.length}
+                    </span>
+                  </Link>
 
-                    {/* PRZYCISK: MOJE POSTĘPY */}
-                    <button 
-                      onClick={() => handlePremiumNavigation("/postepy")}
-                      className="flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-900/60 group transition-all text-left w-full"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-lg">📈</span>
-                        <span className="text-sm font-medium group-hover:text-amber-400 transition-colors">Moje Postępy</span>
-                      </div>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
-                        hasAccess 
-                          ? 'bg-emerald-950/50 border-emerald-900/60 text-emerald-400' 
-                          : 'bg-stone-900/60 border-stone-800 text-stone-500'
-                      }`}>
-                        {hasAccess ? "Wejdź ✨" : "Premium 🔒"}
-                      </span>
-                    </button>
+                  <button 
+                    onClick={() => handlePremiumNavigation("/postepy")}
+                    className="flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-900/60 group transition-all text-left w-full"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">📈</span>
+                      <span className="text-sm font-medium group-hover:text-amber-400 transition-colors">Moje Postępy</span>
+                    </div>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                      hasAccess 
+                        ? 'bg-emerald-950/50 border-emerald-900/60 text-emerald-400' 
+                        : 'bg-stone-900/60 border-stone-800 text-stone-500'
+                    }`}>
+                      {hasAccess ? "Wejdź ✨" : "Premium 🔒"}
+                    </span>
+                  </button>
 
-                    {/* PRZYCISK: SZYBKIE FISZKI */}
-                    <button 
-                      onClick={() => handlePremiumNavigation("/fiszki")}
-                      className="flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-900/60 group transition-all text-left w-full"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-lg">⚡</span>
-                        <span className="text-sm font-medium group-hover:text-amber-400 transition-colors">Szybkie Fiszki</span>
-                      </div>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
-                        hasAccess 
-                          ? 'bg-purple-950/50 border-purple-900/60 text-purple-300' 
-                          : 'bg-stone-900/60 border-stone-800 text-stone-500'
-                      }`}>
-                        {hasAccess ? "Graj ⚡" : "Premium 🔒"}
-                      </span>
-                    </button>
-                  </nav>
-                </div>
+                  <button 
+                    onClick={() => handlePremiumNavigation("/fiszki")}
+                    className="flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-900/60 group transition-all text-left w-full"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">⚡</span>
+                      <span className="text-sm font-medium group-hover:text-amber-400 transition-colors">Szybkie Fiszki</span>
+                    </div>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                      hasAccess 
+                        ? 'bg-purple-950/50 border-purple-900/60 text-purple-300' 
+                        : 'bg-stone-900/60 border-stone-800 text-stone-500'
+                    }`}>
+                      {hasAccess ? "Graj ⚡" : "Premium 🔒"}
+                    </span>
+                  </button>
+                </nav>
+              </div>
 
-              {/* AI Essay Card - Cozy Style */}
+              {/* AI Essay Card */}
               <div className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-5 relative overflow-hidden transition-colors duration-500 group`}>
                 <div className="absolute top-0 right-0 w-24 h-24 bg-purple-600/5 rounded-full blur-2xl group-hover:bg-purple-600/10 transition-all duration-500" />
                 
@@ -932,47 +993,44 @@ useEffect(() => {
                 >
                   {hasAccess ? "Uruchom Edytor ✨" : "Zyskaj Dostęp Premium 🔑"}
                 </button>
-                {/* Szybki licznik pozostałych kredytów oraz historia ostatnich wypracowań */}
-{user && (
-  <div className="mt-4 pt-4 border-t border-stone-800/60 flex flex-col gap-3">
-    {/* Wyświetlanie tokenów */}
-    <div className="flex justify-between items-center bg-purple-950/20 border border-purple-900/30 px-3 py-2 rounded-xl">
-      <span className="text-[10px] text-purple-300 font-semibold uppercase tracking-wider">Pozostałe tokeny:</span>
-      <span className="text-xs font-bold font-mono text-purple-400 bg-stone-900 px-2 py-0.5 rounded-md border border-purple-900/40">
-        {profile?.essay_credits ?? 0} {profile?.essay_credits === 1 ? "token" : "tokeny"}
-      </span>
-    </div>
 
-    {/* Lista ostatnich ocen */}
-    {recentEssays.length > 0 && (
-      <div className="flex flex-col gap-1.5">
-        <span className="text-[9px] text-stone-500 uppercase tracking-widest font-bold">Ostatnio oceniane:</span>
-        <div className="flex flex-col gap-1.5">
-          {recentEssays.map((essay) => (
-            <div 
-              key={essay.id}
-              onClick={() => handlePremiumNavigation("/ocenianie-rozprawek")}
-              className="flex justify-between items-center p-2 rounded-lg bg-stone-950/40 hover:bg-purple-950/20 border border-stone-900 hover:border-purple-900/30 transition-all cursor-pointer group/item"
-            >
-              <span className="text-[10px] text-stone-400 font-serif truncate max-w-[130px] group-hover/item:text-stone-200">
-                {essay.topic || "Bez tytułu"}
-              </span>
-              <span className="text-[10px] font-bold font-mono text-emerald-400 bg-stone-900 px-1.5 py-0.5 rounded border border-stone-800">
-                {essay.score || "Ocena"}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-    )}
-  </div>
-)}
+                {user && (
+                  <div className="mt-4 pt-4 border-t border-stone-800/60 flex flex-col gap-3">
+                    <div className="flex justify-between items-center bg-purple-950/20 border border-purple-900/30 px-3 py-2 rounded-xl">
+                      <span className="text-[10px] text-purple-300 font-semibold uppercase tracking-wider">Pozostałe tokeny:</span>
+                      <span className="text-xs font-bold font-mono text-purple-400 bg-stone-900 px-2 py-0.5 rounded-md border border-purple-900/40">
+                        {profile?.essay_credits ?? 0} {profile?.essay_credits === 1 ? "token" : "tokeny"}
+                      </span>
+                    </div>
+
+                    {recentEssays.length > 0 && (
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[9px] text-stone-500 uppercase tracking-widest font-bold">Ostatnio oceniane:</span>
+                        <div className="flex flex-col gap-1.5">
+                          {recentEssays.map((essay) => (
+                            <div 
+                              key={essay.id}
+                              onClick={() => handlePremiumNavigation("/ocenianie-rozprawek")}
+                              className="flex justify-between items-center p-2 rounded-lg bg-stone-950/40 hover:bg-purple-950/20 border border-stone-900 hover:border-purple-900/30 transition-all cursor-pointer group/item"
+                            >
+                              <span className="text-[10px] text-stone-400 font-serif truncate max-w-[130px] group-hover/item:text-stone-200">
+                                {essay.topic || "Bez tytułu"}
+                              </span>
+                              <span className="text-[10px] font-bold font-mono text-emerald-400 bg-stone-900 px-1.5 py-0.5 rounded border border-stone-800">
+                                {essay.score || "Ocena"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </section>
 
             {/* CENTER COLUMN: NOTES BROWSER */}
             <section className="lg:col-span-6 flex flex-col gap-5">
-              {/* Search bar & Quick Categories */}
               <div className={`p-4 rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} flex flex-col gap-3.5 transition-colors duration-500`}>
                 <div className="relative">
                   <input
@@ -995,22 +1053,21 @@ useEffect(() => {
                   )}
                 </div>
 
-                {/* Quick subject filter chips */}
                 <div className="flex flex-wrap gap-2 pt-1 border-t border-stone-800/40">
                   {[
-                      "Wszystkie", 
-                      "Antyk", 
-                      "Średniowiecze", 
-                      "Renesans", 
-                      "Barok", 
-                      "Oświecenie", 
-                      "Romantyzm", 
-                      "Pozytywizm", 
-                      "Młoda Polska", 
-                      "Dwudziestolecie", 
-                      "Wojna i okupacja", 
-                      "Współczesność"
-                    ].map((subject) => (
+                    "Wszystkie", 
+                    "Antyk", 
+                    "Średniowiecze", 
+                    "Renesans", 
+                    "Barok", 
+                    "Oświecenie", 
+                    "Romantyzm", 
+                    "Pozytywizm", 
+                    "Młoda Polska", 
+                    "Dwudziestolecie", 
+                    "Wojna i okupacja", 
+                    "Współczesność"
+                  ].map((subject) => (
                     <button
                       key={subject}
                       onClick={() => setSelectedSubject(subject)}
@@ -1026,7 +1083,6 @@ useEffect(() => {
                 </div>
               </div>
 
-              {/* Notes list */}
               <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between px-1">
                   <h3 className="text-sm font-semibold font-serif text-stone-100 flex items-center gap-2">
@@ -1062,7 +1118,6 @@ useEffect(() => {
                         key={note.id}
                         className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-5 hover:scale-[1.01] hover:shadow-lg transition-all duration-300 flex flex-col justify-between relative overflow-hidden group`}
                       >
-                        {/* Subject Tag & Read Time */}
                         <div className="flex items-center justify-between text-[11px] font-semibold text-stone-400">
                           <div className="flex items-center gap-1.5">
                             <span className="text-base">📕</span>
@@ -1103,7 +1158,7 @@ useEffect(() => {
             {/* RIGHT COLUMN: COZY STUDY CORNER */}
             <section className="lg:col-span-3 flex flex-col gap-6">
               
-              {/* Animowany Kubek Steaming Mug - Cozy Interaction */}
+              {/* Animowany Kubek Steaming Mug */}
               <div 
                 onClick={handleMugClick}
                 className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-5 text-center cursor-pointer select-none relative overflow-hidden transition-all duration-300 hover:scale-[1.03] hover:shadow-xl ${currentTheme.glow} group`}
@@ -1159,156 +1214,156 @@ useEffect(() => {
                       onClick={() => switchPomodoroMode("break")}
                       className={`text-[10px] px-2 py-0.5 rounded-md font-semibold transition-all ${
                         pomodoroMode === "break"
-                      ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
-                      : "bg-transparent text-stone-500 hover:text-stone-300"
+                          ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
+                          : "bg-transparent text-stone-500 hover:text-stone-300"
+                      }`}
+                    >
+                      Relaks
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-stone-900/60 border border-stone-800/80 rounded-2xl p-4 text-center">
+                  <span className="text-3xl font-extrabold tracking-widest text-stone-100 font-mono drop-shadow-sm select-none">
+                    {formatTime(timeLeft)}
+                  </span>
+                  <p className="text-[10px] text-stone-500 mt-1">
+                    {pomodoroMode === "work" ? "Czas na głębokie skupienie 📚" : "Czas na chwilę wytchnienia ☕"}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 mt-3.5">
+                  <button
+                    onClick={toggleTimer}
+                    className={`py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                      timerRunning
+                        ? "bg-stone-800 text-stone-300 border border-stone-700 hover:bg-stone-700"
+                        : `${currentTheme.accentBg} text-stone-950 ${currentTheme.accentHover} shadow-md`
+                    }`}
+                  >
+                    {timerRunning ? (
+                      <>
+                        <span>⏸️</span> Pauza
+                      </>
+                    ) : (
+                      <>
+                        <span>▶️</span> Start
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={resetTimer}
+                    className="py-2 rounded-xl text-xs font-bold bg-stone-900 hover:bg-stone-850 border border-stone-800/60 text-stone-400 hover:text-stone-200 transition-all flex items-center justify-center gap-1"
+                  >
+                    <span>🔄</span> Reset
+                  </button>
+                </div>
+              </div>
+
+              {/* Cytat Dnia */}
+              <div 
+                onClick={rotateQuote}
+                className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-5 cursor-pointer relative overflow-hidden transition-all duration-300 hover:scale-[1.01]`}
+              >
+                <div className="flex items-center justify-between text-xs text-stone-500 mb-2">
+                  <span>💡 Mądrość na dziś</span>
+                  <span className="text-[10px] text-amber-500/80">kliknij po kolejny →</span>
+                </div>
+                
+                <p className="text-xs text-stone-300 font-serif leading-relaxed italic">
+                  &quot;{COZY_QUOTES[quoteIndex].text}&quot;
+                </p>
+                
+                <p className="text-[10px] text-stone-500 mt-2 text-right">
+                  — {COZY_QUOTES[quoteIndex].author}
+                </p>
+              </div>
+            </section>
+          </main>
+        </>
+      )}
+
+      {/* CLIMATIC SETTINGS OVERLAY / DIALOG MODAL */}
+      {isSettingsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-fade-in">
+          <div className={`w-full max-w-md bg-[#1f1915] border border-amber-950/40 rounded-3xl p-6 shadow-2xl relative`}>
+            <button
+              onClick={() => setIsSettingsOpen(false)}
+              className="absolute top-4 right-4 text-stone-400 hover:text-stone-100 text-lg transition-colors"
+            >
+              ✕
+            </button>
+
+            <h3 className="text-lg font-bold font-serif text-stone-100 flex items-center gap-2 mb-2">
+              ☕ Ustawienia Twojej Kawiarni Nauki
+            </h3>
+            <p className="text-xs text-stone-400 mb-5">
+              Dostosuj otoczenie do własnego tempa. Zmiana klimatu wpływa na tło strony oraz rodzaj odtwarzanego szumu.
+            </p>
+
+            <div className="flex flex-col gap-3">
+              <label className="text-xs font-semibold text-amber-500 uppercase tracking-widest">
+                Wybierz Motyw Wizualny i Dźwiękowy
+              </label>
+
+              <div className="grid grid-cols-1 gap-2.5">
+                <button
+                  onClick={() => setCozyTheme("library")}
+                  className={`flex items-center justify-between p-3.5 rounded-2xl border text-left transition-all ${
+                    cozyTheme === "library"
+                      ? "border-amber-500 bg-[#c68a4c]/10 text-stone-200"
+                      : "border-stone-800 bg-stone-900/60 text-stone-400 hover:border-stone-700 hover:text-stone-200"
                   }`}
                 >
-                  Relaks
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">🍂</span>
+                    <div>
+                      <p className="text-xs font-bold">Ciepła Biblioteka (Domyślny)</p>
+                      <p className="text-[10px] text-stone-500">Cynamonowe barwy, delikatny szum papieru</p>
+                    </div>
+                  </div>
+                  {cozyTheme === "library" && <span className="text-amber-500 text-xs">●</span>}
+                </button>
+
+                <button
+                  onClick={() => setCozyTheme("rainy")}
+                  className={`flex items-center justify-between p-3.5 rounded-2xl border text-left transition-all ${
+                    cozyTheme === "rainy"
+                      ? "border-sky-500 bg-sky-950/15 text-stone-200"
+                      : "border-stone-800 bg-stone-900/60 text-stone-400 hover:border-stone-700 hover:text-stone-200"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">🌧️</span>
+                    <div>
+                      <p className="text-xs font-bold">Deszczowy Wieczór</p>
+                      <p className="text-[10px] text-stone-500">Głębokie chłodne szarości, szum deszczu za oknem</p>
+                    </div>
+                  </div>
+                  {cozyTheme === "rainy" && <span className="text-sky-500 text-xs">●</span>}
+                </button>
+
+                <button
+                  onClick={() => setCozyTheme("fireplace")}
+                  className={`flex items-center justify-between p-3.5 rounded-2xl border text-left transition-all ${
+                    cozyTheme === "fireplace"
+                      ? "border-red-600 bg-red-950/15 text-stone-200"
+                      : "border-stone-800 bg-stone-900/60 text-stone-400 hover:border-stone-700 hover:text-stone-200"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">🔥</span>
+                    <div>
+                      <p className="text-xs font-bold">Kominek w Schronisku</p>
+                      <p className="text-[10px] text-stone-500">Ciepła powłoka węglowa, trzaski płonącego drewna</p>
+                    </div>
+                  </div>
+                  {cozyTheme === "fireplace" && <span className="text-red-500 text-xs">●</span>}
                 </button>
               </div>
             </div>
 
-            <div className="bg-stone-900/60 border border-stone-800/80 rounded-2xl p-4 text-center">
-              <span className="text-3xl font-extrabold tracking-widest text-stone-100 font-mono drop-shadow-sm select-none">
-                {formatTime(timeLeft)}
-              </span>
-              <p className="text-[10px] text-stone-500 mt-1">
-                {pomodoroMode === "work" ? "Czas na głębokie skupienie 📚" : "Czas na chwilę wytchnienia ☕"}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 mt-3.5">
-              <button
-                onClick={toggleTimer}
-                className={`py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                  timerRunning
-                    ? "bg-stone-800 text-stone-300 border border-stone-700 hover:bg-stone-700"
-                    : `${currentTheme.accentBg} text-stone-950 ${currentTheme.accentHover} shadow-md`
-                }`}
-              >
-                {timerRunning ? (
-                  <>
-                    <span>⏸️</span> Pauza
-                  </>
-                ) : (
-                  <>
-                    <span>▶️</span> Start
-                  </>
-                )}
-              </button>
-
-              <button
-                onClick={resetTimer}
-                className="py-2 rounded-xl text-xs font-bold bg-stone-900 hover:bg-stone-850 border border-stone-800/60 text-stone-400 hover:text-stone-200 transition-all flex items-center justify-center gap-1"
-              >
-                <span>🔄</span> Reset
-              </button>
-            </div>
-          </div>
-
-          {/* Cytat Dnia z przyciskiem rotacji */}
-          <div 
-            onClick={rotateQuote}
-            className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-5 cursor-pointer relative overflow-hidden transition-all duration-300 hover:scale-[1.01]`}
-          >
-            <div className="flex items-center justify-between text-xs text-stone-500 mb-2">
-              <span>💡 Mądrość na dziś</span>
-              <span className="text-[10px] text-amber-500/80">kliknij po kolejny →</span>
-            </div>
-            
-            <p className="text-xs text-stone-300 font-serif leading-relaxed italic">
-              &quot;{COZY_QUOTES[quoteIndex].text}&quot;
-            </p>
-            
-            <p className="text-[10px] text-stone-500 mt-2 text-right">
-              — {COZY_QUOTES[quoteIndex].author}
-            </p>
-          </div>
-        </section>
-      </main>
-    </>
-  )}
-
-  {/* CLIMATIC SETTINGS OVERLAY / DIALOG MODAL */}
-  {isSettingsOpen && (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-fade-in">
-      <div className={`w-full max-w-md bg-[#1f1915] border border-amber-950/40 rounded-3xl p-6 shadow-2xl relative`}>
-        <button
-          onClick={() => setIsSettingsOpen(false)}
-          className="absolute top-4 right-4 text-stone-400 hover:text-stone-100 text-lg transition-colors"
-        >
-          ✕
-        </button>
-
-        <h3 className="text-lg font-bold font-serif text-stone-100 flex items-center gap-2 mb-2">
-          ☕ Ustawienia Twojej Kawiarni Nauki
-        </h3>
-        <p className="text-xs text-stone-400 mb-5">
-          Dostosuj otoczenie do własnego tempa. Zmiana klimatu wpływa na tło strony oraz rodzaj odtwarzanego szumu.
-        </p>
-
-        <div className="flex flex-col gap-3">
-          <label className="text-xs font-semibold text-amber-500 uppercase tracking-widest">
-            Wybierz Motyw Wizualny i Dźwiękowy
-          </label>
-
-          <div className="grid grid-cols-1 gap-2.5">
-            <button
-              onClick={() => setCozyTheme("library")}
-              className={`flex items-center justify-between p-3.5 rounded-2xl border text-left transition-all ${
-                cozyTheme === "library"
-                  ? "border-amber-500 bg-[#c68a4c]/10 text-stone-200"
-                  : "border-stone-800 bg-stone-900/60 text-stone-400 hover:border-stone-700 hover:text-stone-200"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-xl">🍂</span>
-                <div>
-                  <p className="text-xs font-bold">Ciepła Biblioteka (Domyślny)</p>
-                  <p className="text-[10px] text-stone-500">Cynamonowe barwy, delikatny szum papieru</p>
-                </div>
-              </div>
-              {cozyTheme === "library" && <span className="text-amber-500 text-xs">●</span>}
-            </button>
-
-            <button
-              onClick={() => setCozyTheme("rainy")}
-              className={`flex items-center justify-between p-3.5 rounded-2xl border text-left transition-all ${
-                cozyTheme === "rainy"
-                  ? "border-sky-500 bg-sky-950/15 text-stone-200"
-                  : "border-stone-800 bg-stone-900/60 text-stone-400 hover:border-stone-700 hover:text-stone-200"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-xl">🌧️</span>
-                <div>
-                  <p className="text-xs font-bold">Deszczowy Wieczór</p>
-                  <p className="text-[10px] text-stone-500">Głębokie chłodne szarości, szum deszczu za oknem</p>
-                </div>
-              </div>
-              {cozyTheme === "rainy" && <span className="text-sky-500 text-xs">●</span>}
-            </button>
-
-            <button
-              onClick={() => setCozyTheme("fireplace")}
-              className={`flex items-center justify-between p-3.5 rounded-2xl border text-left transition-all ${
-                cozyTheme === "fireplace"
-                  ? "border-red-600 bg-red-950/15 text-stone-200"
-                  : "border-stone-800 bg-stone-900/60 text-stone-400 hover:border-stone-700 hover:text-stone-200"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-xl">🔥</span>
-                <div>
-                  <p className="text-xs font-bold">Kominek w Schronisku</p>
-                  <p className="text-[10px] text-stone-500">Ciepła powłoka węglowa, trzaski płonącego drewna</p>
-                </div>
-              </div>
-              {cozyTheme === "fireplace" && <span className="text-red-500 text-xs">●</span>}
-            </button>
-          </div>
-        </div>
-        {/* Sekcja zmiany hasła (Widoczna tylko dla zalogowanych użytkowników) */}
             {user && (
               <div className="mt-6 pt-5 border-t border-stone-800 flex flex-col gap-3">
                 <label className="text-xs font-semibold text-amber-500 uppercase tracking-widest">
@@ -1339,63 +1394,61 @@ useEffect(() => {
               </div>
             )}
 
-        <div className="mt-6 pt-4 border-t border-stone-800 flex justify-end">
-          <button
-            onClick={() => setIsSettingsOpen(false)}
-            className="px-5 py-2 rounded-xl text-xs font-bold bg-amber-500 text-stone-950 hover:bg-amber-400 transition-all active:scale-95"
-          >
-            Zamknij i Zastosuj
-          </button>
+            <div className="mt-6 pt-4 border-t border-stone-800 flex justify-end">
+              <button
+                onClick={() => setIsSettingsOpen(false)}
+                className="px-5 py-2 rounded-xl text-xs font-bold bg-amber-500 text-stone-950 hover:bg-amber-400 transition-all active:scale-95"
+              >
+                Zamknij i Zastosuj
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  )}
+      )}
 
-  {/* FOOTER */}
-    <footer className={`border-t ${currentTheme.cardBorder} mt-auto py-6 px-6 text-center text-xs ${currentTheme.subText} transition-colors duration-500 bg-stone-950/20`}>
-      <div className="max-w-7xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-3">
-        <p>© 2026 Wiedza Szyta na Miarę. Stworzone z miłości do spokojnej nauki.</p>
-        <div className="flex gap-4">
-          {/* ZMIANA: Zamiast buttonów z alertami, wstawiamy bezpośrednie odnośniki Link */}
-          <Link href="/regulamin" className="hover:text-stone-100 transition-colors">
-            Regulamin
-          </Link>
-          <Link href="/prywatnosc" className="hover:text-stone-100 transition-colors">
-            Prywatność
-          </Link>
-          <Link href="/kontakt" className="hover:text-stone-100 transition-colors">
-            Kontakt
-          </Link>
+      {/* FOOTER */}
+      <footer className={`border-t ${currentTheme.cardBorder} mt-auto py-6 px-6 text-center text-xs ${currentTheme.subText} transition-colors duration-500 bg-stone-950/20`}>
+        <div className="max-w-7xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p>© 2026 Wiedza Szyta na Miarę. Stworzone z miłości do spokojnej nauki.</p>
+          <div className="flex gap-4">
+            <Link href="/regulamin" className="hover:text-stone-100 transition-colors">
+              Regulamin
+            </Link>
+            <Link href="/prywatnosc" className="hover:text-stone-100 transition-colors">
+              Prywatność
+            </Link>
+            <Link href="/kontakt" className="hover:text-stone-100 transition-colors">
+              Kontakt
+            </Link>
+          </div>
         </div>
-      </div>
-    </footer>
+      </footer>
 
-  {/* PRZYTULNE POWIADOMIENIE (ZAMIAST BRZYDKIEGO ALERTU) */}
-  {cozyNotification && (
-    <div className="fixed bottom-6 right-6 z-50 animate-slide-in">
-      <div className={`flex items-center gap-3.5 px-5 py-4 rounded-2xl border shadow-2xl backdrop-blur-md max-w-sm ${
-        cozyNotification.type === 'success'
-          ? 'bg-emerald-950/90 border-emerald-500/30 text-emerald-200'
-          : cozyNotification.type === 'error'
-          ? 'bg-red-950/90 border-red-500/30 text-red-200'
-          : 'bg-[#251b15]/95 border-amber-950/40 text-stone-200'
-      }`}>
-        <span className="text-xl">
-          {cozyNotification.type === 'success' ? '✨' : cozyNotification.type === 'error' ? '⚠️' : '☕'}
-        </span>
-        <p className="text-xs font-semibold leading-relaxed pr-2">
-          {cozyNotification.message}
-        </p>
-        <button 
-          onClick={() => setCozyNotification(null)}
-          className="text-stone-400 hover:text-stone-100 text-xs ml-auto font-bold focus:outline-none"
-        >
-          ✕
-        </button>
-      </div>
+      {/* PRZYTULNE POWIADOMIENIE */}
+      {cozyNotification && (
+        <div className="fixed bottom-6 right-6 z-50 animate-slide-in">
+          <div className={`flex items-center gap-3.5 px-5 py-4 rounded-2xl border shadow-2xl backdrop-blur-md max-w-sm ${
+            cozyNotification.type === 'success'
+              ? 'bg-emerald-950/90 border-emerald-500/30 text-emerald-200'
+              : cozyNotification.type === 'error'
+              ? 'bg-red-950/90 border-red-500/30 text-red-200'
+              : 'bg-[#251b15]/95 border-amber-950/40 text-stone-200'
+          }`}>
+            <span className="text-xl">
+              {cozyNotification.type === 'success' ? '✨' : cozyNotification.type === 'error' ? '⚠️' : '☕'}
+            </span>
+            <p className="text-xs font-semibold leading-relaxed pr-2">
+              {cozyNotification.message}
+            </p>
+            <button 
+              onClick={() => setCozyNotification(null)}
+              className="text-stone-400 hover:text-stone-100 text-xs ml-auto font-bold focus:outline-none"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
     </div>
-  )}
-
-</div>
-);
+  );
 }
