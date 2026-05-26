@@ -45,6 +45,14 @@ export default function Home() {
   // Theme state
   const [cozyTheme, setCozyTheme] = useState<"library" | "rainy" | "fireplace">("library");
 
+    // Stan do przechowywania profilu (w tym essay_credits jako tokenów)
+  const [profile, setProfile] = useState<any>(null);
+
+  // Stan do przechowywania listy ostatnich ocenionych rozprawek
+  const [recentEssays, setRecentEssays] = useState<any[]>([]);
+
+  
+
   const [newPassword, setNewPassword] = useState("");
   const [passwordChangeLoading, setPasswordChangeLoading] = useState(false);
   
@@ -83,7 +91,55 @@ export default function Home() {
       setCozyNotification(null);
     }, 4500);
   };
+  // 1. Pobieranie profilu użytkownika (kredyty/tokeny) po zmianie zalogowanego konta
+useEffect(() => {
+  async function fetchUserProfile() {
+    if (user) {
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('subscription_status, essay_credits')
+        .eq('id', user.id)
+        .single();
+        
+      if (profileData) {
+        setProfile(profileData);
+        if (profileData.subscription_status === 'paid' || profileData.subscription_status === 'admin') {
+          setHasAccess(true);
+        } else {
+          setHasAccess(false);
+        }
+      } else {
+        setProfile(null);
+        setHasAccess(false);
+      }
+    } else {
+      setProfile(null);
+      setHasAccess(false);
+    }
+  }
+  fetchUserProfile();
+}, [user]);
 
+// 2. Pobieranie ostatnich ocenionych wypracowań z bazy danych
+useEffect(() => {
+  async function fetchRecentEssays() {
+    if (user) {
+      const { data, error } = await supabase
+        .from("essay_evaluations")
+        .select("id, topic, score")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(3); // Pobiera 3 ostatnio ocenione prace
+        
+      if (data && !error) {
+        setRecentEssays(data);
+      }
+    } else {
+      setRecentEssays([]);
+    }
+  }
+  fetchRecentEssays();
+}, [user]);
   // Sprawdzanie stanu zalogowania i płatności
 // 1. Bezpieczny nasłuchiwalnik samego logowania (bez zapytań do bazy, aby zapobiec zawieszaniu Supabase!)
   useEffect(() => {
@@ -876,6 +932,41 @@ export default function Home() {
                 >
                   {hasAccess ? "Uruchom Edytor ✨" : "Zyskaj Dostęp Premium 🔑"}
                 </button>
+                {/* Szybki licznik pozostałych kredytów oraz historia ostatnich wypracowań */}
+{user && (
+  <div className="mt-4 pt-4 border-t border-stone-800/60 flex flex-col gap-3">
+    {/* Wyświetlanie tokenów */}
+    <div className="flex justify-between items-center bg-purple-950/20 border border-purple-900/30 px-3 py-2 rounded-xl">
+      <span className="text-[10px] text-purple-300 font-semibold uppercase tracking-wider">Pozostałe tokeny:</span>
+      <span className="text-xs font-bold font-mono text-purple-400 bg-stone-900 px-2 py-0.5 rounded-md border border-purple-900/40">
+        {profile?.essay_credits ?? 0} {profile?.essay_credits === 1 ? "token" : "tokeny"}
+      </span>
+    </div>
+
+    {/* Lista ostatnich ocen */}
+    {recentEssays.length > 0 && (
+      <div className="flex flex-col gap-1.5">
+        <span className="text-[9px] text-stone-500 uppercase tracking-widest font-bold">Ostatnio oceniane:</span>
+        <div className="flex flex-col gap-1.5">
+          {recentEssays.map((essay) => (
+            <div 
+              key={essay.id}
+              onClick={() => handlePremiumNavigation("/ocenianie-rozprawek")}
+              className="flex justify-between items-center p-2 rounded-lg bg-stone-950/40 hover:bg-purple-950/20 border border-stone-900 hover:border-purple-900/30 transition-all cursor-pointer group/item"
+            >
+              <span className="text-[10px] text-stone-400 font-serif truncate max-w-[130px] group-hover/item:text-stone-200">
+                {essay.topic || "Bez tytułu"}
+              </span>
+              <span className="text-[10px] font-bold font-mono text-emerald-400 bg-stone-900 px-1.5 py-0.5 rounded border border-stone-800">
+                {essay.score || "Ocena"}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+)}
               </div>
             </section>
 
