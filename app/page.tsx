@@ -217,6 +217,23 @@ export default function Home() {
     }
   };
 
+  // Funkcja bezpiecznej nawigacji dla sekcji Premium
+const handlePremiumNavigation = (path: string) => {
+  if (!user) {
+    triggerNotification("🔑 Aby skorzystać z tej funkcji, najpierw się zaloguj!", "info");
+    return;
+  }
+  
+  if (!hasAccess) {
+    triggerNotification(
+      "🔒 Ta funkcja wymaga konta Premium. Odblokuj pełny dostęp klikając przycisk na górze strony!", 
+      "error"
+    );
+  } else {
+    router.push(path);
+  }
+};
+
   // Pobieranie notatek
 // Pobieranie notatek (Zabezpieczone i zoptymalizowane pod kątem widoczności karty)
 // Pobieranie notatek (Zoptymalizowana, bezbłędna wersja)
@@ -759,63 +776,61 @@ export default function Home() {
             {/* LEFT COLUMN: NAVIGATION & AI ESSAY PLACEHOLDER */}
             <section className="lg:col-span-3 flex flex-col gap-6">
               {/* Navigation Panel */}
-              <div className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-4 transition-colors duration-500`}>
-                <h3 className="text-xs uppercase tracking-widest text-amber-500 font-semibold mb-3 px-1">
-                  Nawigacja
-                </h3>
-                <nav className="flex flex-col gap-1">
-                  <a 
-                    href="/notes" 
-                    className={`flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-900/60 group transition-all`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-lg">📚</span>
-                      <span className="text-sm font-medium group-hover:text-amber-400 transition-colors">Wszystkie Notatki</span>
-                    </div>
-                    <span className="text-xs bg-stone-900 border border-stone-800 text-amber-500/80 px-2 py-0.5 rounded-full">
-                      {notes.length}
-                    </span>
-                  </a>
+                <div className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-4 transition-colors duration-500`}>
+                  <h3 className="text-xs uppercase tracking-widest text-amber-500 font-semibold mb-3 px-1">
+                    Nawigacja
+                  </h3>
+                  <nav className="flex flex-col gap-1">
+                    <Link 
+                      href="/notes" 
+                      className={`flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-900/60 group transition-all`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">📚</span>
+                        <span className="text-sm font-medium group-hover:text-amber-400 transition-colors">Wszystkie Notatki</span>
+                      </div>
+                      <span className="text-xs bg-stone-900 border border-stone-800 text-amber-500/80 px-2 py-0.5 rounded-full">
+                        {notes.length}
+                      </span>
+                    </Link>
 
-                  <button 
-                    onClick={() => {
-                      if (!hasAccess) {
-                        triggerNotification("🔒 Ta opcja wymaga konta Premium. Kliknij 'Uzyskaj Pełny Dostęp' u góry strony, aby odblokować!", "error");
-                      } else {
-                        triggerNotification("Statystyki Twoich postępów zostaną wkrótce zsynchronizowane!", "info");
-                      }
-                    }}
-                    className="flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-900/60 group transition-all text-left w-full"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-lg">📈</span>
-                      <span className="text-sm font-medium group-hover:text-amber-400 transition-colors">Moje Postępy</span>
-                    </div>
-                    <span className="text-xs bg-emerald-950/50 border border-emerald-900/60 text-emerald-400 px-2 py-0.5 rounded-full">
-                      {hasAccess ? "Wkrótce" : "Premium 🔒"}
-                    </span>
-                  </button>
+                    {/* PRZYCISK: MOJE POSTĘPY */}
+                    <button 
+                      onClick={() => handlePremiumNavigation("/postepy")}
+                      className="flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-900/60 group transition-all text-left w-full"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">📈</span>
+                        <span className="text-sm font-medium group-hover:text-amber-400 transition-colors">Moje Postępy</span>
+                      </div>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                        hasAccess 
+                          ? 'bg-emerald-950/50 border-emerald-900/60 text-emerald-400' 
+                          : 'bg-stone-900/60 border-stone-800 text-stone-500'
+                      }`}>
+                        {hasAccess ? "Wejdź ✨" : "Premium 🔒"}
+                      </span>
+                    </button>
 
-                  <button 
-                    onClick={() => {
-                      if (!hasAccess) {
-                        triggerNotification("🔒 Szybkie Fiszki są dostępne w wersji Premium!", "error");
-                      } else {
-                        triggerNotification("Moduł Quizów i Fiszarek w przygotowaniu! Wróć niebawem 🦉", "info");
-                      }
-                    }}
-                    className="flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-900/60 group transition-all text-left w-full"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-lg">⚡</span>
-                      <span className="text-sm font-medium group-hover:text-amber-400 transition-colors">Szybkie Fiszki</span>
-                    </div>
-                    <span className="text-[10px] bg-purple-950/50 border border-purple-900/60 text-purple-300 px-2 py-0.5 rounded-full">
-                      {hasAccess ? "Nowość" : "Premium 🔒"}
-                    </span>
-                  </button>
-                </nav>
-              </div>
+                    {/* PRZYCISK: SZYBKIE FISZKI */}
+                    <button 
+                      onClick={() => handlePremiumNavigation("/fiszki")}
+                      className="flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-900/60 group transition-all text-left w-full"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">⚡</span>
+                        <span className="text-sm font-medium group-hover:text-amber-400 transition-colors">Szybkie Fiszki</span>
+                      </div>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                        hasAccess 
+                          ? 'bg-purple-950/50 border-purple-900/60 text-purple-300' 
+                          : 'bg-stone-900/60 border-stone-800 text-stone-500'
+                      }`}>
+                        {hasAccess ? "Graj ⚡" : "Premium 🔒"}
+                      </span>
+                    </button>
+                  </nav>
+                </div>
 
               {/* AI Essay Card - Cozy Style */}
               <div className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-5 relative overflow-hidden transition-colors duration-500 group`}>
@@ -849,16 +864,14 @@ export default function Home() {
                 </ul>
 
                 <button
-                  onClick={() => {
-                    if (!hasAccess) {
-                      triggerNotification("🔒 To narzędzie AI jest dostępne tylko dla kont Premium. Kliknij 'Uzyskaj Pełny Dostęp' u góry strony, aby je odblokować!", "error");
-                    } else {
-                      triggerNotification("Inteligentne sprawdzanie wypracowań będzie dostępne już wkrótce! Baza wiedzy o kryteriach CKE jest właśnie przygotowywana.", "info");
-                    }
-                  }}
-                  className={`w-full mt-4 py-2 rounded-xl text-xs font-bold text-purple-200 border border-purple-900/60 bg-purple-950/20 hover:bg-[#2c1b3d] hover:text-white transition-all`}
+                  onClick={() => handlePremiumNavigation("/ocenianie-rozprawek")}
+                  className={`w-full mt-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                    hasAccess 
+                      ? 'bg-purple-600 text-white hover:bg-purple-500' 
+                      : 'text-purple-200 border border-purple-900/60 bg-purple-950/20 hover:bg-[#2c1b3d]'
+                  }`}
                 >
-                  {hasAccess ? "Uruchom Edytor (Wkrótce)" : "Zyskaj Dostęp Premium 🔑"}
+                  {hasAccess ? "Uruchom Edytor ✨" : "Zyskaj Dostęp Premium 🔑"}
                 </button>
               </div>
             </section>
