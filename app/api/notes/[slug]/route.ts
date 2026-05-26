@@ -1,6 +1,4 @@
 // app/api/notes/[slug]/route.ts
-import { readFile } from 'fs/promises'
-import path from 'path'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseServer } from '@/app/lib/supabaseServer'
 import { createClient } from '@supabase/supabase-js'
@@ -53,14 +51,41 @@ export async function GET(
     }
   }
 
-  // 3. Jeśli użytkownik ma dostęp lub notatka jest darmowa -> odczytujemy i zwracamy plik HTML
+  // 3. Jeśli użytkownik ma dostęp lub notatka jest darmowa -> odczytujemy i zwracamy plik HTML z GitHub API
   try {
-    const filePath = path.join(process.cwd(), 'private', 'notes', data.file_path)
-    const html = await readFile(filePath, 'utf-8')
+    const owner = "skapon6"
+    const repo = "Notatki-Private-Matura-Projekt"
+    
+    // Zmienna 'data.file_path' to ścieżka do pliku zapisana w Twojej bazie Supabase (np. "notatka1.html").
+    // Ponieważ wrzuciłeś notatki do nowego repozytorium, ścieżka ta idealnie mapuje się na strukturę plików w tym repozytorium.
+    const gitHubPath = data.file_path 
+
+    const response = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/contents/${gitHubPath}`,
+      {
+        headers: {
+          // Pobieramy token ze zmiennych środowiskowych
+          Authorization: `Bearer ${process.env.GITHUB_NOTES_PAT}`,
+          // Pobieramy surowy kod pliku HTML (raw) zamiast obiektu JSON
+          Accept: 'application/vnd.github.v3.raw',
+        },
+        // Wyłączamy cache, aby aktualizacje na GitHubie były od razu widoczne
+        cache: 'no-store' 
+      }
+    )
+
+    if (!response.ok) {
+      console.error(`Błąd API GitHuba: ${response.status} ${response.statusText}`)
+      return new NextResponse('Nie znaleziono pliku notatki w prywatnym repozytorium', { status: 404 })
+    }
+
+    const html = await response.text()
+
     return new NextResponse(html, {
       headers: { 'Content-Type': 'text/html; charset=utf-8' }
     })
-  } catch {
-    return new NextResponse('Błąd odczytu pliku', { status: 500 })
+  } catch (err) {
+    console.error('Błąd pobierania pliku:', err)
+    return new NextResponse('Błąd odczytu pliku z zewnętrznego serwera', { status: 500 })
   }
 }
