@@ -298,6 +298,104 @@ tematu; 9 błędów językowych obniża ostateczną ocenę wypowiedzi.
 4b. Poprawność ortograficzna: 2 pkt – praca bez błędów ortograficznych.
 4c. Poprawność interpunkcyjna: 2 pkt – praca zawiera 7 błędów interpunkcyjnych.
 
+PRZYKŁAD 2 (Rozprawka oceniona na 21/35 przez CKE)
+Temat: Jaki wpływ na sposób widzenia świata przez człowieka mają czasy, w których on żyje?
+
+Treść: Człowiek jest istotą społeczną, dla której niezmiernie ważne są
+relacje międzyludzkie i kultura. Niewątpliwie wpływ na te aspekty życia
+codziennego mają wydarzenia historyczne. W literaturze bardzo
+chętnie jest podejmowana tematyka dziejów historycznych, gdyż budzi
+ona wiele emocji. Pisarze i poeci ukazują w swych utworach
+codzienność i uczucia ludzi, ale także tradycję i zwyczaje ówczesnych
+czasów. Czasy te, w których żyją ludzie, mają znaczący wpływ na ich
+światopogląd, ponieważ stanowi on odzwierciedlenie sytuacji
+codziennej i wartości moralnych człowieka.
+ Doświadczenia kształtują postawę jednostki, kreują jego odczucia
+oraz pragnienia. Ta sama sytuacja może być zinterpretowana na
+różne sposoby przez ludzi z innych epok.
+W opowiadaniu „Proszę państwa do gazu” T. Borowskiego zostały
+ukazane realia życia więźnia obozu koncentracyjnego z czasów II
+wojny światowej. Główny bohater bierze udział w czyszczeniu
+wagonów pociągowych, w których przyjechali ludzie z różnych części
+świata. Mężczyzna odczuwał wstręt i obrzydzenie do przybyłych,
+fekalia, trupy i fetor budziły w nim gniew i pogardę. Bohater chciał jak
+najszybciej wykonać pracę, dlatego martwe noworodki wyciągał z
+wagonu po kilka za malutkie rączki, co dla współczesnego człowieka
+jest niedopuszczalne. Zdehumanizowane postępowanie oficerów
+i pomagających im więźniów budzi żal i smutek u ludzi XXI wieku,
+a wpływ na to ma sytuacja historyczna – wartości więźniów obozu, dla
+których najważniejszym zadaniem było dożyć jutra, wynikają
+z potrzeby zaspokojenia potrzeb fizjologicznych i czysto naturalnych,
+zaś współcześni ludzie mogą sobie pozwolić na rozmyślania
+filozoficzne czy egzystencjalne z powodu zaspokojenia potrzeb
+niższego rzędu i posiadanej wolności. Ukazana w opowiadaniu klęska
+kultury w zetknięciu z barbarzyństwem i brutalnością rozbudziła
+w człowieku prymitywne zachowania i uczucia. Budowane wartości
+upadły w zetknięciu z głodem i śmiercią. Dla głównego bohatera
+sprzątanie zwłok było tylko pracą zapewniającą mu byt, lecz nie
+potrafił on współczuć osobom przeznaczonym, do zagazowania
+Błąd interpunkcyjny:
+Zbędny przecinek przed przyimkiem 'do'.
+Poprawnie: osobom przeznaczonym do zagazowania, bo
+wynikało to z jego doświadczeń.
+Również w „Dziadach” cz. III A. Mickiewicza została podjęta
+tematyka sytuacji człowieka w świecie. Ukazana martyrologia
+Polaków wynika z działań zaborców, którzy za wszelką cenę chcą
+zlikwidować naród polski. Mickiewicz w tym dziele wykreował
+mesjanistyczną koncepcję narodu – Polska jako naród wybrany
+umrze w męce jak Chrystus, lecz odrodzi się w chwale. Ówcześni
+ludzie żyli dzięki temu nadzieją, mieli ochotę do życia i walki za
+ojczyznę. Patriotyczne podejście ludzi do rzeczywistości stanowiło
+wartość, sens ich egzystencji. Pesymistyczny nastrój wywołany
+odebraniem wolności ukochanego kraju został zastąpiony przez
+nadzieję i optymistyczną wizję przyszłości. Polacy z pewnością byli
+rozgoryczeni, mieli poczucie niesprawiedliwości i żalu do Boga,
+dlatego Konrad postanawia zbuntować się przeciwko niemu i wziąć
+sprawy we własne ręce, zawalczyć o kraj. Nie boi się on konsekwencji
+buntu wobec Boga, twierdzi nawet, że Bóg zostawił Polskę, dlatego
+Konrad postanawia wziąć jarzmo cierpienia na własne barki i wyzwolić
+naród. Bezwarunkowa miłość jednostki do ojczyzny wynikła z utraty
+państwa i braku wolności, podczas gdy współcześni obywatele nie
+potrafią docenić dobrobytu i dobrej sytuacji politycznej państwa.
+Negatywne wydarzenia historyczne budzą w ludziach prawdziwe
+emocje, sprawiają, że ludzie odczuwają mocniej i głębiej brutalną
+rzeczywistość w porównaniu ze współczesną stabilizacją i harmonią.
+Prawda jest taka, że ludzie nie potrafią docenić czegoś, dopóki tego
+nie stracą. Doświadczenia kreują ludzki światopogląd i system
+aksjologiczny, determinują jego pragnienia i charakter. Człowiek nie
+potrafi żyć obok historii, bo jest on jej częścią i twórcą
+
+Oficjalna punktacja i uzasadnienie CKE:
+1. Spełnienie formalnych warunków polecenia: 1 pkt – wypracowanie w całości
+spełnia formalne warunki:
+• znajduje się w nim odwołanie do lektury obowiązkowej (Proszę państwa do gazu
+Tadeusza Borowskiego oraz Dziadów cz. III Adama Mickiewicza)
+• w całości dotyczy problemu wskazanego w poleceniu
+• jest wypowiedzią argumentacyjną.
+2. Kompetencje literackie i kulturowe: 10 pkt
+• opowiadanie Borowskiego Proszę państwa do gazu zostało wykorzystane
+w wypowiedzi w pełni funkcjonalnie jako podstawa argumentacji dotyczącej
+wpływu trudnej sytuacji obozowej na postawy ludzi, zatracenie podstawowych
+zasad moralnych; częściowo funkcjonalnie została wykorzystana problematyka
+Dziadów cz. III Mickiewicza –w wypowiedzi został wskazany związek między ideą
+mesjanizmu a postawą patriotyczną, ale powiązanie między mesjanistyczną wizją
+Polski a buntem Konrada wobec Boga jest niespójne, co nie pozwala zdającemu
+na pełną rzeczową argumentację powiązaną z tezą
+• częściowo funkcjonalnie wykorzystano kontekst historycznoliteracki (obecność
+mesjanizmu w literaturze romantycznej)
+• powierzchowna argumentacja.
+3. Kompozycja wypowiedzi
+3a. Struktura wypowiedzi: 2 pkt – usterki w podziale tekstu zarówno w skali ogólnej,
+jak i w zakresie struktury akapitów.
+3b. Spójność wypowiedzi: 1 pkt – w wypowiedzi występuje 6 zaburzeń spójności
+wynikających z braku powiązania treści w akapicie i między akapitami.
+3c. Styl wypowiedzi: 1 pkt – adekwatny do sytuacji komunikacyjnej, jednorodny.
+4. Język wypowiedzi
+4a. Poprawność językowa: 2 pkt – szeroki zakres środków językowych
+(zróżnicowana składnia, leksyka) umożliwiających pełną i swobodną realizację
+tematu; 20 błędów językowych obniża ostateczną ocenę wypowiedzi.
+4b. Poprawność ortograficzna: 2 pkt – praca zawiera 1 błąd ortograficzny.
+4c. Poprawność interpunkcyjna: 2 pkt – praca zawiera 4 błędy interpunkcyjne.
 `
 
 ;

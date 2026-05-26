@@ -15,7 +15,13 @@ const supabaseAdmin = createClient(
 );
 
 export async function POST(req: NextRequest) {
+  // Deklaracja zmiennych na początku funkcji (widoczne w try oraz catch)
+  let creditDeducted = false;
+  let originalCredits = 0;
+  let userId = "";
+
   try {
+    // 1. Autoryzacja użytkownika
     const supabase = await getSupabaseServer();
 
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -23,8 +29,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Brak autoryzacji." }, { status: 401 });
     }
 
-    const userId = session.user.id;
+    userId = session.user.id;
 
+    // 2. Pobranie danych wejściowych
     const { topic, essayText } = await req.json();
     if (!topic || !essayText) {
       return NextResponse.json({ error: "Brak tematu lub treści wypracowania." }, { status: 400 });
@@ -35,6 +42,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Tekst jest zbyt krótki (minimum 50 słów)." }, { status: 400 });
     }
 
+    // 3. Sprawdzenie kredytów
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("essay_credits")
@@ -45,67 +53,75 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Nie udało się pobrać profilu." }, { status: 500 });
     }
 
-    if (profile.essay_credits <= 0) {
+    originalCredits = profile.essay_credits;
+
+    if (originalCredits <= 0) {
       return NextResponse.json({ error: "Brak wolnych kredytów." }, { status: 403 });
     }
 
-    const newCredits = profile.essay_credits - 1;
+    // 4. Natychmiastowe zablokowanie kredytu (zabezpieczenie współbieżności)
+    const newCredits = originalCredits - 1;
     const { error: updateError } = await supabaseAdmin
       .from("profiles")
       .update({ essay_credits: newCredits })
       .eq("id", userId);
 
     if (updateError) {
-      console.error("Błąd zapisu kredytów przez admina:", updateError);
-      return NextResponse.json({ error: "Nie udało się zaktualizować kredytów." }, { status: 500 });
+      console.error("Błąd blokowania kredytu:", updateError);
+      return NextResponse.json({ error: "Nie udało się zablokować kredytu." }, { status: 500 });
     }
 
-    // 5. Oficjalny prompt CKE 2023 (Skala 35 punktów)
-    const systemPrompt = `Jesteś doświadczonym, obiektywnym egzaminatorem CKE. Oceniasz chłodno i zgodnie z rubryką — nie zaniżasz, ale też nie zawyżasz. Twoje oceny są identyczne z tym, co przyznałby średni egzaminator CKE podczas drugiego czytania pracy.
+    // Oznaczenie, że kredyt został fizycznie pobrany z bazy danych
+    creditDeducted = true;
 
-Poniżej znajduje się oficjalna baza wiedzy CKE, wytyczne oceniania oraz wypracowania wzorcowe. Musisz się do nich bezwzględnie zastosować podczas oceny:
+    // 5. Oficjalny prompt CKE 2023 (Skala 35 punktów)
+    const systemPrompt = `Jesteś obiektywnym, precyzyjnym i sprawiedliwym egzaminatorem CKE. Twoim zadaniem jest ocena szkolnego wypracowania zgodnie z polskimi kryteriami CKE w Formule 2023 (skala 35 punktów). Nie bądź ani nadmiernie surowy, ani nadmiernie pobłażliwy. Mapuj tekst ucznia bezpośrednio na definicje i tabele z poniższej bazy wiedzy:
+
 =========================================
 ${ckeGuidelines}
 =========================================
 
-KALIBRACJA OCENIANIA (krytyczna):
-- Wynik 30-35/35 oznacza pracę absolutnie wybitną — wzorcową dla innych egzaminatorów. Takich prac jest mniej niż 2% na maturze.
-- Wynik 25-29/35 oznacza pracę bardzo dobrą, z bogatą erudycją i niemal bezbłędną kompozycją.
-- Wynik 18-24/35 to typowy dobry poziom — praca spełnia wymogi, argumentacja jest rzetelna, ale bez głębszego namysłu.
-- Wynik 12-17/35 to praca przeciętna — spełnia formalne warunki, ale argumentacja jest powierzchowna.
-- Większość prac maturzystów mieści się w przedziale 14-24/35.
+KROKI ANalityczne (MUSISZ JE WYKONAĆ PRZED WYDANIEM PUNKTACJI):
+1. Policz orientacyjną liczbę słów. Jeśli < 300 słów -> Kompozycja = 0/7, Język = 0/11.
+2. Sprawdź, czy nie ma błędu kardynalnego (falsyfikacja losów głównego bohatera lektury obowiązkowej). Jeśli tak -> cała praca otrzymuje bezwzględne 0/35.
+3. KLiK (Kompetencje literackie - 16 pkt) – Zidentyfikuj:
+   - Ile utworów przywołał uczeń? (Dwa? Jeden?)
+   - Jaka jest funkcjonalność każdego z nich? (W pełni funkcjonalne, częściowo funkcjonalne, niefunkcjonalne?)
+   - Jaki jest poziom argumentacji? (Bogaty, zadowalający, powierzchowny?)
+   - Ile jest funkcjonalnych kontekstów? (Co najmniej jeden? Dwa?)
+   - Policz błędy rzeczowe. Za każdy błąd rzeczowy odejmij dokładnie 1 punkt od wyniku KLiK.
+   - NA PODSTAWIE TYCH DANYCH dopasuj punktację KLiK DOKŁADNIE do odpowiedniego wiersza w "TABELI PUNKTACJI" z bazy wiedzy. Jeśli uczeń przywołał tylko 1 utwór częściowo funkcjonalnie z powierzchowną argumentacją, jego KLiK wynosi maksymalnie 1-2 punkty!
+4. Kompozycja (7 pkt) – Oceń strukturę (3a), spójność logiczną (3b - policz zaburzenia) oraz styl (3c).
+5. Język (11 pkt) – Policz błędy językowe (4a), ortograficzne (4b) oraz interpunkcyjne (4c). Zastosuj dokładnie progi punktowe z tabeli.
 
-KONKRETNE ZAOSTRZENIA:
-- KLiK (kryterium 2): 16/16 przyznaj TYLKO jeśli argumentacja jest wieloaspektowa, erudycyjna i oba konteksty są w pełni funkcjonalne z pogłębioną refleksją. Jeśli masz jakiekolwiek wątpliwości — przyznaj co najwyżej 14.
-- Kompozycja (kryterium 3): jeśli akapity są krótkie lub brak wyraźnego toku problemowego (każdy akapit to inny tekst literacki bez spinającego problemu) — odejmij co najmniej 1 pkt w podkryterium struktury.
-- Język (kryterium 4): policz błędy literalnie. Każde nieuzasadnione powtórzenie wyrazu to błąd językowy. Jeśli składnia jest prosta i monotonna — zakres środków = "zadowalający", nie "szeroki".
-- Nie stosuj "zasady na korzyść zdającego" przy ocenie KLiK powyżej 13 pkt — ta zasada dotyczy sytuacji granicznych przy niskich wynikach, nie premiowania przeciętnej argumentacji.
+Zwróć odpowiedź WYŁĄCZNIE jako obiekt JSON o strukturze zgodnej z poniższym przykładem. Nie używaj znaczników markdown takich jak \`\`\`json.
 
-    {
+{
+  "_internal_scoring_checklist": "Tutaj rozpisz krok po kroku swoje wyliczenia: 1. Słowa, 2. Błąd kardynalny, 3. Analiza funkcjonalności utworów, dopasowanie do wiersza tabeli KLiK, odjęte błędy rzeczowe, 4. Wyliczenie błędów językowych/ortograficznych/interpunkcyjnych według progów tabeli JW. To pole służy jako Twój logiczny brudnopis przed wydaniem ocen.",
   "score": "X/35",
   "details": [
     {
       "criterion": "Spełnienie formalnych warunków polecenia",
       "points": "X/1",
-      "comment": "Komentarz"
+      "comment": "Precyzyjne, merytoryczne uzasadnienie punktacji."
     },
     {
       "criterion": "Kompetencje literackie i kulturowe",
       "points": "X/16",
-      "comment": "Komentarz"
+      "comment": "Wyjaśnienie, które utwory zostały uznane za w pełni/częściowo funkcjonalne, ocena poziomu argumentacji oraz wylistowanie błędów rzeczowych wraz z ich wpływem na punktację."
     },
     {
       "criterion": "Kompozycja wypowiedzi",
       "points": "X/7",
-      "comment": "Komentarz"
+      "comment": "Ocena struktury, podziału na akapity, spójności i stylu. Jeżeli praca ma mniej niż 300 słów - przyznaj 0/7 pkt z wyjaśnieniem limitu."
     },
     {
       "criterion": "Język wypowiedzi",
       "points": "X/11",
-      "comment": "Komentarz"
+      "comment": "Ocena poprawności językowej, leksykalnej, ortograficznej i interpunkcyjnej zgodnie z liberalnymi limitami błędów CKE. Jeżeli praca ma mniej niż 300 słów - przyznaj 0/11 pkt."
     }
   ],
-  "summary": "Zwięzłe podsumowanie całej rozprawki z konstruktywnymi, motywującymi i ciepłymi radami dla ucznia na przyszłość.",
+  "summary": "Obiektywne podsumowanie rozprawki wskazujące mocne strony oraz konkretne obszary wymagające poprawy, napisane w tonie profesjonalnego egzaminatora.",
   "annotations": [
     {
       "original": "dokładny fragment z tekstu ucznia zawierający błąd",
@@ -127,14 +143,14 @@ KONKRETNE ZAOSTRZENIA:
       contents: [{ role: "user", parts: [{ text: userMessage }] }],
       generationConfig: {
         responseMimeType: "application/json",
-        temperature: 0.2,
+        temperature: 0.15,
       },
     });
 
     const responseText = result.response.text();
     const parsedResult = JSON.parse(responseText);
 
-    // [NOWOŚĆ] 7. Zapisanie analizy w bazie danych przy użyciu klienta Admina (omijającego RLS przy zapisie)
+    // Zapisanie oceny w historii
     const { error: insertError } = await supabaseAdmin
       .from("essay_evaluations")
       .insert({
@@ -146,7 +162,7 @@ KONKRETNE ZAOSTRZENIA:
       });
 
     if (insertError) {
-      console.error("Błąd zapisu oceny do historii bazy danych:", insertError);
+      console.error("Błąd zapisu oceny do historii:", insertError);
     }
 
     return NextResponse.json({
@@ -157,8 +173,22 @@ KONKRETNE ZAOSTRZENIA:
 
   } catch (error) {
     console.error("Błąd podczas analizy wypracowania z Gemini:", error);
+
+    // Rollback kredytu w przypadku niepowodzenia
+    if (creditDeducted && userId) {
+      try {
+        await supabaseAdmin
+          .from("profiles")
+          .update({ essay_credits: originalCredits })
+          .eq("id", userId);
+        console.log(`[ROLLBACK] Pomyślnie zwrócono kredyt dla użytkownika ${userId}`);
+      } catch (rollbackError) {
+        console.error("Krytyczny błąd podczas wycofywania kredytu (Rollback):", rollbackError);
+      }
+    }
+
     return NextResponse.json(
-      { error: "Wystąpił wewnętrzny błąd serwera podczas analizy AI." }, 
+      { error: "Wystąpił błąd podczas analizy AI. Twój kredyt został zwrócony." }, 
       { status: 500 }
     );
   }
