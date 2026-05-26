@@ -1251,7 +1251,7 @@ export default function Home() {
       <div className="flex gap-4">
         <button onClick={() => alert("Regulamin platformy w trakcie sporządzania 📜")} className="hover:text-stone-100 transition-colors">Regulamin</button>
         <button onClick={() => alert("Polityka prywatności gwarantuje pełne bezpieczeństwo danych 🔒")} className="hover:text-stone-100 transition-colors">Prywatność</button>
-        <a href="mailto:kontakt@wiedzaszytanamiare.pl" className="hover:text-stone-100 transition-colors">Kontakt</a>
+        <a href="mailto:wiedzaszytanamiare@gmail.com" className="hover:text-stone-100 transition-colors">Kontakt</a>
       </div>
     </div>
   </footer>
