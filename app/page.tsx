@@ -1258,16 +1258,23 @@ const handlePremiumNavigation = (path: string) => {
   )}
 
   {/* FOOTER */}
-  <footer className={`border-t ${currentTheme.cardBorder} mt-auto py-6 px-6 text-center text-xs ${currentTheme.subText} transition-colors duration-500 bg-stone-950/20`}>
-    <div className="max-w-7xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-3">
-      <p>© 2026 Wiedza Szyta na Miarę. Stworzone z miłości do spokojnej nauki.</p>
-      <div className="flex gap-4">
-        <button onClick={() => alert("Regulamin platformy w trakcie sporządzania 📜")} className="hover:text-stone-100 transition-colors">Regulamin</button>
-        <button onClick={() => alert("Polityka prywatności gwarantuje pełne bezpieczeństwo danych 🔒")} className="hover:text-stone-100 transition-colors">Prywatność</button>
-        <a href="mailto:wiedzaszytanamiare@gmail.com" className="hover:text-stone-100 transition-colors">Kontakt</a>
+    <footer className={`border-t ${currentTheme.cardBorder} mt-auto py-6 px-6 text-center text-xs ${currentTheme.subText} transition-colors duration-500 bg-stone-950/20`}>
+      <div className="max-w-7xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-3">
+        <p>© 2026 Wiedza Szyta na Miarę. Stworzone z miłości do spokojnej nauki.</p>
+        <div className="flex gap-4">
+          {/* ZMIANA: Zamiast buttonów z alertami, wstawiamy bezpośrednie odnośniki Link */}
+          <Link href="/regulamin" className="hover:text-stone-100 transition-colors">
+            Regulamin
+          </Link>
+          <Link href="/prywatnosc" className="hover:text-stone-100 transition-colors">
+            Prywatność
+          </Link>
+          <Link href="/kontakt" className="hover:text-stone-100 transition-colors">
+            Kontakt
+          </Link>
+        </div>
       </div>
-    </div>
-  </footer>
+    </footer>
 
   {/* PRZYTULNE POWIADOMIENIE (ZAMIAST BRZYDKIEGO ALERTU) */}
   {cozyNotification && (
