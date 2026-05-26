@@ -218,21 +218,24 @@ export default function Home() {
   };
 
   // Funkcja bezpiecznej nawigacji dla sekcji Premium
-const handlePremiumNavigation = (path: string) => {
-  if (!user) {
-    triggerNotification("🔑 Aby skorzystać z tej funkcji, najpierw się zaloguj!", "info");
-    return;
-  }
-  
-  if (!hasAccess) {
-    triggerNotification(
-      "🔒 Ta funkcja wymaga konta Premium. Odblokuj pełny dostęp klikając przycisk na górze strony!", 
-      "error"
-    );
-  } else {
-    router.push(path);
-  }
-};
+  const handlePremiumNavigation = (path: string) => {
+    if (!user) {
+      triggerNotification("🔑 Aby skorzystać z tej funkcji, najpierw się zaloguj!", "info");
+      return;
+    }
+    
+    // Zezwalamy na wejście do edytora rozprawek każdemu zalogowanemu użytkownikowi
+    if (path === "/ocenianie-rozprawek") {
+      router.push(path);
+    } else if (!hasAccess) {
+      triggerNotification(
+        "🔒 Ta funkcja wymaga konta Premium. Odblokuj pełny dostęp klikając przycisk na górze strony!", 
+        "error"
+      );
+    } else {
+      router.push(path);
+    }
+  };
 
   // Pobieranie notatek
 // Pobieranie notatek (Zabezpieczone i zoptymalizowane pod kątem widoczności karty)
