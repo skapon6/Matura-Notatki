@@ -37,14 +37,32 @@ export async function GET(
       return new NextResponse('Brak dostępu: Zaloguj się!', { status: 401 })
     }
 
-    // Pobieramy profil, aby zweryfikować status płatności (Premium lub Admin)
+    // Pobieramy profil wraz z datą wygaśnięcia, aby zweryfikować status płatności
     const { data: profile } = await supabaseAdmin
       .from('profiles')
-      .select('subscription_status')
+      .select('subscription_status, expires_at') // <--- Pobieramy status oraz expires_at
       .eq('id', user.id)
       .single()
 
-    const hasAccess = profile?.subscription_status === 'paid' || profile?.subscription_status === 'admin'
+    // Logika weryfikacji dostępu dla wielu pakietów
+    let hasAccess = false
+    if (profile) {
+      const activeStatuses = ['mini', 'medium', 'premium', 'admin', 'paid']
+      const isStatusActive = activeStatuses.includes(profile.subscription_status)
+      
+      // Sprawdzamy w czasie rzeczywistym, czy data ważności już minęła
+      let isExpired = false
+      if (profile.expires_at) {
+        const expirationTime = new Date(profile.expires_at).getTime()
+        const currentTime = new Date().getTime()
+        isExpired = currentTime > expirationTime
+      }
+      
+      // Dostęp jest aktywny tylko gdy status się zgadza i pakiet nie wygasł
+      if (isStatusActive && !isExpired) {
+        hasAccess = true
+      }
+    }
 
     if (!hasAccess) {
       return new NextResponse('Brak dostępu: Ta notatka wymaga konta Premium! 🔒', { status: 403 })
@@ -56,20 +74,15 @@ export async function GET(
     const owner = "skapon6"
     const repo = "Notatki-Private-Matura-Projekt"
     
-    // Zmienna 'data.file_path' to ścieżka do pliku zapisana w Twojej bazie Supabase (np. "notatka1.html").
-    // Ponieważ wrzuciłeś notatki do nowego repozytorium, ścieżka ta idealnie mapuje się na strukturę plików w tym repozytorium.
     const gitHubPath = data.file_path 
 
     const response = await fetch(
       `https://api.github.com/repos/${owner}/${repo}/contents/${gitHubPath}`,
       {
         headers: {
-          // Pobieramy token ze zmiennych środowiskowych
           Authorization: `Bearer ${process.env.GITHUB_NOTES_PAT}`,
-          // Pobieramy surowy kod pliku HTML (raw) zamiast obiektu JSON
           Accept: 'application/vnd.github.v3.raw',
         },
-        // Wyłączamy cache, aby aktualizacje na GitHubie były od razu widoczne
         cache: 'no-store' 
       }
     )

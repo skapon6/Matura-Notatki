@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { supabase } from "../lib/supabase"; // Jeśli plik supabase.ts masz w app/lib/supabase
+import { supabase } from "../lib/supabase"; // Upewnij się, że ścieżka jest poprawna względem folderu pliku
 
 export default function FiszkiPage() {
   const router = useRouter();
@@ -18,7 +18,7 @@ export default function FiszkiPage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
 
-  // 1. Sprawdzanie uprawnień Premium (Tylko dla opłaconych kont)
+  // 1. Sprawdzanie uprawnień Premium (Zgodnie z logiką z app/page.tsx)
   useEffect(() => {
     async function verifyPremiumAccess() {
       try {
@@ -31,16 +31,27 @@ export default function FiszkiPage() {
 
         const { data: profile } = await supabase
           .from("profiles")
-          .select("subscription_status")
+          .select("subscription_status, expires_at")
           .eq("id", session.user.id)
           .single();
 
-        if (profile?.subscription_status === "paid" || profile?.subscription_status === "admin") {
+        const activeStatuses = ['mini', 'medium', 'premium', 'admin', 'paid'];
+        const isStatusActive = profile ? activeStatuses.includes(profile.subscription_status) : false;
+
+        // Sprawdzenie daty ważności konta
+        let isExpired = false;
+        if (profile?.expires_at) {
+          const expirationTime = new Date(profile.expires_at).getTime();
+          const currentTime = new Date().getTime();
+          isExpired = currentTime > expirationTime;
+        }
+
+        if (isStatusActive && !isExpired) {
           setHasAccess(true);
-          // Jeśli ma dostęp, od razu pobieramy fiszki z bazy danych
+          // Jeśli ma dostęp, wywołujemy pobieranie fiszek
           fetchFlashcards();
         } else {
-          router.push("/"); // Przekieruj na główną, jeśli to darmowy użytkownik
+          router.push("/"); // Przekieruj na główną, jeśli brak dostępu lub subskrypcja wygasła
         }
       } catch (err) {
         console.error("Błąd weryfikacji dostępu:", err);
@@ -134,7 +145,7 @@ export default function FiszkiPage() {
           <div className="h-64 flex items-center justify-center text-stone-500 text-xs">
             ☕ Pobieranie najnowszych fiszek z bazy danych...
           </div>
-        ) : flashcards.length > 0 ? (
+        ) : flashcards.length > 0 && currentCard ? (
           <>
             {/* Karta Fiszki */}
             <div 
@@ -142,7 +153,7 @@ export default function FiszkiPage() {
               className="h-64 rounded-2xl border border-stone-800 bg-stone-900/50 hover:bg-stone-900/70 transition-all cursor-pointer flex flex-col items-center justify-center p-6 text-center shadow-inner select-none relative"
             >
               {/* Epoka literacka u góry */}
-              {currentCard.era && (
+              {currentCard?.era && (
                 <span className="absolute top-4 left-4 text-[10px] text-amber-500 uppercase tracking-widest font-bold">
                   {currentCard.era}
                 </span>
@@ -156,14 +167,14 @@ export default function FiszkiPage() {
                 {isFlipped ? "Kliknij, aby odwrócić 🔄" : "Kliknij, aby poznać odpowiedź 🔄"}
               </span>
 
-              {/* Przód i tył */}
+              {/* Przód i tył z bezpiecznym łańcuchowaniem */}
               {isFlipped ? (
                 <p className="text-sm sm:text-base text-stone-200 font-serif leading-relaxed animate-fade-in px-2">
-                  {currentCard.back}
+                  {currentCard?.back}
                 </p>
               ) : (
                 <p className="text-base sm:text-lg text-stone-100 font-bold font-serif leading-tight px-2">
-                  {currentCard.front}
+                  {currentCard?.front}
                 </p>
               )}
             </div>
