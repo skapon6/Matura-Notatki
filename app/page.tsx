@@ -21,6 +21,7 @@ import { NotesBrowser } from "./components/NotesBrowser";
 import { PersonalNotesList } from "./components/PersonalNotesList";
 import { PersonalNotesModal } from "./components/PersonalNotesModal";
 import { MaturaCountdown } from "./components/MaturaCountdown";
+import { TokenRechargeModal } from "./components/TokenRechargeModal";
 
 // Import globalnego odtwarzacza Lo-Fi
 import { useLofi } from "./context/LofiContext";
@@ -59,6 +60,9 @@ export default function Home() {
   // Stany otwarcia szczegółowego notesu z cytatami
   const [isPersonalNotesOpen, setIsPersonalNotesOpen] = useState(false);
   const [selectedPersonalNote, setSelectedPersonalNote] = useState<any | null>(null);
+
+  // Stan otwarcia modalu doładowań tokenów
+  const [isTokenModalOpen, setIsTokenModalOpen] = useState(false);
 
   // AUTH & STRIPE STATES
   const [user, setUser] = useState<any>(null);
@@ -693,9 +697,19 @@ export default function Home() {
                   <div className="mt-4 pt-4 border-t border-stone-800/60 flex flex-col gap-3">
                     <div className="flex justify-between items-center bg-purple-950/20 border border-purple-900/30 px-3 py-2 rounded-xl">
                       <span className="text-[10px] text-purple-300 font-semibold uppercase tracking-wider">Pozostałe tokeny:</span>
-                      <span className="text-xs font-bold font-mono text-purple-400 bg-stone-900 px-2 py-0.5 rounded-md border border-purple-900/40">
-                        {profile?.essay_credits ?? 0} {profile?.essay_credits === 1 ? "token" : "tokeny"}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold font-mono text-purple-400 bg-stone-900 px-2 py-0.5 rounded-md border border-purple-900/40">
+                          {profile?.essay_credits ?? 0} {profile?.essay_credits === 1 ? "token" : "tokeny"}
+                        </span>
+                        
+                        {/* TUTAJ NOWY PRZYCISK: DOŁADOWANIE TOKENÓW */}
+                        <button
+                          onClick={() => setIsTokenModalOpen(true)}
+                          className="text-[9px] uppercase tracking-wider font-extrabold bg-amber-500 text-stone-950 px-2 py-1 rounded-md hover:bg-amber-400 transition-all shadow"
+                        >
+                          Doładuj 🪙
+                        </button>
+                      </div>
                     </div>
 
                     {recentEssays.length > 0 && (
@@ -773,7 +787,7 @@ export default function Home() {
       />
 
       {/* COZY NOTIFICATIONS */}
-      <CozyNotification 
+      < CozyNotification 
         notification={cozyNotification} 
         onClose={() => setCozyNotification(null)} 
       />
@@ -790,6 +804,14 @@ export default function Home() {
         setPersonalNotes={setPersonalNotes}
         triggerNotification={triggerNotification}
         selectedNote={selectedPersonalNote}
+      />
+
+      {/* MODAL DOŁADOWAŃ TOKENÓW (DODAJEMY GO NA SAMYM DOLE) */}
+      <TokenRechargeModal 
+        isOpen={isTokenModalOpen}
+        onClose={() => setIsTokenModalOpen(false)}
+        currentTheme={currentTheme}
+        triggerNotification={triggerNotification}
       />
     </div>
   );

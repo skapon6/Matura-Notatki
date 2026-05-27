@@ -1,83 +1,106 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import Stripe from 'stripe'
+import { createClient } from '@supabase/supabase-js';
+import { NextResponse } from 'next/server';
+import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2023-10-16' as any,
+});
 
-// Klient administratora do zapisu danych bez ograniczeń RLS
-const supabaseAdmin = createClient(
+// Klient Supabase z prawami Service Role do ominięcia barier RLS przy aktualizacji profilu
+const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+);
 
 export async function POST(request: Request) {
-  const body = await request.text()
-  const sig = request.headers.get('stripe-signature')
+  const body = await request.text();
+  const signature = request.headers.get('stripe-signature')!;
 
-  let event: Stripe.Event
+  let event: Stripe.Event;
 
   try {
-    if (!sig) throw new Error('Brak nagłówka stripe-signature')
-    event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET!)
+    event = stripe.webhooks.constructEvent(
+      body,
+      signature,
+      process.env.STRIPE_WEBHOOK_SECRET!
+    );
   } catch (err: any) {
-    console.error(`⚠️ Błąd weryfikacji webhooka: ${err.message}`)
-    return NextResponse.json({ error: `Błąd weryfikacji: ${err.message}` }, { status: 400 })
+    console.error(`Błąd weryfikacji webhooka Stripe: ${err.message}`);
+    return new Response(`Webhook Error: ${err.message}`, { status: 400 });
   }
 
-  // Obsługa zdarzenia po udanej płatności
-// Obsługa zdarzenia po udanej płatności
-if (event.type === 'checkout.session.completed') {
-  const session = event.data.object as Stripe.Checkout.Session;
+  // Obsługa sfinalizowania płatności
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object as Stripe.Checkout.Session;
+    const metadata = session.metadata;
 
-  const userId = session.metadata?.supabase_user_id;
-  const tier = session.metadata?.tier;
+    if (metadata) {
+      const userId = metadata.userId;
+      const purchaseType = metadata.purchaseType;
 
-  if (userId && tier) {
-    let tokensToAdd = 0;
-    let expirationDate: Date | null = null;
+      // 1. OBSŁUGA ZAKUPU JEDNORAZOWYCH TOKENÓW
+      if (purchaseType === 'tokens') {
+        const tokenAmount = parseInt(metadata.tokenAmount || '0');
 
-    const now = new Date();
+        try {
+          // Pobieramy aktualną liczbę tokenów użytkownika
+          const { data: profile, error: fetchError } = await supabase
+            .from('profiles')
+            .select('essay_credits')
+            .eq('id', userId)
+            .single();
 
-    // Obliczamy tokeny oraz datę wygaśnięcia dostępu
-    if (tier === 'mini') {
-      tokensToAdd = 5;
-      expirationDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // +30 dni
-    } else if (tier === 'medium') {
-      tokensToAdd = 10;
-      expirationDate = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000); // +90 dni
-    } else if (tier === 'premium') {
-      tokensToAdd = 10;
-      expirationDate = null; // Premium nie wygasa nigdy (dostęp na zawsze)
-    }
+          if (fetchError) throw fetchError;
 
-    try {
-      // A. Pobieramy aktualny stan profilu
-      const { data: profile } = await supabaseAdmin
-        .from('profiles')
-        .select('essay_credits')
-        .eq('id', userId)
-        .single();
+          const currentCredits = profile?.essay_credits || 0;
+          const newCredits = currentCredits + tokenAmount;
 
-      const currentCredits = profile?.essay_credits || 0;
-      const newCredits = currentCredits + tokensToAdd;
+          // Aktualizujemy tokeny w bazie Supabase
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ essay_credits: newCredits })
+            .eq('id', userId);
 
-      // B. Zapisujemy dane wraz z datą wygaśnięcia
-      await supabaseAdmin
-        .from('profiles')
-        .update({
-          subscription_status: tier,
-          essay_credits: newCredits,
-          expires_at: expirationDate ? expirationDate.toISOString() : null, // Zapisujemy datę
-          updated_at: now.toISOString()
-        })
-        .eq('id', userId);
+          if (updateError) throw updateError;
 
-      console.log(`✅ Sukces: Nadano pakiet ${tier}, dodano ${tokensToAdd} tokenów. Ważność do: ${expirationDate}`);
-    } catch (err) {
-      console.error("Błąd aktualizacji profilu w webhooku:", err);
+          console.log(`Pomyślnie dodano ${tokenAmount} tokenów dla użytkownika ${userId}`);
+        } catch (dbError: any) {
+          console.error('Błąd aktualizacji bazy danych przy zakupie tokenów:', dbError.message);
+          return NextResponse.json({ error: dbError.message }, { status: 500 });
+        }
+
+      // 2. OBSŁUGA ZAKUPU SUBSKRYPCJI (Dotychczasowa logika)
+      } else if (purchaseType === 'subscription') {
+        const tier = metadata.subscriptionTier;
+        
+        let expirationDate = new Date();
+        if (tier === 'mini') {
+          expirationDate.setDate(expirationDate.getDate() + 30);
+        } else if (tier === 'medium') {
+          expirationDate.setDate(expirationDate.getDate() + 90);
+        } else if (tier === 'premium') {
+          expirationDate.setFullYear(expirationDate.getFullYear() + 100); // Lifetime
+        }
+
+        try {
+          const { error: subUpdateError } = await supabase
+            .from('profiles')
+            .update({
+              subscription_status: tier,
+              expires_at: expirationDate.toISOString()
+            })
+            .eq('id', userId);
+
+          if (subUpdateError) throw subUpdateError;
+
+          console.log(`Pomyślnie zaktualizowano subskrypcję ${tier} dla użytkownika ${userId}`);
+        } catch (dbError: any) {
+          console.error('Błąd aktualizacji bazy przy subskrypcji:', dbError.message);
+          return NextResponse.json({ error: dbError.message }, { status: 500 });
+        }
+      }
     }
   }
-}
 
-  return NextResponse.json({ received: true })
+  return NextResponse.json({ received: true });
 }
