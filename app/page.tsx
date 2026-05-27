@@ -1,4 +1,3 @@
-// app/page.tsx
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
@@ -6,60 +5,31 @@ import { supabase } from "./lib/supabase";
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-// Cozy quotes for Matura students
-const COZY_QUOTES = [
-  { text: "Cierpliwość i praca tworzą wielkie dzieła.", author: "Konfucjusz" },
-  { text: "Nauka to jedyna rzecz, której umysł nigdy nie wyczerpie, nie boi się ani nie żałuje.", author: "Leonardo da Vinci" },
-  { text: "Zrób to, co możesz, tym, co masz, tam, gdzie jesteś.", author: "Theodore Roosevelt" },
-  { text: "Nie bój się iść powoli, obawiaj się jedynie stania w miejscu.", author: "Przysłowie chińskie" },
-  { text: "Krok po kroku i dojdziesz do celu. Matura to tylko kolejny przystanek.", author: "Wiedza Szyta na Miarę" }
-];
+// Lib & Helpers
+import { getThemeClasses, CozyTheme } from "./lib/theme";
 
-// Słownik tłumaczący błędy z języka angielskiego na polski
-const translateAuthError = (message: string): string => {
-  const msg = message.toLowerCase();
-  
-  if (msg.includes("user already registered") || msg.includes("already exists")) {
-    return "Użytkownik o tym adresie e-mail już istnieje!";
-  }
-  if (msg.includes("password should be at least")) {
-    return "Hasło musi mieć co najmniej 6 znaków!";
-  }
-  if (msg.includes("invalid login credentials")) {
-    return "Niepoprawny adres e-mail lub hasło!";
-  }
-  if (msg.includes("signup requires a valid email")) {
-    return "Wprowadź poprawny adres e-mail!";
-  }
-  if (msg.includes("email rate limit exceeded") || msg.includes("rate limit")) {
-    return "Zbyt wiele prób w krótkim czasie. Odczekaj chwilę!";
-  }
-  
-  return message;
-};
+// Wyodrębnione Komponenty
+import { CozyNotification } from "./components/CozyNotification";
+import { ClimaticSettingsModal } from "./components/ClimaticSettingsModal";
+import { CozyMug } from "./components/CozyMug";
+import { PomodoroTimer } from "./components/PomodoroTimer";
+import { QuoteCard } from "./components/QuoteCard";
+import { AuthForm } from "./components/AuthForm";
+import { PaymentTiers } from "./components/PaymentTiers";
+import { NotesBrowser } from "./components/NotesBrowser";
 
 export default function Home() {
   const router = useRouter();
+
   // Theme state
-  const [cozyTheme, setCozyTheme] = useState<"library" | "rainy" | "fireplace">("library");
+  const [cozyTheme, setCozyTheme] = useState<CozyTheme>("library");
 
-  // Stan do przechowywania profilu (w tym essay_credits jako tokenów)
+  // Stan profilu i sesji
   const [profile, setProfile] = useState<any>(null);
-
-  // Stan do przechowywania listy ostatnich ocenionych rozprawek
   const [recentEssays, setRecentEssays] = useState<any[]>([]);
-
-  const [newPassword, setNewPassword] = useState("");
-  const [passwordChangeLoading, setPasswordChangeLoading] = useState(false);
-  
-  // Settings modal
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // Search & filter states
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedSubject, setSelectedSubject] = useState("Wszystkie");
-
-  // Dynamic notes loaded from Supabase
+  // Dynamiczne notatki pobierane z bazy
   const [notes, setNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -67,15 +37,10 @@ export default function Home() {
   const [user, setUser] = useState<any>(null);
   const [hasAccess, setHasAccess] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
-
-  // Formularz logowania
-  const [authEmail, setAuthEmail] = useState('');
-  const [authPassword, setAuthPassword] = useState('');
-  const [isRegisterForm, setIsRegisterForm] = useState(false);
-  const [authFormLoading, setAuthFormLoading] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const [activePaymentTier, setActivePaymentTier] = useState<string | null>(null);
 
-  // SYSTEM PRZYTULNYCH POWIADOMIEŃ
+  // System przytulnych powiadomień
   const [cozyNotification, setCozyNotification] = useState<{
     message: string;
     type: "success" | "error" | "info";
@@ -88,7 +53,7 @@ export default function Home() {
     }, 4500);
   };
 
-  // 1. Bezpieczny nasłuchiwalnik samego logowania
+  // 1. Monitorowanie sesji i logowania
   useEffect(() => {
     async function checkInitialSession() {
       setAuthLoading(true);
@@ -118,7 +83,7 @@ export default function Home() {
     };
   }, []);
 
-  // 2. Jednolity proces pobierania profilu (z uwzględnieniem daty wygaśnięcia dostępu)
+  // 2. Pobieranie danych profilu
   useEffect(() => {
     async function fetchUserProfile() {
       if (user) {
@@ -134,7 +99,6 @@ export default function Home() {
           const activeStatuses = ['mini', 'medium', 'premium', 'admin', 'paid'];
           const isStatusActive = activeStatuses.includes(profileData.subscription_status);
           
-          // Sprawdzamy w czasie rzeczywistym, czy data ważności już minęła
           let isExpired = false;
           if (profileData.expires_at) {
             const expirationTime = new Date(profileData.expires_at).getTime();
@@ -142,7 +106,6 @@ export default function Home() {
             isExpired = currentTime > expirationTime;
           }
           
-          // Dostęp jest aktywny tylko jeśli status się zgadza i czas nie upłynął
           if (isStatusActive && !isExpired) {
             setHasAccess(true);
           } else {
@@ -160,7 +123,7 @@ export default function Home() {
     fetchUserProfile();
   }, [user]);
 
-  // 3. Pobieranie ostatnich ocenionych wypracowań z bazy danych
+  // 3. Pobieranie ostatnich rozprawki
   useEffect(() => {
     async function fetchRecentEssays() {
       if (user) {
@@ -169,7 +132,7 @@ export default function Home() {
           .select("id, topic, score")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false })
-          .limit(3); // Pobiera 3 ostatnio ocenione prace
+          .limit(3);
           
         if (data && !error) {
           setRecentEssays(data);
@@ -181,48 +144,33 @@ export default function Home() {
     fetchRecentEssays();
   }, [user]);
 
-  // Obsługa logowania / rejestracji
-  const handleAuthSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthFormLoading(true);
-    
-    if (isRegisterForm) {
-      const { error } = await supabase.auth.signUp({
-        email: authEmail,
-        password: authPassword,
-      });
-      if (error) {
-        triggerNotification(translateAuthError(error.message), 'error');
-      } else {
-        triggerNotification('Konto zostało pomyślnie utworzone! Możesz się teraz zalogować.', 'success');
-        setIsRegisterForm(false);
-      }
-    } else {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: authEmail,
-        password: authPassword,
-      });
-      if (error) {
-        triggerNotification(translateAuthError(error.message), 'error');
-      } else {
-        triggerNotification('Zalogowano pomyślnie!', 'success');
+  // 4. Pobieranie bazy notatek
+  useEffect(() => {
+    async function fetchNotes() {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase.from("notes").select("*");
+        if (!error && data) {
+          setNotes(data as any[]);
+        }
+      } catch (err) {
+        console.error("Error fetching notes:", err);
+      } finally {
+        setLoading(false);
       }
     }
-    setAuthFormLoading(false);
-  };
 
-  const [activePaymentTier, setActivePaymentTier] = useState<string | null>(null);
+    fetchNotes();
+  }, [hasAccess]);
 
-  // Obsługa inicjalizacji płatności Stripe dla wybranego pakietu
+  // Inicjalizacja transakcji Stripe
   const handlePaymentInit = async (tier: 'mini' | 'medium' | 'premium') => {
     setPaymentLoading(true);
     setActivePaymentTier(tier);
     try {
       const response = await fetch('/api/checkout', { 
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tier })
       });
       const data = await response.json();
@@ -241,36 +189,7 @@ export default function Home() {
     }
   };
 
-  // Funkcja zmiany hasła użytkownika
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (newPassword.length < 6) {
-      triggerNotification("Hasło musi mieć co najmniej 6 znaków!", "error");
-      return;
-    }
-
-    setPasswordChangeLoading(true);
-    try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
-
-      if (error) {
-        triggerNotification(translateAuthError(error.message), "error");
-      } else {
-        triggerNotification("Hasło zostało pomyślnie zmienione! 🔑", "success");
-        setNewPassword("");
-      }
-    } catch (err) {
-      console.error(err);
-      triggerNotification("Wystąpił błąd podczas zmiany hasła.", "error");
-    } finally {
-      setPasswordChangeLoading(false);
-    }
-  };
-
-  // Funkcja bezpiecznej nawigacji dla sekcji Premium
+  // Bezpieczna nawigacja
   const handlePremiumNavigation = (path: string) => {
     if (!user) {
       triggerNotification("🔑 Aby skorzystać z tej funkcji, najpierw się zaloguj!", "info");
@@ -289,91 +208,12 @@ export default function Home() {
     }
   };
 
-  // Pobieranie notatek
-  useEffect(() => {
-    async function fetchNotes() {
-      setLoading(true)
-      try {
-        const { data, error } = await supabase.from("notes").select("*");
-        if (!error && data) {
-          setNotes(data as any[]);
-        }
-      } catch (err) {
-        console.error("Error fetching notes:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchNotes()
-  }, [hasAccess])
-
-  // Pomodoro state
-  const [pomodoroMode, setPomodoroMode] = useState<"work" | "break">("work");
-  const [timeLeft, setTimeLeft] = useState(25 * 60);
-  const [timerRunning, setTimerRunning] = useState(false);
-
-  // Steam mug click count & surprise message state
-  const [mugClicks, setMugClicks] = useState(0);
-  const [mugMessage, setMugMessage] = useState("Ciepły napar paruje... Kliknij kubek!");
-
   // Ambient sound synthesizer references
   const [ambientSoundActive, setAmbientSoundActive] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const noiseSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const filterNodeRef = useRef<BiquadFilterNode | null>(null);
 
-  // Quote index state
-  const [quoteIndex, setQuoteIndex] = useState(0);
-
-  // Change quote on click
-  const rotateQuote = () => {
-    setQuoteIndex((prev) => (prev + 1) % COZY_QUOTES.length);
-  };
-
-  // Pomodoro Countdown Effect
-  useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    if (timerRunning && timeLeft > 0) {
-      interval = setInterval(() => {
-        setTimeLeft((prev) => prev - 1);
-      }, 1000);
-    } else if (timeLeft === 0) {
-      setTimerRunning(false);
-      if (pomodoroMode === "work") {
-        setPomodoroMode("break");
-        setTimeLeft(5 * 60);
-        triggerNotification("Czas na przerwę! Napij się herbaty ☕", "success");
-      } else {
-        setPomodoroMode("work");
-        setTimeLeft(25 * 60);
-        triggerNotification("Czas wracać do pracy! Skupienie 📚", "info");
-      }
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [timerRunning, timeLeft, pomodoroMode]);
-
-  // Pomodoro controls
-  const toggleTimer = () => setTimerRunning(!timerRunning);
-  const resetTimer = () => {
-    setTimerRunning(false);
-    setTimeLeft(pomodoroMode === "work" ? 25 * 60 : 5 * 60);
-  };
-  const switchPomodoroMode = (mode: "work" | "break") => {
-    setTimerRunning(false);
-    setPomodoroMode(mode);
-    setTimeLeft(mode === "work" ? 25 * 60 : 5 * 60);
-  };
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-  };
-
-  // Web Audio Rain / Cozy Ambience Synthesizer
   const toggleAmbientSound = () => {
     if (ambientSoundActive) {
       try {
@@ -444,128 +284,7 @@ export default function Home() {
     }
   }, [cozyTheme]);
 
-  // Mug Click Interaction
-  const handleMugClick = () => {
-    const clicks = mugClicks + 1;
-    setMugClicks(clicks);
-    
-    const messages = [
-      "Mmm... pyszna, ciepła cynamonowa herbata! ☕",
-      "Spokojnie, krok po kroku opanujesz cały materiał.",
-      "Zrobiłeś sobie przerwę? Bardzo dobrze, mózg potrzebuje odpoczynku.",
-      "Czy wiesz, że zapach herbaty obniża poziom stresu?",
-      "Klikasz w kubek z determinacją! Matura na 100%! 🚀",
-      "Masz ochotę na małą powtórkę? Spójrz na notatki obok.",
-      "Czujesz ten zapach goździków i pomarańczy? Wyjątkowo przytulnie."
-    ];
-    setMugMessage(messages[clicks % messages.length]);
-  };
-
-  const epochKeywords: Record<string, string[]> = {
-    "Antyk": ["antyk", "starożytność", "mitologia", "homer", "sofokles", "biblia", "mit", "antygona", "król edyp", "iliada", "odyseja"],
-    "Średniowiecze": ["średniowiecze", "bogurodzica", "lament swietokrzyski", "pieśń o rolandzie", "rozmowa mistrza polikarpa", "gall anonim"],
-    "Renesans": ["renesans", "odrodzenie", "kochanowski", "treny", "szachy", "odprawa posłów", "fraszki", "pieśni", "mikołaj rej", "szekspir", "makbet"],
-    "Barok": ["barok", "vanitas", "konceptyzm", "sarmatyzm", "marinizm", "paski", "morsztyn", "naborowski", "skąpiec", "molier"],
-    "Oświecenie": ["oświecenie", "krasicki", "monachomachia", "hymn do miłości", "żona modna", "powrót posła", "bajki"],
-    "Romantyzm": ["romantyzm", "kordian", "mickiewicz", "słowacki", "dziady", "pan tadeusz", "ballady i romanse", "nie-boska komedia", "krasiński"],
-    "Pozytywizm": ["pozytywizm", "lalka", "prus", "orzeszkowa", "nad niemnem", "mendel gdanski", "gloria victis", "potop", "sienkiewicz"],
-    "Młoda Polska": ["młoda polska", "wesele", "wyspiański", "ludzie bezdomni", "chłopi", "reymont", "deszcz jesienny", "tetmajer", "kasprowicz"],
-    "Dwudziestolecie": ["dwudziestolecie", "ferdydurke", "gombrowicz", "przedwiośnie", "żeromski", "granica", "nałkowska", "skamander", "schulz", "sklepy cynamonowe"],
-    "Wojna i okupacja": ["wojna", "okupacja", "kamienie na szaniec", "baczyński", "borowski", "opoowiadania borowskiego", "inny świat", "grudziński"],
-    "Współczesność": ["współczesność", "tango", "mrożek", "ocalenie", "szymborska", "różewicz", "herbert", "rok 1984", "orwell", "dżuma", "camus"]
-  };
-
-  const getExcerpt = (note: any) => {
-    if (note.excerpt && typeof note.excerpt === 'string') return note.excerpt;
-    const content = note.content;
-    if (typeof content === 'string') return content.length > 140 ? content.substring(0, 140) + '...' : content;
-    if (Array.isArray(content)) {
-      for (const b of content) {
-        if (typeof b === 'string') {
-          return b.length > 140 ? b.substring(0, 140) + '...' : b;
-        }
-        if (b && (b.content || b.text || b.body)) {
-          const t = b.content || b.text || b.body;
-          if (typeof t === 'string') return t.length > 140 ? t.substring(0, 140) + '...' : t;
-        }
-      }
-    }
-    if (content && typeof content === 'object') {
-      try {
-        const s = JSON.stringify(content);
-        return s.length > 140 ? s.substring(0, 140) + '...' : s;
-      } catch (_) {}
-    }
-    return note.era ? `Epoka: ${note.era}` : '';
-  };
-
-  const filteredNotes = notes.filter((note) => {
-    const titleLower = (note.title || "").toLowerCase();
-    const contentString = typeof note.content === 'string' ? note.content : JSON.stringify(note.content || "");
-    const contentLower = contentString.toLowerCase();
-    
-    const chipsString = Array.isArray(note.chips) ? note.chips.join(" ") : "";
-    const chipsLower = chipsString.toLowerCase();
-    
-    const textToSearch = `${titleLower} ${contentLower} ${chipsLower}`;
-    
-    const matchesSearch = textToSearch.includes(searchQuery.toLowerCase());
-    
-    let matchesSubject = true;
-    if (selectedSubject !== "Wszystkie") {
-      const keywords = epochKeywords[selectedSubject] || [selectedSubject.toLowerCase()];
-      matchesSubject = keywords.some(keyword => textToSearch.includes(keyword));
-    }
-    
-    return matchesSearch && matchesSubject;
-  });
-
-  const getThemeClasses = () => {
-    switch (cozyTheme) {
-      case "rainy":
-        return {
-          bg: "bg-[#0d1116]",
-          cardBg: "bg-[#151c24]/90",
-          cardBorder: "border-slate-800/60",
-          accentText: "text-sky-400",
-          accentBg: "bg-sky-500",
-          accentHover: "hover:bg-sky-400",
-          glow: "shadow-sky-500/5",
-          btnBorder: "border-sky-500/30",
-          textColor: "text-slate-200",
-          subText: "text-slate-400"
-        };
-      case "fireplace":
-        return {
-          bg: "bg-[#1a0e0e]",
-          cardBg: "bg-[#251515]/90",
-          cardBorder: "border-red-950/60",
-          accentText: "text-amber-500",
-          accentBg: "bg-amber-600",
-          accentHover: "hover:bg-amber-500",
-          glow: "shadow-amber-600/5",
-          btnBorder: "border-amber-600/30",
-          textColor: "text-rose-100",
-          subText: "text-rose-300/70"
-        };
-      case "library":
-      default:
-        return {
-          bg: "bg-[#14100e]",
-          cardBg: "bg-[#1f1915]/90",
-          cardBorder: "border-amber-950/40",
-          accentText: "text-amber-500/90",
-          accentBg: "bg-[#c68a4c]",
-          accentHover: "hover:bg-[#d99c5d]",
-          glow: "shadow-amber-700/5",
-          btnBorder: "border-[#c68a4c]/30",
-          textColor: "text-stone-200",
-          subText: "text-stone-400"
-        };
-    }
-  };
-
-  const currentTheme = getThemeClasses();
+  const currentTheme = getThemeClasses(cozyTheme);
 
   if (authLoading) {
     return (
@@ -603,7 +322,7 @@ export default function Home() {
           onClick={() => setIsSettingsOpen(true)}
           className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 transition-all text-sm font-medium ${currentTheme.subText} hover:text-stone-100`}
         >
-          <svg className="w-4 h-4 animate-spin-slow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
@@ -613,7 +332,7 @@ export default function Home() {
         <div className="flex flex-col items-center select-none">
           <div className="flex items-center gap-2">
             <span className="text-2xl">📖</span>
-            <h1 className={`text-xl font-semibold tracking-wide bg-gradient-to-r from-amber-200 via-orange-300 to-amber-100 bg-clip-text text-transparent drop-shadow-sm`}>
+            <h1 className="text-xl font-semibold tracking-wide bg-gradient-to-r from-amber-200 via-orange-300 to-amber-100 bg-clip-text text-transparent drop-shadow-sm">
               Wiedza Szyta na Miarę
             </h1>
           </div>
@@ -659,14 +378,14 @@ export default function Home() {
                   try {
                     await supabase.auth.signOut();
                   } catch (err) {
-                    console.warn("Wylogowanie w chmurze pominięte:", err);
+                    console.warn("Wylogowanie pominięte:", err);
                   } finally {
                     setUser(null);
                     setHasAccess(false);
                     router.refresh();
                   }
                 }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold border border-red-900/30 bg-red-950/20 text-red-400 hover:bg-red-900 hover:text-white transition-all`}
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold border border-red-900/30 bg-red-950/20 text-red-400 hover:bg-red-900 hover:text-white transition-all"
               >
                 Wyloguj
               </button>
@@ -694,57 +413,16 @@ export default function Home() {
               Witaj w swojej cichej przystani naukowej. Zaloguj się lub utwórz bezpłatne konto, aby uzyskać dostęp do notatek i przygotować się bez zbędnego stresu.
             </p>
             <div className="mt-6 p-4 rounded-2xl bg-stone-900/30 border border-stone-800/40 text-xs italic text-stone-400">
-              &quot;{COZY_QUOTES[0].text}&quot; — {COZY_QUOTES[0].author}
+              &quot;Cierpliwość i praca tworzą wielkie dzieła.&quot; — Konfucjusz
             </div>
           </div>
 
-          <div className={`w-full max-w-sm rounded-3xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-6 sm:p-8 shadow-xl ${currentTheme.glow}`}>
-            <form onSubmit={handleAuthSubmit} className="flex flex-col gap-4">
-              <h3 className="text-xl font-bold text-stone-100 font-serif text-center">
-                {isRegisterForm ? "Załóż darmowe konto" : "Zaloguj się"}
-              </h3>
-              
-              <div className="flex flex-col gap-3 mt-2">
-                <input
-                  type="email"
-                  placeholder="Twój adres e-mail"
-                  value={authEmail}
-                  onChange={(e) => setAuthEmail(e.target.value)}
-                  required
-                  className="w-full bg-stone-900 border border-stone-800 rounded-xl py-2 px-4 text-sm text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60"
-                />
-                <input
-                  type="password"
-                  placeholder="Hasło"
-                  value={authPassword}
-                  onChange={(e) => setAuthPassword(e.target.value)}
-                  required
-                  className="w-full bg-stone-900 border border-stone-800 rounded-xl py-2 px-4 text-sm text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60"
-                />
-                
-                <button
-                  type="submit"
-                  disabled={authFormLoading}
-                  className={`w-full mt-2 py-2.5 rounded-xl ${currentTheme.accentBg} text-stone-950 font-bold ${currentTheme.accentHover} transition-all disabled:bg-gray-500`}
-                >
-                  {authFormLoading ? "Trwa logowanie..." : isRegisterForm ? "Zarejestruj się" : "Zaloguj się"}
-                </button>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setIsRegisterForm(!isRegisterForm)}
-                className="text-xs text-amber-500 hover:underline text-center mt-2 focus:outline-none"
-              >
-                {isRegisterForm ? "Masz już konto? Zaloguj się" : "Nie masz konta? Zarejestruj się"}
-              </button>
-            </form>
-          </div>
+          <AuthForm currentTheme={currentTheme} triggerNotification={triggerNotification} />
         </main>
       ) : (
         <>
-          {/* DASHBOARD HERO BANNER */}
-          <div className={`max-w-7xl mx-auto w-full px-6 pt-6`}>
+          {/* HERO BANNER */}
+          <div className="max-w-7xl mx-auto w-full px-6 pt-6">
             <div className={`relative rounded-3xl overflow-hidden p-6 sm:p-8 border ${currentTheme.cardBorder} ${currentTheme.cardBg} transition-all duration-500 shadow-xl ${currentTheme.glow} flex flex-col md:flex-row items-center justify-between gap-6`}>
               <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl -z-10 pointer-events-none" />
               <div className="absolute bottom-0 left-0 w-80 h-80 bg-orange-600/5 rounded-full blur-3xl -z-10 pointer-events-none" />
@@ -757,20 +435,10 @@ export default function Home() {
                 {hasAccess ? (
                   <>
                     <h2 className="text-3xl sm:text-4xl font-bold text-stone-100 mt-3 leading-tight font-serif tracking-tight">
-                      {profile?.subscription_status === 'mini' && "Witaj w pakiecie Mini! 🚀"}
-                      {profile?.subscription_status === 'medium' && "Witaj w pakiecie Medium! 🚀"}
-                      {profile?.subscription_status === 'premium' && "Witaj w pakiecie Premium! 🚀"}
-                      {!['mini', 'medium', 'premium'].includes(profile?.subscription_status) && "Witaj w swoim panelu! 🚀"}
+                      Witaj w pakiecie {profile?.subscription_status ? (profile.subscription_status.charAt(0).toUpperCase() + profile.subscription_status.slice(1)) : "Premium"}! 🚀
                     </h2>
                     <p className={`mt-3 text-sm sm:text-base ${currentTheme.subText} leading-relaxed`}>
-                      {profile?.subscription_status === 'mini' && 
-                        "Twój miesięczny dostęp odblokował pełną bazę wiedzy oraz wszystkie moduły AI. Powodzenia w nauce w najprzytulniejszym kąciku w sieci!"}
-                      {profile?.subscription_status === 'medium' && 
-                        "Twój 3-miesięczny pakiet odblokował pełną bazę wiedzy oraz wszystkie moduły AI. Powodzenia w nauce w najprzytulniejszym kąciku w sieci!"}
-                      {profile?.subscription_status === 'premium' && 
-                        "Twój dożywotni zakup odblokował pełny, nielimitowany dostęp do bazy wiedzy oraz wszystkich modułów AI na zawsze!"}
-                      {!['mini', 'medium', 'premium'].includes(profile?.subscription_status) && 
-                        "Twój profil posiada pełny dostęp do bazy wiedzy i wszystkich funkcjonalności sztucznej inteligencji."}
+                      Twój pakiet odblokował pełną bazę wiedzy oraz wszystkie moduły AI. Powodzenia w nauce w najprzytulniejszym kąciku w sieci!
                     </p>
                   </>
                 ) : (
@@ -779,79 +447,13 @@ export default function Home() {
                       Odblokuj pełny dostęp Premium.
                     </h2>
                     <p className={`mt-3 text-sm sm:text-base ${currentTheme.subText} leading-relaxed`}>
-                      Masz darmowe konto, które pozwala na przeglądanie kącika. Aby odblokować wszystkie notatki z lektur, moduł oceniania wypracowań AI oraz sprawić, by kłódeczki zniknęły – kliknij przycisk poniżej!
+                      Masz darmowe konto, które pozwala na przeglądanie kącika. Aby odblokować wszystkie notatki z lektur, moduł oceniania wypracowań AI oraz sprawić, by kłódeczki zniknęły – wybierz jeden z pakietów:
                     </p>
-                    <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
-                      {/* Pakiet MINI */}
-                      <div className="bg-stone-900/60 border border-stone-800/80 p-5 rounded-2xl flex flex-col justify-between">
-                        <div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-xs font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded">MINI</span>
-                            <span className="text-stone-400 text-xs">1 miesiąc</span>
-                          </div>
-                          <p className="text-lg font-bold text-stone-100 mt-2">29 zł</p>
-                          <ul className="text-[11px] text-stone-400 mt-3 space-y-1.5">
-                            <li>📚 Pełna baza wiedzy i notatek</li>
-                            <li>✍️ <strong>5 tokenów</strong> do rozprawki</li>
-                            <li>⚡ Dostęp na 30 dni</li>
-                          </ul>
-                        </div>
-                        <button
-                          onClick={() => handlePaymentInit('mini')}
-                          disabled={paymentLoading}
-                          className={`w-full mt-4 py-2 rounded-xl text-xs font-bold bg-stone-800 hover:bg-stone-750 text-stone-200 transition-all active:scale-98`}
-                        >
-                          {activePaymentTier === 'mini' ? "Ładowanie..." : "Wybierz Mini"}
-                        </button>
-                      </div>
-
-                      {/* Pakiet MEDIUM */}
-                      <div className="bg-amber-950/20 border border-amber-900/40 p-5 rounded-2xl flex flex-col justify-between relative overflow-hidden">
-                        <div className="absolute top-0 right-0 bg-amber-500 text-stone-950 text-[9px] font-bold px-2 py-0.5 rounded-bl">POLECANY</div>
-                        <div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-xs font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">MEDIUM</span>
-                            <span className="text-stone-400 text-xs">3 miesiące</span>
-                          </div>
-                          <p className="text-lg font-bold text-stone-100 mt-2">59 zł</p>
-                          <ul className="text-[11px] text-stone-400 mt-3 space-y-1.5">
-                            <li>📚 Pełna baza wiedzy i notatek</li>
-                            <li>✍️ <strong>10 tokenów</strong> do rozprawki</li>
-                            <li>⚡ Dostęp na 90 dni</li>
-                          </ul>
-                        </div>
-                        <button
-                          onClick={() => handlePaymentInit('medium')}
-                          disabled={paymentLoading}
-                          className={`w-full mt-4 py-2 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-500 text-stone-950 transition-all active:scale-98`}
-                        >
-                          {activePaymentTier === 'medium' ? "Ładowanie..." : "Wybierz Medium"}
-                        </button>
-                      </div>
-
-                      {/* Pakiet PREMIUM */}
-                      <div className="bg-purple-950/20 border border-purple-900/40 p-5 rounded-2xl flex flex-col justify-between">
-                        <div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-xs font-bold text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded">PREMIUM</span>
-                            <span className="text-stone-400 text-xs">Na zawsze</span>
-                          </div>
-                          <p className="text-lg font-bold text-stone-100 mt-2">89 zł</p>
-                          <ul className="text-[11px] text-stone-400 mt-3 space-y-1.5">
-                            <li>📚 Pełna baza wiedzy i notatek</li>
-                            <li>✍️ <strong>10 tokenów</strong> do rozprawki</li>
-                            <li>♾️ Dostęp <strong>dożywotni</strong></li>
-                          </ul>
-                        </div>
-                        <button
-                          onClick={() => handlePaymentInit('premium')}
-                          disabled={paymentLoading}
-                          className={`w-full mt-4 py-2 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white transition-all active:scale-98`}
-                        >
-                          {activePaymentTier === 'premium' ? "Ładowanie..." : "Wybierz Premium"}
-                        </button>
-                      </div>
-                    </div>
+                    <PaymentTiers 
+                      paymentLoading={paymentLoading}
+                      activePaymentTier={activePaymentTier}
+                      handlePaymentInit={handlePaymentInit}
+                    />
                   </>
                 )}
               </div>
@@ -895,9 +497,8 @@ export default function Home() {
           {/* MAIN CONTENT DASHBOARD GRID */}
           <main className="max-w-7xl mx-auto w-full p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1">
             
-            {/* LEFT COLUMN: NAVIGATION & AI ESSAY PLACEHOLDER */}
+            {/* COLUMN 1: NAVIGATION & AI ESSAY INFO */}
             <section className="lg:col-span-3 flex flex-col gap-6">
-              {/* Navigation Panel */}
               <div className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-4 transition-colors duration-500`}>
                 <h3 className="text-xs uppercase tracking-widest text-amber-500 font-semibold mb-3 px-1">
                   Nawigacja
@@ -905,7 +506,7 @@ export default function Home() {
                 <nav className="flex flex-col gap-1">
                   <Link 
                     href="/notes" 
-                    className={`flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-900/60 group transition-all`}
+                    className="flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-900/60 group transition-all"
                   >
                     <div className="flex items-center gap-3">
                       <span className="text-lg">📚</span>
@@ -968,20 +569,8 @@ export default function Home() {
                 </h3>
                 
                 <p className="text-xs text-stone-400 mt-2 leading-relaxed">
-                  Prześlij swoje wypracowanie maturalne z języka polskiego. Nasz algorytm AI przeanalizuje je w kilka sekund zgodnie z najnowszymi wytycznymi CKE pod kątem:
+                  Prześlij swoje wypracowanie maturalne z języka polskiego. Nasz algorytm AI przeanalizuje je w kilka sekund zgodnie z najnowszymi wytycznymi CKE.
                 </p>
-
-                <ul className="text-[11px] text-stone-500 mt-3 space-y-1">
-                  <li className="flex items-center gap-1.5">
-                    <span className="text-purple-500">•</span> Sformułowania tezy i argumentacji
-                  </li>
-                  <li className="flex items-center gap-1.5">
-                    <span className="text-purple-500">•</span> Spójności tekstu i kompozycji
-                  </li>
-                  <li className="flex items-center gap-1.5">
-                    <span className="text-purple-500">•</span> Poprawności językowej i ortograficznej
-                  </li>
-                </ul>
 
                 <button
                   onClick={() => handlePremiumNavigation("/ocenianie-rozprawek")}
@@ -1029,381 +618,30 @@ export default function Home() {
               </div>
             </section>
 
-            {/* CENTER COLUMN: NOTES BROWSER */}
+            {/* COLUMN 2: CENTRAL NOTES BROWSER */}
             <section className="lg:col-span-6 flex flex-col gap-5">
-              <div className={`p-4 rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} flex flex-col gap-3.5 transition-colors duration-500`}>
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Wyszukaj lekturę, motyw lub epokę..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-stone-900/70 border border-stone-800 rounded-xl py-2.5 pl-10 pr-4 text-sm text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60 focus:ring-1 focus:ring-amber-700/60 transition-all font-sans"
-                  />
-                  <svg className="w-4 h-4 text-stone-500 absolute left-3.5 top-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                  {searchQuery && (
-                    <button 
-                      onClick={() => setSearchQuery("")}
-                      className="absolute right-3 top-3.5 text-xs text-stone-500 hover:text-stone-200"
-                    >
-                      wyczyść
-                    </button>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap gap-2 pt-1 border-t border-stone-800/40">
-                  {[
-                    "Wszystkie", 
-                    "Antyk", 
-                    "Średniowiecze", 
-                    "Renesans", 
-                    "Barok", 
-                    "Oświecenie", 
-                    "Romantyzm", 
-                    "Pozytywizm", 
-                    "Młoda Polska", 
-                    "Dwudziestolecie", 
-                    "Wojna i okupacja", 
-                    "Współczesność"
-                  ].map((subject) => (
-                    <button
-                      key={subject}
-                      onClick={() => setSelectedSubject(subject)}
-                      className={`text-xs px-3 py-1.5 rounded-xl border transition-all ${
-                        selectedSubject === subject
-                          ? `${currentTheme.accentBg} text-stone-950 font-bold border-transparent`
-                          : "border-stone-800/60 bg-stone-950/40 text-stone-400 hover:border-stone-700 hover:text-stone-200"
-                      }`}
-                    >
-                      {subject}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between px-1">
-                  <h3 className="text-sm font-semibold font-serif text-stone-100 flex items-center gap-2">
-                    📂 Baza Notatek
-                    <span className={`text-[10px] font-sans font-normal px-2 py-0.5 rounded-full bg-stone-900 border ${currentTheme.cardBorder} text-stone-400`}>
-                      {filteredNotes.length} z {notes.length}
-                    </span>
-                  </h3>
-                  <a href="/notes" className="text-xs text-amber-500/80 hover:text-amber-400 transition-colors font-medium">
-                    zobacz wszystkie →
-                  </a>
-                </div>
-
-                {loading ? (
-                  <div className="rounded-2xl border border-dashed border-amber-950/40 p-8 text-center text-sm text-stone-500 bg-[#1f1915]/30">
-                    ☕ Parzenie herbaty i pobieranie notatek z Supabase...
-                  </div>
-                ) : filteredNotes.length > 0 ? (
-                  filteredNotes.map((note) => {
-                    const handleNoteClick = (e: React.MouseEvent) => {
-                      if (!hasAccess && !note.is_free) {
-                        e.preventDefault();
-                        triggerNotification("🔒 Ta notatka wymaga konta Premium. Kliknij 'Uzyskaj Pełny Dostęp' u góry strony, aby odblokować całą bazę notatek!", "error");
-                      }
-                    };
-
-                    return (
-                      <a
-                        href={`/notes/${note.slug}`}
-                        onClick={handleNoteClick}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        key={note.id}
-                        className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-5 hover:scale-[1.01] hover:shadow-lg transition-all duration-300 flex flex-col justify-between relative overflow-hidden group`}
-                      >
-                        <div className="flex items-center justify-between text-[11px] font-semibold text-stone-400">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-base">📕</span>
-                            <span className="uppercase tracking-wider text-amber-500/80">{note.subject || "Język Polski"}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="flex items-center gap-1">
-                              ⏱️ {note.read_time || note.readTime || (Math.max(2, Math.round((String(note.content || "")).split(/\s+/).length / 150)) + " min")}
-                            </span>
-                            <span className={`px-2 py-0.5 rounded-md text-[10px] border bg-amber-950/40 border-amber-900/50 text-amber-400`}>
-                              Lektura
-                            </span>
-                          </div>
-                        </div>
-                        <h4 className="text-base font-bold text-stone-100 font-serif mt-3 tracking-tight group-hover:text-amber-200 transition-colors">
-                          {note.title} {!hasAccess && !note.is_free && "🔒"}
-                        </h4>
-                        <p className="text-xs text-stone-400/90 leading-relaxed mt-2 line-clamp-3">
-                          {getExcerpt(note)}
-                        </p>
-                        <div className="border-t border-stone-800/40 mt-4 pt-3 flex items-center justify-between text-xs text-stone-500">
-                          <span>Zaktualizowano niedawno</span>
-                          <span className={`text-amber-500/80 group-hover:text-amber-400 font-medium flex items-center gap-1 transition-colors`}>
-                            {hasAccess || note.is_free ? "Otwórz notatkę 📚" : "Odblokuj notatkę 🔒"}
-                          </span>
-                        </div>
-                      </a>
-                    );
-                  })
-                ) : (
-                  <div className={`rounded-2xl border border-dashed border-stone-800 p-8 text-center text-sm text-stone-500`}>
-                    😴 Brak notatek spełniających wybrane kryteria. Spróbuj zmienić słowo kluczowe.
-                  </div>
-                )}
-              </div>
+              <NotesBrowser 
+                notes={notes}
+                loading={loading}
+                hasAccess={hasAccess}
+                currentTheme={currentTheme}
+                triggerNotification={triggerNotification}
+              />
             </section>
 
-            {/* RIGHT COLUMN: COZY STUDY CORNER */}
+            {/* COLUMN 3: STUDY CORNER SIDEBAR */}
             <section className="lg:col-span-3 flex flex-col gap-6">
+              <CozyMug currentTheme={currentTheme} />
               
-              {/* Animowany Kubek Steaming Mug */}
-              <div 
-                onClick={handleMugClick}
-                className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-5 text-center cursor-pointer select-none relative overflow-hidden transition-all duration-300 hover:scale-[1.03] hover:shadow-xl ${currentTheme.glow} group`}
-              >
-                <div className="absolute inset-0 bg-gradient-to-t from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-
-                <h3 className="text-xs uppercase tracking-widest text-amber-500 font-semibold mb-1">
-                  Przytulny Kącik
-                </h3>
-                
-                <div className="relative w-24 h-24 mx-auto flex items-center justify-center my-1 select-none">
-                  <svg className="absolute top-1 w-12 h-8 text-stone-400/50" viewBox="0 0 100 100" fill="none">
-                    <path className="steam-line" d="M30,80 Q40,60 30,40 T40,10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-                    <path className="steam-line-2" d="M50,80 Q60,65 50,45 T60,15" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-                    <path className="steam-line-3" d="M70,85 Q80,70 70,50 T80,20" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-                  </svg>
-
-                  <svg className="w-16 h-16 text-amber-800/80 drop-shadow-md transform group-hover:rotate-3 transition-transform" viewBox="0 0 100 100" fill="currentColor">
-                    <path d="M20,35 C20,35 20,80 30,85 C40,90 60,90 70,85 C80,80 80,35 80,35 Z" fill="#694d3f" />
-                    <ellipse cx="50" cy="35" rx="30" ry="8" fill="#8b6857" />
-                    <ellipse cx="50" cy="35" rx="27" ry="6" fill="#a75d33" />
-                    <path d="M80,45 C80,45 92,45 92,60 C92,75 80,75 80,75" stroke="#694d3f" strokeWidth="10" strokeLinecap="round" fill="none" />
-                    <path d="M50,50 L52,55 L58,56 L53,60 L55,66 L50,62 L45,66 L47,60 L42,56 L48,55 Z" fill="#e8d5c8" />
-                  </svg>
-                </div>
-
-                <p className="text-xs font-semibold text-stone-200 mt-2">
-                  Zrób łyk ciepłego naparu ☕
-                </p>
-                <p className="text-[11px] text-stone-400 mt-1 italic leading-relaxed">
-                  &quot;{mugMessage}&quot;
-                </p>
-              </div>
-
-              {/* Działający Pomodoro Timer */}
-              <div className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-5 transition-colors duration-500`}>
-                <div className="flex items-center justify-between mb-3.5">
-                  <h3 className="text-xs uppercase tracking-widest text-amber-500 font-semibold flex items-center gap-1.5">
-                    <span>⏱️</span> Pomodoro
-                  </h3>
-                  <div className="flex gap-1.5">
-                    <button
-                      onClick={() => switchPomodoroMode("work")}
-                      className={`text-[10px] px-2 py-0.5 rounded-md font-semibold transition-all ${
-                        pomodoroMode === "work"
-                          ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
-                          : "bg-transparent text-stone-500 hover:text-stone-300"
-                      }`}
-                    >
-                      Nauka
-                    </button>
-                    <button
-                      onClick={() => switchPomodoroMode("break")}
-                      className={`text-[10px] px-2 py-0.5 rounded-md font-semibold transition-all ${
-                        pomodoroMode === "break"
-                          ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
-                          : "bg-transparent text-stone-500 hover:text-stone-300"
-                      }`}
-                    >
-                      Relaks
-                    </button>
-                  </div>
-                </div>
-
-                <div className="bg-stone-900/60 border border-stone-800/80 rounded-2xl p-4 text-center">
-                  <span className="text-3xl font-extrabold tracking-widest text-stone-100 font-mono drop-shadow-sm select-none">
-                    {formatTime(timeLeft)}
-                  </span>
-                  <p className="text-[10px] text-stone-500 mt-1">
-                    {pomodoroMode === "work" ? "Czas na głębokie skupienie 📚" : "Czas na chwilę wytchnienia ☕"}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 mt-3.5">
-                  <button
-                    onClick={toggleTimer}
-                    className={`py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                      timerRunning
-                        ? "bg-stone-800 text-stone-300 border border-stone-700 hover:bg-stone-700"
-                        : `${currentTheme.accentBg} text-stone-950 ${currentTheme.accentHover} shadow-md`
-                    }`}
-                  >
-                    {timerRunning ? (
-                      <>
-                        <span>⏸️</span> Pauza
-                      </>
-                    ) : (
-                      <>
-                        <span>▶️</span> Start
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    onClick={resetTimer}
-                    className="py-2 rounded-xl text-xs font-bold bg-stone-900 hover:bg-stone-850 border border-stone-800/60 text-stone-400 hover:text-stone-200 transition-all flex items-center justify-center gap-1"
-                  >
-                    <span>🔄</span> Reset
-                  </button>
-                </div>
-              </div>
-
-              {/* Cytat Dnia */}
-              <div 
-                onClick={rotateQuote}
-                className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-5 cursor-pointer relative overflow-hidden transition-all duration-300 hover:scale-[1.01]`}
-              >
-                <div className="flex items-center justify-between text-xs text-stone-500 mb-2">
-                  <span>💡 Mądrość na dziś</span>
-                  <span className="text-[10px] text-amber-500/80">kliknij po kolejny →</span>
-                </div>
-                
-                <p className="text-xs text-stone-300 font-serif leading-relaxed italic">
-                  &quot;{COZY_QUOTES[quoteIndex].text}&quot;
-                </p>
-                
-                <p className="text-[10px] text-stone-500 mt-2 text-right">
-                  — {COZY_QUOTES[quoteIndex].author}
-                </p>
-              </div>
+              <PomodoroTimer 
+                currentTheme={currentTheme} 
+                triggerNotification={triggerNotification} 
+              />
+              
+              <QuoteCard currentTheme={currentTheme} />
             </section>
           </main>
         </>
-      )}
-
-      {/* CLIMATIC SETTINGS OVERLAY / DIALOG MODAL */}
-      {isSettingsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-fade-in">
-          <div className={`w-full max-w-md bg-[#1f1915] border border-amber-950/40 rounded-3xl p-6 shadow-2xl relative`}>
-            <button
-              onClick={() => setIsSettingsOpen(false)}
-              className="absolute top-4 right-4 text-stone-400 hover:text-stone-100 text-lg transition-colors"
-            >
-              ✕
-            </button>
-
-            <h3 className="text-lg font-bold font-serif text-stone-100 flex items-center gap-2 mb-2">
-              ☕ Ustawienia Twojej Kawiarni Nauki
-            </h3>
-            <p className="text-xs text-stone-400 mb-5">
-              Dostosuj otoczenie do własnego tempa. Zmiana klimatu wpływa na tło strony oraz rodzaj odtwarzanego szumu.
-            </p>
-
-            <div className="flex flex-col gap-3">
-              <label className="text-xs font-semibold text-amber-500 uppercase tracking-widest">
-                Wybierz Motyw Wizualny i Dźwiękowy
-              </label>
-
-              <div className="grid grid-cols-1 gap-2.5">
-                <button
-                  onClick={() => setCozyTheme("library")}
-                  className={`flex items-center justify-between p-3.5 rounded-2xl border text-left transition-all ${
-                    cozyTheme === "library"
-                      ? "border-amber-500 bg-[#c68a4c]/10 text-stone-200"
-                      : "border-stone-800 bg-stone-900/60 text-stone-400 hover:border-stone-700 hover:text-stone-200"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">🍂</span>
-                    <div>
-                      <p className="text-xs font-bold">Ciepła Biblioteka (Domyślny)</p>
-                      <p className="text-[10px] text-stone-500">Cynamonowe barwy, delikatny szum papieru</p>
-                    </div>
-                  </div>
-                  {cozyTheme === "library" && <span className="text-amber-500 text-xs">●</span>}
-                </button>
-
-                <button
-                  onClick={() => setCozyTheme("rainy")}
-                  className={`flex items-center justify-between p-3.5 rounded-2xl border text-left transition-all ${
-                    cozyTheme === "rainy"
-                      ? "border-sky-500 bg-sky-950/15 text-stone-200"
-                      : "border-stone-800 bg-stone-900/60 text-stone-400 hover:border-stone-700 hover:text-stone-200"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">🌧️</span>
-                    <div>
-                      <p className="text-xs font-bold">Deszczowy Wieczór</p>
-                      <p className="text-[10px] text-stone-500">Głębokie chłodne szarości, szum deszczu za oknem</p>
-                    </div>
-                  </div>
-                  {cozyTheme === "rainy" && <span className="text-sky-500 text-xs">●</span>}
-                </button>
-
-                <button
-                  onClick={() => setCozyTheme("fireplace")}
-                  className={`flex items-center justify-between p-3.5 rounded-2xl border text-left transition-all ${
-                    cozyTheme === "fireplace"
-                      ? "border-red-600 bg-red-950/15 text-stone-200"
-                      : "border-stone-800 bg-stone-900/60 text-stone-400 hover:border-stone-700 hover:text-stone-200"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">🔥</span>
-                    <div>
-                      <p className="text-xs font-bold">Kominek w Schronisku</p>
-                      <p className="text-[10px] text-stone-500">Ciepła powłoka węglowa, trzaski płonącego drewna</p>
-                    </div>
-                  </div>
-                  {cozyTheme === "fireplace" && <span className="text-red-500 text-xs">●</span>}
-                </button>
-              </div>
-            </div>
-
-            {user && (
-              <div className="mt-6 pt-5 border-t border-stone-800 flex flex-col gap-3">
-                <label className="text-xs font-semibold text-amber-500 uppercase tracking-widest">
-                  Konto i Bezpieczeństwo
-                </label>
-                <form onSubmit={handlePasswordChange} className="flex flex-col gap-2">
-                  <p className="text-[10px] text-stone-500 leading-relaxed">
-                    Wpisz nowe, bezpieczne hasło (minimum 6 znaków):
-                  </p>
-                  <div className="flex gap-2">
-                    <input
-                      type="password"
-                      placeholder="Nowe hasło"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      required
-                      className="flex-1 bg-stone-900 border border-stone-800 rounded-xl py-2 px-3 text-xs text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60"
-                    />
-                    <button
-                      type="submit"
-                      disabled={passwordChangeLoading}
-                      className="px-4 py-2 bg-stone-900 hover:bg-stone-850 border border-stone-800 text-stone-300 hover:text-stone-100 text-xs font-bold rounded-xl transition-all disabled:bg-gray-500"
-                    >
-                      {passwordChangeLoading ? "Zmienianie..." : "Zmień"}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-
-            <div className="mt-6 pt-4 border-t border-stone-800 flex justify-end">
-              <button
-                onClick={() => setIsSettingsOpen(false)}
-                className="px-5 py-2 rounded-xl text-xs font-bold bg-amber-500 text-stone-950 hover:bg-amber-400 transition-all active:scale-95"
-              >
-                Zamknij i Zastosuj
-              </button>
-            </div>
-          </div>
-        </div>
       )}
 
       {/* FOOTER */}
@@ -1411,44 +649,28 @@ export default function Home() {
         <div className="max-w-7xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-3">
           <p>© 2026 Wiedza Szyta na Miarę. Stworzone z miłości do spokojnej nauki.</p>
           <div className="flex gap-4">
-            <Link href="/regulamin" className="hover:text-stone-100 transition-colors">
-              Regulamin
-            </Link>
-            <Link href="/prywatnosc" className="hover:text-stone-100 transition-colors">
-              Prywatność
-            </Link>
-            <Link href="/kontakt" className="hover:text-stone-100 transition-colors">
-              Kontakt
-            </Link>
+            <Link href="/regulamin" className="hover:text-stone-100 transition-colors">Regulamin</Link>
+            <Link href="/prywatnosc" className="hover:text-stone-100 transition-colors">Prywatność</Link>
+            <Link href="/kontakt" className="hover:text-stone-100 transition-colors">Kontakt</Link>
           </div>
         </div>
       </footer>
 
-      {/* PRZYTULNE POWIADOMIENIE */}
-      {cozyNotification && (
-        <div className="fixed bottom-6 right-6 z-50 animate-slide-in">
-          <div className={`flex items-center gap-3.5 px-5 py-4 rounded-2xl border shadow-2xl backdrop-blur-md max-w-sm ${
-            cozyNotification.type === 'success'
-              ? 'bg-emerald-950/90 border-emerald-500/30 text-emerald-200'
-              : cozyNotification.type === 'error'
-              ? 'bg-red-950/90 border-red-500/30 text-red-200'
-              : 'bg-[#251b15]/95 border-amber-950/40 text-stone-200'
-          }`}>
-            <span className="text-xl">
-              {cozyNotification.type === 'success' ? '✨' : cozyNotification.type === 'error' ? '⚠️' : '☕'}
-            </span>
-            <p className="text-xs font-semibold leading-relaxed pr-2">
-              {cozyNotification.message}
-            </p>
-            <button 
-              onClick={() => setCozyNotification(null)}
-              className="text-stone-400 hover:text-stone-100 text-xs ml-auto font-bold focus:outline-none"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
+      {/* CLIMATIC SETTINGS DIALOG */}
+      <ClimaticSettingsModal 
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        cozyTheme={cozyTheme}
+        setCozyTheme={setCozyTheme}
+        user={user}
+        triggerNotification={triggerNotification}
+      />
+
+      {/* COZY NOTIFICATIONS */}
+      <CozyNotification 
+        notification={cozyNotification} 
+        onClose={() => setCozyNotification(null)} 
+      />
     </div>
   );
 }
