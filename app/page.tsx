@@ -4,10 +4,10 @@ import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "./lib/supabase";
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { playSound } from "./lib/sounds";
 
 // Lib & Helpers
 import { getThemeClasses, CozyTheme } from "./lib/theme";
+import { playSound } from "./lib/sounds";
 
 // Wyodrębnione Komponenty
 import { CozyNotification } from "./components/CozyNotification";
@@ -18,6 +18,8 @@ import { QuoteCard } from "./components/QuoteCard";
 import { AuthForm } from "./components/AuthForm";
 import { PaymentTiers } from "./components/PaymentTiers";
 import { NotesBrowser } from "./components/NotesBrowser";
+import { PersonalNotesList } from "./components/PersonalNotesList";
+import { PersonalNotesModal } from "./components/PersonalNotesModal";
 
 export default function Home() {
   const router = useRouter();
@@ -34,6 +36,14 @@ export default function Home() {
   const [notes, setNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Osobiste notatki (gwiazdki) pobierane z bazy
+  const [personalNotes, setPersonalNotes] = useState<any[]>([]);
+  const [personalNotesLoading, setPersonalNotesLoading] = useState(false);
+
+  // Stany otwarcia szczegółowego notesu z cytatami
+  const [isPersonalNotesOpen, setIsPersonalNotesOpen] = useState(false);
+  const [selectedPersonalNote, setSelectedPersonalNote] = useState<any | null>(null);
+
   // AUTH & STRIPE STATES
   const [user, setUser] = useState<any>(null);
   const [hasAccess, setHasAccess] = useState(false);
@@ -49,6 +59,15 @@ export default function Home() {
 
   const triggerNotification = (message: string, type: "success" | "error" | "info" = "info") => {
     setCozyNotification({ message, type });
+    
+    if (type === "success") {
+      playSound("success");
+    } else if (type === "error") {
+      playSound("error");
+    } else {
+      playSound("click");
+    }
+
     setTimeout(() => {
       setCozyNotification(null);
     }, 4500);
@@ -164,6 +183,31 @@ export default function Home() {
     fetchNotes();
   }, [hasAccess]);
 
+  // 5. Pobieranie osobistych notatek (gwiazdek)
+  useEffect(() => {
+    async function fetchPersonalNotes() {
+      if (!user) {
+        setPersonalNotes([]);
+        return;
+      }
+      setPersonalNotesLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("personal_notes")
+          .select("*")
+          .order("created_at", { ascending: false });
+        if (!error && data) {
+          setPersonalNotes(data);
+        }
+      } catch (err) {
+        console.error("Error fetching personal notes:", err);
+      } finally {
+        setPersonalNotesLoading(false);
+      }
+    }
+    fetchPersonalNotes();
+  }, [user]);
+
   // Inicjalizacja transakcji Stripe
   const handlePaymentInit = async (tier: 'mini' | 'medium' | 'premium') => {
     setPaymentLoading(true);
@@ -243,10 +287,12 @@ export default function Home() {
   };
 
   const handleNextTrack = () => {
+    playSound("click");
     setCurrentTrackIndex((prevIndex) => (prevIndex + 1) % lofiTracks.length);
   };
 
   const handlePrevTrack = () => {
+    playSound("click");
     setCurrentTrackIndex((prevIndex) => (prevIndex - 1 + lofiTracks.length) % lofiTracks.length);
   };
 
@@ -284,27 +330,33 @@ export default function Home() {
     const handleGlobalClick = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
 
-      // Sprawdzamy, czy kliknięty element (lub jego rodzic) to przycisk, link, lub ma kursor "pointer"
       const isInteractive = 
         target.closest("button") || 
         target.closest("a") || 
         target.closest("[role='button']") ||
         window.getComputedStyle(target).cursor === "pointer";
 
-      // Jeśli element jest klikalny, odtwarzamy dźwięk
       if (isInteractive) {
         playSound("click");
       }
     };
 
-    // Rejestrujemy nasłuchiwanie na poziomie całego okna przeglądarki
     window.addEventListener("click", handleGlobalClick);
 
-    // Czyszczenie nasłuchiwania przy wyjściu ze strony
     return () => {
       window.removeEventListener("click", handleGlobalClick);
     };
   }, []);
+
+  // Funkcja wywołująca otwarcie modala dla notatek
+  const handleOpenPersonalNotes = (note?: any) => {
+    if (note) {
+      setSelectedPersonalNote(note);
+    } else {
+      setSelectedPersonalNote(null);
+    }
+    setIsPersonalNotesOpen(true);
+  };
 
   const currentTheme = getThemeClasses(cozyTheme);
 
@@ -486,7 +538,7 @@ export default function Home() {
               Witaj w swojej cichej przystani naukowej. Zaloguj się lub utwórz bezpłatne konto, aby uzyskać dostęp do notatek i przygotować się bez zbędnego stresu.
             </p>
             <div className="mt-6 p-4 rounded-2xl bg-stone-900/30 border border-stone-800/40 text-xs italic text-stone-400">
-              &quot;Cierpliwość i praca tworzą wielkie dzieła.&quot; — Konfucjusz
+              &quot;Cierpliwość i praca tworzą wielkie deeds.&quot; — Konfucjusz
             </div>
           </div>
 
@@ -626,6 +678,27 @@ export default function Home() {
                 </nav>
               </div>
 
+              {/* TUTAJ CHCĘ NOWY ELEMENT: ZAPAMIĘTANE CYTATY */}
+              <div className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-5 transition-colors duration-500 flex flex-col gap-3`}>
+                <h3 className="text-xs uppercase tracking-widest text-amber-500 font-semibold px-1 flex items-center justify-between">
+                  <span>Zapamiętane cytaty ⭐</span>
+                  <span className="text-[10px] bg-stone-900 border border-stone-800 text-amber-500/80 px-2 py-0.5 rounded-full">
+                    {personalNotes.length}
+                  </span>
+                </h3>
+                
+                <div className="max-h-72 overflow-y-auto pr-1 flex flex-col gap-3 scrollbar-thin scrollbar-thumb-stone-800">
+                  <PersonalNotesList 
+                  currentTheme={currentTheme}
+                  personalNotes={personalNotes}
+                  setPersonalNotes={setPersonalNotes}
+                  triggerNotification={triggerNotification}
+                  loading={personalNotesLoading}
+                  onOpenModal={handleOpenPersonalNotes} // <-- DODAJ TĘ LINIJKĘ
+                />
+                </div>
+              </div>
+
               {/* AI Essay Card */}
               <div className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-5 relative overflow-hidden transition-colors duration-500 group`}>
                 <div className="absolute top-0 right-0 w-24 h-24 bg-purple-600/5 rounded-full blur-2xl group-hover:bg-purple-600/10 transition-all duration-500" />
@@ -743,6 +816,20 @@ export default function Home() {
       <CozyNotification 
         notification={cozyNotification} 
         onClose={() => setCozyNotification(null)} 
+      />
+
+      {/* PERSONAL NOTES DIALOG MODAL */}
+      <PersonalNotesModal 
+        isOpen={isPersonalNotesOpen}
+        onClose={() => {
+          setIsPersonalNotesOpen(false);
+          setSelectedPersonalNote(null);
+        }}
+        currentTheme={currentTheme}
+        personalNotes={personalNotes}
+        setPersonalNotes={setPersonalNotes}
+        triggerNotification={triggerNotification}
+        selectedNote={selectedPersonalNote}
       />
     </div>
   );
