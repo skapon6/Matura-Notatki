@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "./lib/supabase";
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { playSound } from "./lib/sounds";
 
 // Lib & Helpers
 import { getThemeClasses, CozyTheme } from "./lib/theme";
@@ -208,81 +209,102 @@ export default function Home() {
     }
   };
 
-  // Ambient sound synthesizer references
-  const [ambientSoundActive, setAmbientSoundActive] = useState(false);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const noiseSourceRef = useRef<AudioBufferSourceNode | null>(null);
-  const filterNodeRef = useRef<BiquadFilterNode | null>(null);
+  // ODTWARZACZ LO-FI: Konfiguracja i obsługa
+  const lofiAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [lofiActive, setLofiActive] = useState(false);
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+  const [lofiVolume, setLofiVolume] = useState(0.3); // domyślna głośność: 30%
+  
+  const lofiTracks = [
+    { name: "Chill Lofi 1", src: "/audio/track1.mp3" },
+    { name: "Cozy Lofi 2", src: "/audio/track2.mp3" },
+  ];
 
-  const toggleAmbientSound = () => {
-    if (ambientSoundActive) {
-      try {
-        if (noiseSourceRef.current) {
-          noiseSourceRef.current.stop();
-          noiseSourceRef.current.disconnect();
-        }
-      } catch (e) {
-        console.error(e);
-      }
-      setAmbientSoundActive(false);
+  const toggleLofi = () => {
+    if (!lofiAudioRef.current) {
+      lofiAudioRef.current = new Audio(lofiTracks[currentTrackIndex].src);
+      lofiAudioRef.current.volume = lofiVolume;
+      
+      // Kiedy utwór się zakończy, odtwarzaj automatycznie kolejny
+      lofiAudioRef.current.addEventListener("ended", () => {
+        handleNextTrack();
+      });
+    }
+
+    if (lofiActive) {
+      lofiAudioRef.current.pause();
+      setLofiActive(false);
     } else {
-      try {
-        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-        const ctx = new AudioContextClass();
-        audioCtxRef.current = ctx;
-
-        const bufferSize = 2 * ctx.sampleRate;
-        const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-        const output = noiseBuffer.getChannelData(0);
-        
-        let lastOut = 0.0;
-        for (let i = 0; i < bufferSize; i++) {
-          const white = Math.random() * 2 - 1;
-          if (cozyTheme === "rainy") {
-            output[i] = (lastOut + (0.02 * white)) / 1.02;
-            lastOut = output[i];
-            output[i] *= 3.5; 
-          } else if (cozyTheme === "fireplace") {
-            output[i] = (lastOut + (0.05 * white)) / 1.05;
-            lastOut = output[i];
-            if (Math.random() > 0.9995) {
-              output[i] += (Math.random() * 2 - 1) * 0.8;
-            }
-            output[i] *= 2.5;
-          } else {
-            output[i] = (lastOut + (0.01 * white)) / 1.01;
-            lastOut = output[i];
-            output[i] *= 1.5;
-          }
-        }
-
-        const source = ctx.createBufferSource();
-        source.buffer = noiseBuffer;
-        source.loop = true;
-
-        const filter = ctx.createBiquadFilter();
-        filter.type = "lowpass";
-        filter.frequency.value = cozyTheme === "rainy" ? 600 : cozyTheme === "fireplace" ? 900 : 400;
-
-        source.connect(filter);
-        filter.connect(ctx.destination);
-        source.start();
-
-        noiseSourceRef.current = source;
-        filterNodeRef.current = filter;
-        setAmbientSoundActive(true);
-      } catch (err) {
-        console.error("Audio Context failed to start:", err);
-      }
+      lofiAudioRef.current.play().catch((err) => {
+        console.error("Autoodtwarzanie zablokowane przez przeglądarkę:", err);
+      });
+      setLofiActive(true);
     }
   };
 
-  useEffect(() => {
-    if (ambientSoundActive) {
-      toggleAmbientSound();
-      toggleAmbientSound();
+  const handleNextTrack = () => {
+    setCurrentTrackIndex((prevIndex) => (prevIndex + 1) % lofiTracks.length);
+  };
+
+  const handlePrevTrack = () => {
+    setCurrentTrackIndex((prevIndex) => (prevIndex - 1 + lofiTracks.length) % lofiTracks.length);
+  };
+
+  const handleVolumeChange = (newVolume: number) => {
+    setLofiVolume(newVolume);
+    if (lofiAudioRef.current) {
+      lofiAudioRef.current.volume = newVolume;
     }
-  }, [cozyTheme]);
+  };
+
+  // Obsługa zmiany utworu w tle
+  useEffect(() => {
+    if (lofiAudioRef.current) {
+      const wasPlaying = lofiActive;
+      lofiAudioRef.current.pause();
+      lofiAudioRef.current.src = lofiTracks[currentTrackIndex].src;
+      lofiAudioRef.current.load();
+      if (wasPlaying) {
+        lofiAudioRef.current.play().catch((err) => console.error(err));
+      }
+    }
+  }, [currentTrackIndex]);
+
+  // Wyłączenie muzyki przy wyjściu z aplikacji
+  useEffect(() => {
+    return () => {
+      if (lofiAudioRef.current) {
+        lofiAudioRef.current.pause();
+      }
+    };
+  }, []);
+
+  // GLOBALNY INTELIGENTNY NASŁUCHIWAĆ KLIKNIĘĆ
+  useEffect(() => {
+    const handleGlobalClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+
+      // Sprawdzamy, czy kliknięty element (lub jego rodzic) to przycisk, link, lub ma kursor "pointer"
+      const isInteractive = 
+        target.closest("button") || 
+        target.closest("a") || 
+        target.closest("[role='button']") ||
+        window.getComputedStyle(target).cursor === "pointer";
+
+      // Jeśli element jest klikalny, odtwarzamy dźwięk
+      if (isInteractive) {
+        playSound("click");
+      }
+    };
+
+    // Rejestrujemy nasłuchiwanie na poziomie całego okna przeglądarki
+    window.addEventListener("click", handleGlobalClick);
+
+    // Czyszczenie nasłuchiwania przy wyjściu ze strony
+    return () => {
+      window.removeEventListener("click", handleGlobalClick);
+    };
+  }, []);
 
   const currentTheme = getThemeClasses(cozyTheme);
 
@@ -341,23 +363,74 @@ export default function Home() {
           </span>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={toggleAmbientSound}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium border ${
-              ambientSoundActive 
-                ? `${currentTheme.accentBg} text-stone-900 border-transparent shadow-lg ${currentTheme.glow}` 
-                : `${currentTheme.cardBg} ${currentTheme.btnBorder} ${currentTheme.subText} hover:text-stone-100`
-            } transition-all duration-300 active:scale-95`}
-          >
-            <span className="relative flex h-2 w-2">
-              {ambientSoundActive && (
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-stone-950 opacity-75"></span>
+        <div className="flex items-center gap-4">
+          
+          {/* NOWY, ELEGANCKI, WIĘKSZY PANEL STEROWANIA MUZYKĄ LO-FI */}
+          <div className={`flex items-center gap-4 px-5 py-2.5 rounded-2xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} transition-all select-none shadow-md`}>
+            {/* Poprzedni utwór */}
+            <button 
+              type="button"
+              onClick={handlePrevTrack} 
+              className="text-stone-400 hover:text-amber-400 p-1.5 rounded-xl hover:bg-stone-800/40 transition-colors"
+              title="Poprzedni utwór"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.334 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z" />
+              </svg>
+            </button>
+            
+            {/* Play / Pauza */}
+            <button 
+              type="button"
+              onClick={toggleLofi} 
+              className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 hover:text-amber-400 border border-amber-500/20 transition-all font-semibold text-sm active:scale-95"
+            >
+              {lofiActive ? (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               )}
-              <span className={`relative inline-flex rounded-full h-2 w-2 ${ambientSoundActive ? 'bg-stone-950' : 'bg-amber-600'}`}></span>
-            </span>
-            {ambientSoundActive ? "Wyłącz Szum Tła 🔇" : "Dźwięk Cozy 🔊"}
-          </button>
+              <span className="hidden md:inline text-xs tracking-wide">
+                {lofiTracks[currentTrackIndex].name}
+              </span>
+            </button>
+            
+            {/* Następny utwór */}
+            <button 
+              type="button"
+              onClick={handleNextTrack} 
+              className="text-stone-400 hover:text-amber-400 p-1.5 rounded-xl hover:bg-stone-800/40 transition-colors"
+              title="Następny utwór"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 005 8v8a1 1 0 001.6.8l5.334-4zM19.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.334-4z" />
+              </svg>
+            </button>
+            
+            {/* Płynny suwak głośności */}
+            <div className="flex items-center gap-2.5 ml-1 border-l border-stone-800/80 pl-3">
+              <svg className="w-5 h-5 text-stone-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+              </svg>
+              <input 
+                type="range" 
+                min="0" 
+                max="1" 
+                step="0.05" 
+                value={lofiVolume} 
+                onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                className="w-16 sm:w-20 h-1.5 bg-stone-850 rounded-lg appearance-none cursor-pointer accent-amber-500 focus:outline-none"
+                style={{
+                  WebkitAppearance: "none",
+                }}
+              />
+            </div>
+          </div>
           
           {user ? (
             <div className="flex items-center gap-2">
