@@ -281,7 +281,7 @@ export default function Home() {
       return;
     }
     
-    if (path === "/ocenianie-rozprawek") {
+    if (path === "/ocenianie-rozprawek" || path === "/matura-ustna") {
       router.push(path);
     } else if (!hasAccess) {
       triggerNotification(
@@ -361,8 +361,8 @@ export default function Home() {
       {/* HEADER SECTION */}
       <header className={`border-b ${currentTheme.cardBorder} px-4 sm:px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 backdrop-blur-md sticky top-0 z-40 transition-colors duration-500`}>
         
-        {/* Lewa strefa: Ustawienia Klimatu oraz ikona pomocy ❓ */}
-        <div className="flex w-full md:w-auto items-center justify-between md:justify-start gap-3">
+        {/* Lewa strefa: Ustawienia Klimatu oraz logo na komórkach */}
+        <div className="flex w-full md:w-auto items-center justify-between md:justify-start gap-4">
           <div className="flex md:hidden items-center gap-2 select-none">
             <span className="text-xl">📖</span>
             <h1 className="text-sm font-bold tracking-wide bg-gradient-to-r from-amber-200 via-orange-300 to-amber-100 bg-clip-text text-transparent drop-shadow-sm">
@@ -373,7 +373,7 @@ export default function Home() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsSettingsOpen(true)}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 transition-all text-xs font-medium ${currentTheme.subText} hover:text-stone-100`}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 transition-all text-xs sm:text-sm font-medium ${currentTheme.subText} hover:text-stone-100`}
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -382,7 +382,7 @@ export default function Home() {
               Ustawienia
             </button>
 
-            {/* DUSTY, MINIMALISTYCZNY PRZYCISK POMOCY/INSTRUKCJI ❓ */}
+            {/* DUSTY, INTERAKTYWNA INSTRUKCJA ❓ */}
             <button
               onClick={() => setIsHelpOpen(true)}
               className={`flex items-center justify-center p-2 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 transition-all text-stone-400 hover:text-stone-100`}
@@ -696,35 +696,43 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* AI Essay Card */}
+              {/* ZAKTUALIZOWANA NAZWA: STREFA NAUKI AI 🤖 Z DWOMA PRZYCISKAMI */}
               <div className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-5 relative overflow-hidden transition-colors duration-500 group`}>
                 <div className="absolute top-0 right-0 w-24 h-24 bg-purple-600/5 rounded-full blur-2xl group-hover:bg-purple-600/10 transition-all duration-500" />
                 
                 <div className="flex justify-between items-start">
                   <span className="text-xs font-semibold uppercase tracking-widest text-purple-400 bg-purple-950/60 px-2.5 py-1 rounded-md border border-purple-800/40">
-                    Kryteria CKE + AI
+                    Sztuczna Inteligencja
                   </span>
-                  <span className="text-stone-500 text-lg">{hasAccess ? "✨" : "🔒"}</span>
+                  <span className="text-stone-500 text-lg">{hasAccess ? "🤖" : "🔒"}</span>
                 </div>
 
                 <h3 className="text-base font-bold text-stone-100 mt-4 font-serif">
-                  Ocenianie Rozprawek AI
+                  Strefa Nauki AI 🤖
                 </h3>
                 
                 <p className="text-xs text-stone-400 mt-2 leading-relaxed">
-                  Prześlij swoje wypracowanie maturalne z języka polskiego. Nasz algorytm AI przeanalizuje je w kilka sekund zgodnie z najnowszymi wytycznymi CKE.
+                  Skorzystaj z wirtualnych asystentów, aby sprawdzić swoje wypracowanie lub przeprowadzić próbny egzamin ustny na żywo według kryteriów CKE!
                 </p>
 
-                <button
-                  onClick={() => handlePremiumNavigation("/ocenianie-rozprawek")}
-                  className={`w-full mt-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                    hasAccess 
-                      ? 'bg-purple-600 text-white hover:bg-purple-500' 
-                      : 'text-purple-200 border border-purple-900/60 bg-purple-950/20 hover:bg-[#2c1b3d]'
-                  }`}
-                >
-                  {hasAccess ? "Uruchom Edytor ✨" : "Zyskaj Dostęp Premium 🔑"}
-                </button>
+                {/* PRZYCISKI DO DWÓCH MODUŁÓW AI */}
+                <div className="flex flex-col gap-2.5 mt-4">
+                  {/* Przycisk 1: Edytor Rozprawek (Zawsze dostępny) */}
+                  <button
+                    onClick={() => handlePremiumNavigation("/ocenianie-rozprawek")}
+                    className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2"
+                  >
+                    <span>✍️</span> Edytor Rozprawek AI (1 Token)
+                  </button>
+
+                  {/* Przycisk 2: Symulator Matury Ustnej (Nowy moduł) */}
+                  <button
+                    onClick={() => handlePremiumNavigation("/matura-ustna")}
+                    className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white border border-indigo-500/40 font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/30"
+                  >
+                    <span>🎙️</span> Matura Ustna AI (3 Tokeny)
+                  </button>
+                </div>
 
                 {user && (
                   <div className="mt-4 pt-4 border-t border-stone-800/60 flex flex-col gap-3">
@@ -735,7 +743,7 @@ export default function Home() {
                           {profile?.essay_credits ?? 0} {profile?.essay_credits === 1 ? "token" : "tokeny"}
                         </span>
                         
-                        {/* TUTAJ NOWY PRZYCISK: DOŁADOWANIE TOKENÓW */}
+                        {/* PRZYCISK: DOŁADOWANIE TOKENÓW */}
                         <button
                           onClick={() => setIsTokenModalOpen(true)}
                           className="text-[9px] uppercase tracking-wider font-extrabold bg-amber-500 text-stone-950 px-2 py-1 rounded-md hover:bg-amber-400 transition-all shadow"
