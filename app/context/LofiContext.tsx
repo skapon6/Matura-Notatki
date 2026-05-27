@@ -21,8 +21,10 @@ interface LofiContextType {
 const LofiContext = createContext<LofiContextType | undefined>(undefined);
 
 export const lofiTracks: LofiTrack[] = [
-  { name: "Chill Lofi 1", src: "/audio/track1.mp3" },
+  { name: "Cozy Lofi 1", src: "/audio/track1.mp3" },
   { name: "Cozy Lofi 2", src: "/audio/track2.mp3" },
+  { name: "Cozy Lofi 3", src: "/audio/track3.mp3" },
+  { name: "Cozy Lofi 4", src: "/audio/track4.mp3" },
 ];
 
 export const LofiProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

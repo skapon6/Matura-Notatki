@@ -1,231 +1,376 @@
-export const revalidate = 0
-export const dynamic = 'force-dynamic'
+"use client";
 
-import { getSupabaseServer } from '../lib/supabaseServer'
-import { createClient } from '@supabase/supabase-js'
+import React, { useState, useEffect } from "react";
+import { supabase } from "../lib/supabase";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { playSound } from "../lib/sounds";
+import { useLofi } from "../context/LofiContext";
+import { getThemeClasses } from "../lib/theme";
+import { CozyNotification } from "../components/CozyNotification";
 
-// Tworzymy klienta admina do bezpiecznego sprawdzenia profilu bez barier RLS
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+export default function WszystkieNotatkiPage() {
+  const router = useRouter();
+  const currentTheme = getThemeClasses("library");
 
-export default async function NotesPage() {
-  // 1. Pobieramy serwerowego klienta Supabase
-  const supabase = await getSupabaseServer()
+  // Globalny odtwarzacz Lo-Fi (gra płynnie bez przerw przy nawigacji!)
+  const {
+    lofiActive,
+    currentTrackIndex,
+    lofiVolume,
+    lofiTracks,
+    toggleLofi,
+    handleNextTrack,
+    handlePrevTrack,
+    handleVolumeChange
+  } = useLofi();
 
-  // 2. Pobieramy aktualnie zalogowanego użytkownika
-  const { data: { user } } = await supabase.auth.getUser()
+  const [user, setUser] = useState<any>(null);
+  const [hasAccess, setHasAccess] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
+  const [notes, setNotes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // 3. Sprawdzamy status płatności użytkownika
-  let hasAccess = false
-  if (user) {
-    const { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('subscription_status, expires_at') // <--- Pobieramy status oraz datę wygaśnięcia
-      .eq('id', user.id)
-      .single()
-      
-    if (profile) {
-      const activeStatuses = ['mini', 'medium', 'premium', 'admin', 'paid']
-      const isStatusActive = activeStatuses.includes(profile.subscription_status)
-      
-      // Sprawdzamy, czy subskrypcja nie wygasła
-      let isExpired = false
-      if (profile.expires_at) {
-        const expirationTime = new Date(profile.expires_at).getTime()
-        const currentTime = new Date().getTime()
-        isExpired = currentTime > expirationTime
-      }
-      
-      // Dostęp jest aktywny, gdy status jest poprawny i pakiet nie wygasł
-      if (isStatusActive && !isExpired) {
-        hasAccess = true
+  // Stany wyszukiwania i filtrowania epok
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedEra, setSelectedEra] = useState("Wszystkie");
+
+  // System przytulnych powiadomień
+  const [cozyNotification, setCozyNotification] = useState<{
+    message: string;
+    type: "success" | "error" | "info";
+  } | null>(null);
+
+  const triggerNotification = (message: string, type: "success" | "error" | "info" = "info") => {
+    setCozyNotification({ message, type });
+    if (type === "success") playSound("success");
+    else if (type === "error") playSound("error");
+    else playSound("click");
+
+    setTimeout(() => setCozyNotification(null), 4500);
+  };
+
+  const eras = [
+    "Wszystkie",
+    "Antyk",
+    "Średniowiecze",
+    "Renesans",
+    "Barok",
+    "Oświecenie",
+    "Romantyzm",
+    "Pozytywizm",
+    "Młoda Polska",
+    "Dwudziestolecie",
+    "Współczesność"
+  ];
+
+  // Monitorowanie sesji, profilu i wczytywanie notatek z bazy
+  useEffect(() => {
+    async function fetchUserDataAndNotes() {
+      setLoading(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        let userId = null;
+        if (session?.user) {
+          setUser(session.user);
+          userId = session.user.id;
+        }
+
+        if (userId) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('subscription_status, expires_at')
+            .eq('id', userId)
+            .single();
+            
+          if (profileData) {
+            setProfile(profileData);
+            const activeStatuses = ['mini', 'medium', 'premium', 'admin', 'paid'];
+            const isStatusActive = activeStatuses.includes(profileData.subscription_status);
+            
+            let isExpired = false;
+            if (profileData.expires_at) {
+              const expirationTime = new Date(profileData.expires_at).getTime();
+              const currentTime = new Date().getTime();
+              isExpired = currentTime > expirationTime;
+            }
+            
+            if (isStatusActive && !isExpired) {
+              setHasAccess(true);
+            }
+          }
+        }
+
+        // Pobranie wszystkich notatek z Twojej tabeli public.notes
+        const { data: notesData, error: notesError } = await supabase
+          .from("notes")
+          .select("*")
+          .order("id", { ascending: true });
+
+        if (!notesError && notesData) {
+          setNotes(notesData);
+        }
+      } catch (err) {
+        console.error("Błąd pobierania danych:", err);
+      } finally {
+        setLoading(false);
       }
     }
-  }
+    fetchUserDataAndNotes();
+  }, []);
 
-  // 4. Budujemy zapytanie do bazy: 
-  // Jeśli brak premium -> pobieramy TYLKO darmowe notatki (is_free = true)
-  let query = supabase.from('notes').select('*')
-  if (!hasAccess) {
-    query = query.eq('is_free', true)
-  }
+  // Filtrowanie notatek na podstawie wyszukiwarki i kafelków epok
+  const filteredNotes = notes.filter((note) => {
+    // 1. Filtrowanie po wybranej epoce
+    if (selectedEra !== "Wszystkie") {
+      const eraMatch = note.era?.toLowerCase() === selectedEra.toLowerCase();
+      const specialMatch = 
+        (selectedEra === "Dwudziestolecie" && note.era?.toLowerCase().includes("międzywojenne")) ||
+        (selectedEra === "Współczesność" && note.era?.toLowerCase().includes("współczesność"));
+      
+      if (!eraMatch && !specialMatch) return false;
+    }
 
-  const { data: notes, error } = await query
+    // 2. Filtrowanie po wpisanej frazie (tytuł, epoka, tagi)
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const titleMatch = note.title?.toLowerCase().includes(query);
+      const eraMatch = note.era?.toLowerCase().includes(query);
+      const chipsMatch = Array.isArray(note.chips) && note.chips.some((chip: string) => chip.toLowerCase().includes(query));
+      return titleMatch || eraMatch || chipsMatch;
+    }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-[#14100e] text-stone-200 flex flex-col items-center justify-center p-6 font-sans">
-        <div className="bg-[#1f1915]/90 border border-red-950/60 p-6 rounded-2xl max-w-md text-center shadow-xl">
-          <span className="text-3xl">⚠️</span>
-          <h2 className="text-lg font-bold font-serif text-red-400 mt-2">Błąd połączenia z bazą</h2>
-          <p className="text-xs text-stone-400 mt-1">{error.message}</p>
-          <a
-            href="/"
-            className="inline-block mt-4 px-4 py-2 rounded-xl bg-stone-900 border border-stone-800 text-stone-300 text-xs hover:text-stone-100 hover:bg-stone-850 transition-all"
-          >
-            Wróć do strony głównej
-          </a>
-        </div>
-      </div>
-    );
-  }
+    return true;
+  });
 
-  const polishNotes = notes || [];
+  // Obsługa kliknięcia w notatkę (zabezpieczenie Premium)
+  const handleOpenNote = (note: any) => {
+    if (!user) {
+      triggerNotification("🔑 Zaloguj się na stronie głównej, aby czytać notatki!", "info");
+      return;
+    }
+    
+    // Jeśli notatka jest darmowa (is_free === true) lub użytkownik ma Premium (hasAccess === true)
+    if (note.is_free || hasAccess) {
+      playSound("success");
+      // Przekierowanie do renderowania notatki HTML
+      router.push(`/notes/${note.slug}`);
+    } else {
+      triggerNotification(
+        "🔒 Ta epoka wymaga dostępu Premium. Odblokuj pełny pakiet na stronie głównej!", 
+        "error"
+      );
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-[#14100e] text-stone-200 font-sans flex flex-col transition-colors duration-500">
-      {/* Dynamic Keyframes for Subtle Steam effect in the logo */}
+    <div className={`min-h-screen flex flex-col transition-colors duration-500 ${currentTheme.bg} text-stone-200 font-sans`}>
       <style dangerouslySetInnerHTML={{__html: `
-        @keyframes steamMini {
-          0% { transform: translateY(0) scaleX(1); opacity: 0; }
-          50% { transform: translateY(-5px) scaleX(1.2); opacity: 0.3; }
-          100% { transform: translateY(-10px) scaleX(0.8); opacity: 0; }
+        @keyframes slideIn {
+          0% { transform: translateY(30px) scale(0.95); opacity: 0; }
+          100% { transform: translateY(0) scale(1); opacity: 1; }
         }
-        .steam-mini-1 { animation: steamMini 3s infinite ease-in-out; }
-        .steam-mini-2 { animation: steamMini 3s infinite ease-in-out; animation-delay: 1.5s; }
+        .animate-slide-in { animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
       `}} />
 
-      {/* HEADER SECTION (Consistent with home page styling) */}
-      <header className="border-b border-amber-950/40 px-6 py-4 flex items-center justify-between backdrop-blur-md sticky top-0 z-40 bg-[#1f1915]/80">
-        
-        {/* Left: Back to Home Page Button */}
-        <a
-          href="/"
-          className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl border border-[#c68a4c]/30 bg-[#1f1915]/90 hover:scale-105 active:scale-95 transition-all text-xs font-medium text-stone-400 hover:text-stone-100"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          Wróć do Kominka
-        </a>
-
-        {/* Center: Branding */}
-        <div className="flex flex-col items-center select-none">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">📖</span>
-            <h1 className="text-lg font-semibold tracking-wide bg-gradient-to-r from-amber-200 via-orange-300 to-amber-100 bg-clip-text text-transparent drop-shadow-sm">
-              Wiedza Szyta na Miarę
-            </h1>
-          </div>
-          <span className="text-[9px] uppercase tracking-widest text-amber-500/60 font-semibold">
-            Baza Notatek Maturalnych
-          </span>
+      {/* HEADER SECTION (Identyczny jak na głównej - zapobiega przerwaniu Lo-Fi!) */}
+      <header className={`border-b ${currentTheme.cardBorder} px-4 sm:px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 backdrop-blur-md sticky top-0 z-40 transition-colors duration-500`}>
+        <div className="flex w-full md:w-auto items-center justify-between md:justify-start gap-4">
+          <button
+            onClick={() => router.push("/")}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 transition-all text-xs font-medium ${currentTheme.subText} hover:text-stone-100`}
+          >
+            ← Wróć do kącika
+          </button>
         </div>
 
-        {/* Right: Steaming Coffee/Tea Mug Icon (Decorative & Cozy) */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-stone-900/60 border border-amber-950/40 text-xs text-amber-500/80">
-          <span className="relative flex items-center justify-center w-5 h-5">
-            {/* Steam animation lines */}
-            <svg className="absolute -top-1.5 w-3 h-3 text-stone-400/40" viewBox="0 0 100 100" fill="none">
-              <path className="steam-mini-1" d="M30,80 Q40,50 30,20" stroke="currentColor" strokeWidth="12" strokeLinecap="round" />
-              <path className="steam-mini-2" d="M70,80 Q80,50 70,20" stroke="currentColor" strokeWidth="12" strokeLinecap="round" />
-            </svg>
-            <span>☕</span>
-          </span>
-          <span className="hidden sm:inline font-medium">Czas na naukę</span>
+        <div className="hidden md:flex flex-col items-center select-none">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">📚</span>
+            <h1 className="text-xl font-semibold tracking-wide bg-gradient-to-r from-amber-200 via-orange-300 to-amber-100 bg-clip-text text-transparent drop-shadow-sm">
+              Wszystkie Notatki Maturalne
+            </h1>
+          </div>
+        </div>
+
+        {/* Globalny Odtwarzacz Lofi */}
+        <div className="flex w-full md:w-auto items-center justify-between md:justify-end gap-3 sm:gap-4 border-t md:border-t-0 border-stone-800/40 pt-3 md:pt-0">
+          <div className={`flex items-center gap-3 sm:gap-4 px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} transition-all select-none shadow-md`}>
+            <button type="button" onClick={handlePrevTrack} className="text-stone-400 hover:text-amber-400 p-1 rounded-xl hover:bg-stone-800/40 transition-colors">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.334 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z" />
+              </svg>
+            </button>
+            <button type="button" onClick={toggleLofi} className="flex items-center gap-1.5 sm:gap-2 px-3 py-1 sm:px-4 sm:py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 hover:text-amber-400 border border-amber-500/20 transition-all font-semibold text-xs active:scale-95">
+              {lofiActive ? (
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
+              <span className="hidden md:inline text-[10px] sm:text-xs tracking-wide">
+                {lofiTracks[currentTrackIndex].name}
+              </span>
+            </button>
+            <button type="button" onClick={handleNextTrack} className="text-stone-400 hover:text-amber-400 p-1 rounded-xl hover:bg-stone-800/40 transition-colors">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 005 8v8a1 1 0 001.6.8l5.334-4zM19.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.334-4z" />
+              </svg>
+            </button>
+            <div className="hidden sm:flex items-center gap-2 sm:gap-2.5 ml-1 border-l border-stone-800/80 pl-2 sm:pl-3">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-stone-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 12H3a1 1 0 01-1-1V9a1 1 0 011-1h1.586l3.707-3.707a1 1 0 011.09-.217z" clipRule="evenodd" />
+              </svg>
+              <input 
+                type="range" 
+                min="0" 
+                max="1" 
+                step="0.05" 
+                value={lofiVolume} 
+                onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                className="w-14 sm:w-16 md:w-20 h-1 bg-stone-850 rounded-lg appearance-none cursor-pointer accent-amber-500 focus:outline-none"
+                style={{ WebkitAppearance: "none" }}
+              />
+            </div>
+          </div>
         </div>
       </header>
 
-      {/* MAIN CONTAINER */}
-      <main className="max-w-4xl mx-auto w-full p-6 sm:p-8 flex-1 flex flex-col gap-6">
+      {/* RENDEROWANIE ZAWARTOŚCI */}
+      <main className="max-w-7xl mx-auto w-full p-6 flex flex-col gap-6 flex-1 select-none animate-slide-in">
         
-        {/* Banner with stats */}
-        <div className="relative rounded-2xl p-6 border border-amber-950/40 bg-[#1f1915]/90 overflow-hidden shadow-lg">
-          <div className="absolute top-0 right-0 w-48 h-48 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
+        {/* PANEL WYSZUKIWANIA I FILTROWANIA (Identyczny jak na głównej!) */}
+        <div className={`p-6 rounded-3xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} shadow-md flex flex-col gap-4`}>
           
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-amber-500 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
-            Archiwum Wiedzy
-          </span>
-          <h2 className="text-2xl font-bold font-serif text-stone-100 mt-2">Notatki maturalne z bazy danych</h2>
-          <p className="text-xs text-stone-400 mt-1 leading-relaxed max-w-2xl">
-            Oto Twoje kompendium wiedzy pobrane bezpośrednio z chmury Supabase. Każda notatka jest starannie wyselekcjonowana i zredagowana, aby pomóc Ci w opanowaniu kluczowych wymagań egzaminacyjnych CKE z języka polskiego.
-          </p>
+          {/* Input Wyszukiwarki */}
+          <div className="relative">
+            <input 
+              type="text"
+              placeholder="Wyszukaj lekturę, motyw lub epokę..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-stone-950/80 border border-stone-800/80 rounded-2xl py-3 px-5 text-sm text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60"
+            />
+            <span className="absolute right-5 top-3.5 text-stone-500 text-sm">🔍</span>
+          </div>
+
+          {/* Kafelki Epok */}
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-stone-800">
+            {eras.map((era) => (
+              <button
+                key={era}
+                onClick={() => setSelectedEra(era)}
+                className={`text-xs px-3.5 py-2 rounded-xl font-semibold border whitespace-nowrap transition-all ${
+                  selectedEra === era
+                    ? "bg-amber-500/20 text-amber-400 border-amber-500/40"
+                    : "bg-stone-950/20 text-stone-500 border-stone-800/40 hover:text-stone-300"
+                }`}
+              >
+                {era}
+              </button>
+            ))}
+          </div>
+
         </div>
 
-        {/* PRZYTULNY BANER REKLAMOWY DLA UŻYTKOWNIKÓW FREE */}
-        {!hasAccess && (
-          <div className="rounded-2xl p-5 border border-amber-950/30 bg-amber-950/5 text-center flex flex-col items-center gap-3 shadow-md">
-            <span className="text-2xl">🔒</span>
-            <p className="text-xs text-amber-500 font-semibold">
-              Przeglądasz wersję demonstracyjną. Aby odblokować pełną bazę wszystkich notatek maturalnych bez ograniczeń, wykup dostęp premium.
-            </p>
-            <a
-              href="/"
-              className="px-4 py-2 text-xs font-bold bg-[#c68a4c] hover:bg-[#d99d5d] text-stone-950 rounded-xl transition-all hover:scale-105 shadow-md"
-            >
-              Uzyskaj Pełny Dostęp Premium 🔑
-            </a>
+        {/* SIATKA KART Z NOTATKAMI (Dla komputerów 3 kolumny, responsywne) */}
+        {loading ? (
+          <div className="text-center py-16 text-stone-500 text-sm">
+            Wczytywanie pełnej bazy notatek...
           </div>
-        )}
-
-        {/* Dynamic Notes List */}
-        <div className="flex flex-col gap-5">
-          {polishNotes && polishNotes.length > 0 ? (
-            polishNotes.map((note) => {
-              const emoji = '📕';
-              const subjectColor = 'text-rose-400';
-
+        ) : filteredNotes.length === 0 ? (
+          <div className="text-center py-20 border border-dashed border-stone-800 rounded-3xl text-stone-500">
+            <span className="text-3xl block mb-2">📚</span>
+            <p className="text-sm font-semibold">Nie znaleźliśmy notatek spełniających wybrane kryteria.</p>
+            <p className="text-xs text-stone-600 mt-1">Spróbuj zmienić wpisane słowo kluczowe lub wybraną epokę.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredNotes.map((note) => {
+              const isLocked = !note.is_free && !hasAccess;
+              
               return (
-                <a key={note.id} href={`/notes/${note.slug}`} target="_blank" rel="noopener noreferrer">
-                  <article
-                    className="rounded-2xl border border-amber-950/30 bg-[#1f1915]/90 p-6 hover:scale-[1.01] hover:shadow-lg transition-all duration-300 relative overflow-hidden group"
-                  >
-                    {/* Decorative corner warm gradient */}
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/[0.02] rounded-full blur-2xl group-hover:bg-amber-500/[0.04] transition-all pointer-events-none" />
-
-                    {/* Header metadata of the card */}
-                    <div className="flex items-center justify-between text-xs font-semibold text-stone-400">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-base">{emoji}</span>
-                        <span className={`uppercase tracking-wider ${subjectColor}`}>{note.subject || "Język Polski"}</span>
-                      </div>
+                <div 
+                  key={note.id}
+                  className={`p-6 rounded-3xl border ${currentTheme.cardBorder} bg-[#161210] flex flex-col justify-between gap-4 shadow-lg hover:border-stone-800 transition-all`}
+                >
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] uppercase tracking-widest text-amber-500 font-extrabold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                        📍 {note.era}
+                      </span>
                       
-                      <div className="flex items-center gap-1.5 text-[11px] text-stone-500">
-                        <span>⏱️ 5-10 min czytania</span>
-                      </div>
+                      {/* Trudność notatki */}
+                      <span className={`text-[9px] uppercase tracking-widest font-extrabold px-2 py-0.5 rounded border ${
+                        note.difficulty === "Trudny" 
+                          ? "bg-red-950/50 border-red-900/40 text-red-400"
+                          : "bg-emerald-950/50 border-emerald-900/40 text-emerald-400"
+                      }`}>
+                        {note.difficulty || "Średni"}
+                      </span>
                     </div>
 
-                    {/* Note Title */}
-                    <h3 className="text-lg font-bold text-stone-100 font-serif mt-3 tracking-tight group-hover:text-amber-200 transition-colors">
+                    <h2 className="text-lg font-bold text-stone-100 font-serif leading-snug">
                       {note.title}
-                    </h3>
+                    </h2>
 
-                    {/* Main Content Body */}
-                    <p className="text-xs text-stone-300/95 leading-relaxed mt-3.5 whitespace-pre-line font-sans border-l-2 border-amber-900/30 pl-3">
+                    {/* Poprawiony, ładny opis pobierany bezpośrednio z bazy danych */}
+                    <p className="text-xs text-stone-400 leading-relaxed font-sans line-clamp-3">
                       {note.content}
                     </p>
+                  </div>
 
-                    {/* Card footer details */}
-                    <div className="border-t border-stone-800/40 mt-5 pt-3.5 flex items-center justify-between text-[11px] text-stone-500">
-                      <div className="flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
-                        <span>Baza wiedzy CKE 2026</span>
+                  <div className="flex flex-col gap-3 mt-2">
+                    {/* Lista tagów (chips) */}
+                    {Array.isArray(note.chips) && (
+                      <div className="flex flex-wrap gap-1">
+                        {note.chips.map((chip: string) => (
+                          <span 
+                            key={chip}
+                            className="text-[9px] text-stone-500 bg-stone-950 px-2 py-1 rounded-md border border-stone-900"
+                          >
+                            #{chip}
+                          </span>
+                        ))}
                       </div>
-                      <span className="font-serif italic text-amber-500/70">Wiedza Szyta na Miarę</span>
-                    </div>
-                  </article>
-                </a>
-              );
-            })
-          ) : (
-            <div className="rounded-2xl border border-dashed border-stone-850 p-12 text-center text-stone-500 bg-[#1f1915]/40">
-              <span className="text-3xl block mb-2">📭</span>
-              Brak darmowych notatek z języka polskiego w bazie danych. Odblokuj Premium, aby zobaczyć pełną bazę!
-            </div>
-          )}
-        </div>
+                    )}
 
+                    {/* Przycisk otwierania (z kłódką dla zablokowanych lektur) */}
+                    <button
+                      onClick={() => handleOpenNote(note)}
+                      className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                        isLocked 
+                          ? "bg-stone-950 border border-stone-900 text-stone-500 hover:bg-stone-900/40"
+                          : "bg-amber-500 text-stone-950 hover:bg-amber-400 shadow-md"
+                      }`}
+                    >
+                      {isLocked ? (
+                        <>
+                          <span>🔒</span> Zablokowane (Premium)
+                        </>
+                      ) : (
+                        <>
+                          Otwórz notatkę 📖
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </main>
 
-      {/* FOOTER */}
-      <footer className="border-t border-amber-950/40 mt-auto py-5 px-6 text-center text-xs text-stone-500 bg-stone-950/10">
-        <div className="max-w-4xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p>© 2026 Wiedza Szyta na Miarę. Pobieranie danych z Supabase aktywne.</p>
-          <a href="/" className="text-amber-500/70 hover:text-amber-400 transition-colors">Strona Główna</a>
-        </div>
-      </footer>
+      {/* SYSTEM POWIADOMIEŃ */}
+      <CozyNotification 
+        notification={cozyNotification} 
+        onClose={() => setCozyNotification(null)} 
+      />
     </div>
-  )
+  );
 }
