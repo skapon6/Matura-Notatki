@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { ThemeClasses } from "../lib/theme";
+import { playSound } from "../lib/sounds";
 
 interface PomodoroTimerProps {
   currentTheme: ThemeClasses;
@@ -13,14 +14,62 @@ export const PomodoroTimer: React.FC<PomodoroTimerProps> = ({ currentTheme, trig
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [timerRunning, setTimerRunning] = useState(false);
 
+  // Stany dla Dziennego Celu Nauki
+  const [dailyGoal, setDailyGoal] = useState<number>(25);
+  const [minutesStudiedToday, setMinutesStudiedToday] = useState<number>(0);
+
+  // Wczytywanie celu i dzisiejszego czasu nauki z localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedGoal = localStorage.getItem("cozy_study_goal");
+      if (savedGoal) {
+        setDailyGoal(parseInt(savedGoal));
+      }
+
+      const todayStr = new Date().toLocaleDateString("pl-PL");
+      const savedDate = localStorage.getItem("cozy_study_date");
+
+      if (savedDate !== todayStr) {
+        localStorage.setItem("cozy_study_date", todayStr);
+        localStorage.setItem("cozy_study_minutes_today", "0");
+        setMinutesStudiedToday(0);
+      } else {
+        const savedMinutes = localStorage.getItem("cozy_study_minutes_today");
+        if (savedMinutes) {
+          setMinutesStudiedToday(parseFloat(savedMinutes));
+        }
+      }
+    }
+  }, []);
+
+  // Główna pętla timera
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
+    
     if (timerRunning && timeLeft > 0) {
       interval = setInterval(() => {
         setTimeLeft((prev) => prev - 1);
+
+        // Jeśli jesteśmy w trybie Nauki (work), dodajemy czas do celu dziennego oraz łącznego
+        if (pomodoroMode === "work") {
+          setMinutesStudiedToday((prev) => {
+            const updated = prev + 1 / 60;
+            localStorage.setItem("cozy_study_minutes_today", updated.toString());
+            return updated;
+          });
+
+          // Zapis łącznego (all-time) czasu nauki
+          if (typeof window !== "undefined") {
+            const currentTotal = localStorage.getItem("cozy_total_study_minutes");
+            const updatedTotal = parseFloat(currentTotal || "0") + 1 / 60;
+            localStorage.setItem("cozy_total_study_minutes", updatedTotal.toString());
+          }
+        }
       }, 1000);
     } else if (timeLeft === 0) {
       setTimerRunning(false);
+      playSound("success");
+
       if (pomodoroMode === "work") {
         setPomodoroMode("break");
         setTimeLeft(5 * 60);
@@ -31,17 +80,25 @@ export const PomodoroTimer: React.FC<PomodoroTimerProps> = ({ currentTheme, trig
         triggerNotification("Czas wracać do pracy! Skupienie 📚", "info");
       }
     }
+    
     return () => {
       if (interval) clearInterval(interval);
     };
   }, [timerRunning, timeLeft, pomodoroMode, triggerNotification]);
 
-  const toggleTimer = () => setTimerRunning(!timerRunning);
+  const toggleTimer = () => {
+    playSound("click");
+    setTimerRunning(!timerRunning);
+  };
+
   const resetTimer = () => {
+    playSound("click");
     setTimerRunning(false);
     setTimeLeft(pomodoroMode === "work" ? 25 * 60 : 5 * 60);
   };
+
   const switchPomodoroMode = (mode: "work" | "break") => {
+    playSound("click");
     setTimerRunning(false);
     setPomodoroMode(mode);
     setTimeLeft(mode === "work" ? 25 * 60 : 5 * 60);
@@ -52,6 +109,8 @@ export const PomodoroTimer: React.FC<PomodoroTimerProps> = ({ currentTheme, trig
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
+
+  const goalPercentage = Math.min(100, Math.round((minutesStudiedToday / dailyGoal) * 100));
 
   return (
     <div className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-5 transition-colors duration-500`}>
@@ -118,6 +177,25 @@ export const PomodoroTimer: React.FC<PomodoroTimerProps> = ({ currentTheme, trig
         >
           <span>🔄</span> Reset
         </button>
+      </div>
+
+      {/* DYNAMICZNY PODGLĄD DZIENNEGO CELU NAUKI */}
+      <div className="mt-4 pt-3.5 border-t border-stone-800/60 flex flex-col gap-2">
+        <div className="flex justify-between items-center text-[10px] text-stone-400 font-semibold">
+          <span>Dzienny cel nauki:</span>
+          <span>{Math.floor(minutesStudiedToday)} / {dailyGoal} min ({goalPercentage}%)</span>
+        </div>
+        <div className="w-full h-1.5 bg-stone-950/60 rounded-full overflow-hidden border border-stone-900">
+          <div 
+            className={`h-full ${goalPercentage >= 100 ? "bg-emerald-500" : "bg-amber-500"} rounded-full transition-all duration-300`}
+            style={{ width: `${goalPercentage}%` }}
+          />
+        </div>
+        {goalPercentage >= 100 && (
+          <span className="text-[9px] text-emerald-400 font-bold text-center mt-1 animate-pulse">
+            🎉 Gratulacje! Twój dzisiejszy cel został osiągnięty!
+          </span>
+        )}
       </div>
     </div>
   );

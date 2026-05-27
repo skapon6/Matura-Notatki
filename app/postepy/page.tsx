@@ -11,7 +11,7 @@ export default function PostepyPage() {
   const router = useRouter();
   const currentTheme = getThemeClasses("library");
 
-  // Globalny odtwarzacz Lo-Fi (gra płynnie bez przerw!)
+  // Globalny odtwarzacz Lo-Fi (gra płynnie bez przerw przy nawigacji!)
   const {
     lofiActive,
     currentTrackIndex,
@@ -30,6 +30,9 @@ export default function PostepyPage() {
   const [essayCount, setEssayCount] = useState(0);
   const [savedQuotesCount, setSavedQuotesCount] = useState(0);
   const [essayCredits, setEssayCredits] = useState(0);
+
+  // NOWY STAN: Łączny czas nauki (pobierany z localStorage)
+  const [totalStudyMinutes, setTotalStudyMinutes] = useState<number>(0);
 
   // STANY DLA DYNAMICZNEGO POSTĘPU EPOK (Porównanie tabel flashcards i flashcard_progress)
   const [flashcards, setFlashcards] = useState<any[]>([]);
@@ -97,6 +100,14 @@ export default function PostepyPage() {
           setProgress(progressMap);
         }
 
+        // 7. Wczytaj łączny czas nauki z localStorage
+        if (typeof window !== "undefined") {
+          const savedTotal = localStorage.getItem("cozy_total_study_minutes");
+          if (savedTotal) {
+            setTotalStudyMinutes(parseFloat(savedTotal));
+          }
+        }
+
       } catch (err) {
         console.error("Błąd podczas wczytywania statystyk:", err);
       } finally {
@@ -111,20 +122,28 @@ export default function PostepyPage() {
   const getEpochProgressPercent = (eras: string[]) => {
     if (flashcards.length === 0) return 0;
 
-    // 1. Filtrujemy tylko te fiszki, które należą do wskazanych epok (ignorujemy wielkość liter)
     const eraCards = flashcards.filter((card) =>
       eras.some((era) => card.era?.toLowerCase() === era.toLowerCase())
     );
 
     if (eraCards.length === 0) return 0;
 
-    // 2. Liczymy, ile z tych fiszek użytkownik oznaczył jako 'mastered' (Opanowałem!)
     const masteredCardsCount = eraCards.filter(
       (card) => progress[card.id] === "mastered"
     ).length;
 
-    // 3. Zwracamy zaokrąglony procent opanowania
     return Math.round((masteredCardsCount / eraCards.length) * 100);
+  };
+
+  // Piękne formatowanie łącznego czasu nauki (minuty -> godziny i minuty)
+  const formatStudyTime = (minutes: number) => {
+    if (minutes < 1) return "0 min";
+    if (minutes < 60) {
+      return `${Math.floor(minutes)} min`;
+    }
+    const hours = Math.floor(minutes / 60);
+    const mins = Math.floor(minutes % 60);
+    return mins > 0 ? `${hours} godz. ${mins} min` : `${hours} godz.`;
   };
 
   return (
@@ -222,8 +241,8 @@ export default function PostepyPage() {
         ) : (
           <div className="w-full flex flex-col gap-6">
             
-            {/* PANEL DYNAMICZNYCH STATYSTYK (3 KAFELKI) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* PANEL DYNAMICZNYCH STATYSTYK (ROZBUDOWANY DO 4 KAFELKÓW) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               
               {/* KAFELEK 1: ZAPISANE CYTATY */}
               <div className={`p-5 rounded-2xl border ${currentTheme.cardBorder} bg-[#161210] flex flex-col items-center justify-center text-center shadow-md`}>
@@ -249,6 +268,17 @@ export default function PostepyPage() {
                 <span className="text-2xl font-bold font-mono text-stone-100">{essayCount}</span>
                 <span className="text-[10px] uppercase tracking-widest text-stone-500 font-bold mt-1">
                   Ocenione Rozprawki
+                </span>
+              </div>
+
+              {/* NOWY KAFELEK 4: ŁĄCZNY CZAS NAUKI (Sformatowany dynamicznie!) */}
+              <div className={`p-5 rounded-2xl border ${currentTheme.cardBorder} bg-[#161210] flex flex-col items-center justify-center text-center shadow-md`}>
+                <span className="text-2xl mb-1">⏱️</span>
+                <span className="text-xl font-bold font-mono text-stone-100 whitespace-nowrap">
+                  {formatStudyTime(totalStudyMinutes)}
+                </span>
+                <span className="text-[10px] uppercase tracking-widest text-stone-500 font-bold mt-1">
+                  Łączny Czas Nauki
                 </span>
               </div>
 
