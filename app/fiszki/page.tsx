@@ -1,214 +1,505 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
+import { supabase } from "../lib/supabase";
 import { useRouter } from "next/navigation";
-import { supabase } from "../lib/supabase"; // Upewnij się, że ścieżka jest poprawna względem folderu pliku
+import { playSound } from "../lib/sounds";
+import { useLofi } from "../context/LofiContext";
+import { getThemeClasses } from "../lib/theme";
 
 export default function FiszkiPage() {
   const router = useRouter();
+  const currentTheme = getThemeClasses("library");
 
-  // Stany autoryzacji i dostępu
-  const [checkingAccess, setCheckingAccess] = useState(true);
-  const [hasAccess, setHasAccess] = useState(false);
+  // Globalny odtwarzacz Lo-Fi
+  const {
+    lofiActive,
+    currentTrackIndex,
+    lofiVolume,
+    lofiTracks,
+    toggleLofi,
+    handleNextTrack,
+    handlePrevTrack,
+    handleVolumeChange
+  } = useLofi();
 
-  // Stany bazy danych i fiszek
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  
+  // Dynamiczna lista fiszek pobrana z bazy Supabase
   const [flashcards, setFlashcards] = useState<any[]>([]);
-  const [loadingCards, setLoadingCards] = useState(true);
+  
+  // Stan przechowywania postępów z bazy danych
+  const [progress, setProgress] = useState<Record<string, "mastered" | "learning">>({});
+  
+  // Filtrowanie fiszek: 'all' (gra) | 'learning' (lista do nauki) | 'mastered' (lista opanowane)
+  const [filter, setFilter] = useState<"all" | "learning" | "mastered">("all");
+  
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
 
-  // 1. Sprawdzanie uprawnień Premium (Zgodnie z logiką z app/page.tsx)
+  // Kierunek animacji Swipe ('left' lub 'right')
+  const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
+
+  // Monitorowanie sesji oraz pobieranie danych
   useEffect(() => {
-    async function verifyPremiumAccess() {
+    async function fetchData() {
+      setLoading(true);
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session?.user) {
-          router.push("/"); // Przekieruj na główną, jeśli nie jest zalogowany
-          return;
+        let userId = null;
+        if (session?.user) {
+          setUser(session.user);
+          userId = session.user.id;
         }
 
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("subscription_status, expires_at")
-          .eq("id", session.user.id)
-          .single();
+        const { data: cardsData, error: cardsError } = await supabase
+          .from("flashcards")
+          .select("*")
+          .order("id", { ascending: true });
 
-        const activeStatuses = ['mini', 'medium', 'premium', 'admin', 'paid'];
-        const isStatusActive = profile ? activeStatuses.includes(profile.subscription_status) : false;
-
-        // Sprawdzenie daty ważności konta
-        let isExpired = false;
-        if (profile?.expires_at) {
-          const expirationTime = new Date(profile.expires_at).getTime();
-          const currentTime = new Date().getTime();
-          isExpired = currentTime > expirationTime;
+        if (!cardsError && cardsData) {
+          const mappedCards = cardsData.map((row) => ({
+            id: row.id.toString(),
+            category: row.era || "Inne",
+            question: row.front,
+            answer: row.back,
+          }));
+          setFlashcards(mappedCards);
         }
 
-        if (isStatusActive && !isExpired) {
-          setHasAccess(true);
-          // Jeśli ma dostęp, wywołujemy pobieranie fiszek
-          fetchFlashcards();
-        } else {
-          router.push("/"); // Przekieruj na główną, jeśli brak dostępu lub subskrypcja wygasła
+        if (userId) {
+          const { data: progressData, error: progressError } = await supabase
+            .from("flashcard_progress")
+            .select("flashcard_id, status")
+            .eq("user_id", userId);
+            
+          if (!progressError && progressData) {
+            const progressMap: Record<string, "mastered" | "learning"> = {};
+            progressData.forEach((row) => {
+              progressMap[row.flashcard_id] = row.status as "mastered" | "learning";
+            });
+            setProgress(progressMap);
+          }
         }
       } catch (err) {
-        console.error("Błąd weryfikacji dostępu:", err);
-        router.push("/");
+        console.error("Błąd pobierania danych z Supabase:", err);
       } finally {
-        setCheckingAccess(false);
+        setLoading(false);
       }
     }
+    
+    fetchData();
+  }, []);
 
-    verifyPremiumAccess();
-  }, [router]);
-
-  // 2. Pobieranie fiszek z tabeli Supabase
-  async function fetchFlashcards() {
-    setLoadingCards(true);
-    try {
-      const { data, error } = await supabase
-        .from("flashcards")
-        .select("*")
-        .order("id", { ascending: true });
-
-      if (error) throw error;
-
-      if (data) {
-        setFlashcards(data);
-      }
-    } catch (err) {
-      console.error("Błąd pobierania fiszek:", err);
-    } finally {
-      setLoadingCards(false);
+  // Filtrowanie fiszek na podstawie wybranej zakładki
+  const filteredCards = flashcards.filter((card) => {
+    const cardStatus = progress[card.id];
+    if (filter === "mastered") return cardStatus === "mastered";
+    if (filter === "learning") {
+      return cardStatus === "learning" || !cardStatus;
     }
-  }
+    return true; 
+  });
 
-  // 3. Nawigacja między fiszkami
-  const handleNext = () => {
-    if (flashcards.length === 0) return;
+  // Reset indeksu przy zmianie filtru
+  useEffect(() => {
+    setCurrentIndex(0);
     setIsFlipped(false);
-    setTimeout(() => {
-      setCurrentIndex((prev) => (prev + 1) % flashcards.length);
-    }, 200);
+    setSwipeDirection(null);
+  }, [filter]);
+
+  // Zabezpieczenie przed wyjściem indeksu poza zakres przefiltrowanej listy (Race Condition)
+  const safeCurrentIndex = currentIndex >= filteredCards.length ? 0 : currentIndex;
+  const activeCard = filteredCards[safeCurrentIndex];
+
+  const handleNext = () => {
+    setIsFlipped(false);
+    if (filteredCards.length > 0) {
+      setCurrentIndex((prev) => (prev + 1) % filteredCards.length);
+    }
   };
 
   const handlePrev = () => {
-    if (flashcards.length === 0) return;
     setIsFlipped(false);
-    setTimeout(() => {
-      setCurrentIndex((prev) => (prev - 1 + flashcards.length) % flashcards.length);
-    }, 200);
+    if (filteredCards.length > 0) {
+      setCurrentIndex((prev) => (prev - 1 + filteredCards.length) % filteredCards.length);
+    }
   };
 
-  // Ekran ładowania autoryzacji
-  if (checkingAccess) {
-    return (
-      <div className="min-h-screen bg-[#14100e] text-stone-200 flex flex-col items-center justify-center p-8">
-        <div className="text-4xl animate-bounce mb-4">☕</div>
-        <p className="text-sm tracking-widest font-semibold text-stone-400">
-          Weryfikacja dostępu do strefy Premium...
-        </p>
-      </div>
-    );
-  }
+  // OBSŁUGA DLA TRYBU GRY (Z animacją swipe i dźwiękiem)
+  const handleMarkStatusGame = async (cardId: string, status: "mastered" | "learning") => {
+    if (!user || !cardId) return;
 
-  // Zabezpieczenie przed wyrenderowaniem strony bez uprawnień
-  if (!hasAccess) return null;
+    // Uruchomienie kierunku animacji i dedykowanych dźwięków
+    if (status === "mastered") {
+      setSwipeDirection("right");
+      playSound("success"); // Dźwięk sukcesu dla Znam!
+    } else {
+      setSwipeDirection("left");
+      playSound("error"); // Dźwięk błędu dla Nie znam!
+    }
 
-  const currentCard = flashcards[currentIndex];
+    // Aktualizacja stanu lokalnego
+    setProgress((prev) => ({
+      ...prev,
+      [cardId]: status,
+    }));
+
+    // Zapis w bazie Supabase
+    try {
+      await supabase
+        .from("flashcard_progress")
+        .upsert({
+          user_id: user.id,
+          flashcard_id: cardId,
+          status: status,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: "user_id,flashcard_id"
+        });
+    } catch (err) {
+      console.error("Błąd zapisu postępu:", err);
+    }
+
+    // Płynne wunięcie kolejnej karty
+    setTimeout(() => {
+      setIsFlipped(false);
+      setSwipeDirection(null);
+      if (filteredCards.length > 1) {
+        setCurrentIndex((prev) => (prev + 1) % filteredCards.length);
+      }
+    }, 250);
+  };
+
+  // OBSŁUGA DLA TRYBU LISTY (Natychmiastowe przeniesienie bez animacji i przesuwania indeksów)
+  const handleMarkStatusList = async (cardId: string, status: "mastered" | "learning") => {
+    if (!user || !cardId) return;
+
+    if (status === "mastered") {
+      playSound("success");
+    } else {
+      playSound("error");
+    }
+
+    setProgress((prev) => ({
+      ...prev,
+      [cardId]: status,
+    }));
+
+    try {
+      await supabase
+        .from("flashcard_progress")
+        .upsert({
+          user_id: user.id,
+          flashcard_id: cardId,
+          status: status,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: "user_id,flashcard_id"
+        });
+    } catch (err) {
+      console.error("Błąd zapisu postępu na liście:", err);
+    }
+  };
+
+  // Liczenie statystyk wyłącznie na podstawie aktualnie pobranych fiszek z bazy
+  const masteredCount = flashcards.filter(card => progress[card.id] === "mastered").length;
+  const learningCount = flashcards.length - masteredCount;
 
   return (
-    <div className="min-h-screen bg-[#14100e] text-stone-200 font-sans p-6 flex flex-col items-center">
-      <div className="max-w-xl w-full bg-[#1f1915]/90 border border-amber-950/40 rounded-3xl p-6 sm:p-8 shadow-xl mt-8 flex flex-col">
-        
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-stone-800/60 pb-5 mb-6">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">⚡</span>
-            <div>
-              <h1 className="text-lg sm:text-xl font-bold font-serif text-stone-100">Szybkie Fiszki</h1>
-              <p className="text-[10px] text-stone-500">Powtórka najważniejszych motywów</p>
-            </div>
-          </div>
-          <Link 
-            href="/" 
-            className="text-xs px-3.5 py-1.5 rounded-xl border border-[#c68a4c]/30 bg-stone-900/60 text-stone-400 hover:text-stone-100 hover:border-amber-700 transition-all"
+    <div className={`min-h-screen flex flex-col transition-colors duration-500 ${currentTheme.bg} text-stone-200 font-sans`}>
+      <style dangerouslySetInnerHTML={{__html: `
+        .perspective-1000 { perspective: 1000px; }
+        .transform-style-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+      `}} />
+
+      {/* HEADER SECTION */}
+      <header className={`border-b ${currentTheme.cardBorder} px-4 sm:px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 backdrop-blur-md sticky top-0 z-40 transition-colors duration-500`}>
+        <div className="flex w-full md:w-auto items-center justify-between md:justify-start gap-4">
+          <button
+            onClick={() => router.push("/")}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 transition-all text-xs font-medium ${currentTheme.subText} hover:text-stone-100`}
           >
-            ← Wróć
-          </Link>
+            ← Wróć do panelu
+          </button>
         </div>
 
-        {/* Dynamiczny widok fiszek */}
-        {loadingCards ? (
-          <div className="h-64 flex items-center justify-center text-stone-500 text-xs">
-            ☕ Pobieranie najnowszych fiszek z bazy danych...
+        <div className="hidden md:flex flex-col items-center select-none">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">⚡</span>
+            <h1 className="text-xl font-semibold tracking-wide bg-gradient-to-r from-amber-200 via-orange-300 to-amber-100 bg-clip-text text-transparent drop-shadow-sm">
+              Szybkie Fiszki Maturalne
+            </h1>
           </div>
-        ) : flashcards.length > 0 && currentCard ? (
-          <>
-            {/* Karta Fiszki */}
-            <div 
-              onClick={() => setIsFlipped(!isFlipped)}
-              className="h-64 rounded-2xl border border-stone-800 bg-stone-900/50 hover:bg-stone-900/70 transition-all cursor-pointer flex flex-col items-center justify-center p-6 text-center shadow-inner select-none relative"
-            >
-              {/* Epoka literacka u góry */}
-              {currentCard?.era && (
-                <span className="absolute top-4 left-4 text-[10px] text-amber-500 uppercase tracking-widest font-bold">
-                  {currentCard.era}
-                </span>
-              )}
-              
-              <span className="absolute top-4 right-4 text-[10px] text-stone-500 uppercase tracking-widest">
-                Fiszka {currentIndex + 1} z {flashcards.length}
-              </span>
-              
-              <span className="absolute bottom-4 text-[10px] text-stone-500">
-                {isFlipped ? "Kliknij, aby odwrócić 🔄" : "Kliknij, aby poznać odpowiedź 🔄"}
-              </span>
+        </div>
 
-              {/* Przód i tył z bezpiecznym łańcuchowaniem */}
-              {isFlipped ? (
-                <p className="text-sm sm:text-base text-stone-200 font-serif leading-relaxed animate-fade-in px-2">
-                  {currentCard?.back}
-                </p>
+        {/* Globalny Odtwarzacz Lofi */}
+        <div className="flex w-full md:w-auto items-center justify-between md:justify-end gap-3 sm:gap-4 border-t md:border-t-0 border-stone-800/40 pt-3 md:pt-0">
+          <div className={`flex items-center gap-3 sm:gap-4 px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} transition-all select-none shadow-md`}>
+            <button type="button" onClick={handlePrevTrack} className="text-stone-400 hover:text-amber-400 p-1 rounded-xl hover:bg-stone-800/40 transition-colors">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.334 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z" />
+              </svg>
+            </button>
+            <button type="button" onClick={toggleLofi} className="flex items-center gap-1.5 sm:gap-2 px-3 py-1 sm:px-4 sm:py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 hover:text-amber-400 border border-amber-500/20 transition-all font-semibold text-xs active:scale-95">
+              {lofiActive ? (
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               ) : (
-                <p className="text-base sm:text-lg text-stone-100 font-bold font-serif leading-tight px-2">
-                  {currentCard?.front}
-                </p>
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               )}
+              <span className="hidden md:inline text-[10px] sm:text-xs tracking-wide">
+                {lofiTracks[currentTrackIndex].name}
+              </span>
+            </button>
+            <button type="button" onClick={handleNextTrack} className="text-stone-400 hover:text-amber-400 p-1 rounded-xl hover:bg-stone-800/40 transition-colors">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 005 8v8a1 1 0 001.6.8l5.334-4zM19.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.334-4z" />
+              </svg>
+            </button>
+            <div className="hidden sm:flex items-center gap-2 sm:gap-2.5 ml-1 border-l border-stone-800/80 pl-2 sm:pl-3">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-stone-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 12H3a1 1 0 01-1-1V9a1 1 0 011-1h1.586l3.707-3.707a1 1 0 011.09-.217z" clipRule="evenodd" />
+              </svg>
+              <input 
+                type="range" 
+                min="0" 
+                max="1" 
+                step="0.05" 
+                value={lofiVolume} 
+                onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                className="w-14 sm:w-16 md:w-20 h-1 bg-stone-850 rounded-lg appearance-none cursor-pointer accent-amber-500 focus:outline-none"
+                style={{ WebkitAppearance: "none" }}
+              />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* RENDEROWANIE ZAWARTOŚCI */}
+      <main className="max-w-2xl mx-auto w-full p-6 flex flex-col items-center justify-center flex-1">
+        
+        {/* PANEL FILTROWANIA I STATYSTYK */}
+        <div className="w-full flex items-center justify-between mb-6 bg-stone-900/40 border border-stone-800/60 p-2.5 rounded-2xl">
+          <div className="flex gap-1.5 flex-wrap">
+            {(["all", "learning", "mastered"] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setFilter(tab)}
+                className={`text-[11px] px-3 py-1.5 rounded-xl font-semibold transition-all ${
+                  filter === tab
+                    ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                    : "text-stone-500 hover:text-stone-300"
+                }`}
+              >
+                {tab === "all" && "Wszystkie (Zabawa)"}
+                {tab === "learning" && `Do nauki (${learningCount})`}
+                {tab === "mastered" && `Opanowane (${masteredCount})`}
+              </button>
+            ))}
+          </div>
+
+          <div className="text-[10px] text-stone-500 font-semibold uppercase tracking-wider pr-1">
+            Matura 2026
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="text-center py-12 text-stone-500">Wczytywanie Twojej strefy fiszek...</div>
+        ) : filteredCards.length === 0 ? (
+          <div className="text-center py-16 px-4 border border-dashed border-stone-800 rounded-3xl w-full text-stone-500 select-none">
+            <span className="text-3xl block mb-2">⭐</span>
+            <p className="text-sm font-semibold">Brak fiszek w tej kategorii.</p>
+            <p className="text-xs text-stone-600 mt-1 leading-relaxed">
+              {filter === "mastered" 
+                ? "Nie oznaczyłeś jeszcze żadnej fiszki jako opanowanej. Kliknij 'Znam' podczas gry!"
+                : "Wspaniale! Opanowałeś już wszystkie dostępne fiszki!"}
+            </p>
+          </div>
+        ) : filter === "all" ? (
+          
+          /* TRYB GRY (DLA KATEGORII 'WSZYSTKIE') */
+          <div className="w-full flex flex-col gap-6 select-none animate-slide-in">
+            
+            {/* GŁÓWNA KARTA FISZKI Z SZYBKĄ ANIMACJĄ (75ms) I BŁYSKIEM KOLORU */}
+            <div 
+              onClick={() => { 
+                if (!swipeDirection) {
+                  playSound("click"); 
+                  setIsFlipped(!isFlipped); 
+                }
+              }}
+              className={`perspective-1000 w-full h-[400px] cursor-pointer transition-all duration-300 ease-out transform ${
+                swipeDirection === "left" 
+                  ? "translate-x-[-150%] rotate-[-15deg] opacity-0" 
+                  : swipeDirection === "right" 
+                    ? "translate-x-[150%] rotate-[15deg] opacity-0" 
+                    : "translate-x-0 rotate-0 opacity-100"
+              }`}
+            >
+              <div className={`relative w-full h-full duration-500 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
+                
+                {/* STRONA A: PYTANIE (Błyskawiczna zmiana ramki w 75ms przy swipe) */}
+                <div className={`absolute inset-0 w-full h-full rounded-3xl border transition-all duration-75 ${
+                  swipeDirection === "left" 
+                    ? "border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.25)]" 
+                    : swipeDirection === "right" 
+                      ? "border-emerald-500/50 shadow-[0_0_30px_rgba(16,185,129,0.25)]" 
+                      : currentTheme.cardBorder
+                } bg-[#161210] p-8 flex flex-col justify-between backface-hidden shadow-xl`}>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-amber-500 font-bold uppercase tracking-widest bg-amber-500/10 px-2.5 py-1 rounded border border-amber-500/20">
+                      📍 {activeCard?.category}
+                    </span>
+                    <span className="text-stone-500 font-semibold font-mono">
+                      Fiszka {safeCurrentIndex + 1} z {filteredCards.length}
+                    </span>
+                  </div>
+
+                  <div className="text-center my-auto">
+                    <h2 className="text-xl sm:text-2xl font-bold font-serif text-stone-100 leading-snug px-2">
+                      {activeCard?.question}
+                    </h2>
+                  </div>
+
+                  <p className="text-center text-[10px] text-stone-500 uppercase tracking-widest font-semibold animate-pulse">
+                    Kliknij, aby odwrócić i poznać odpowiedź 🔄
+                  </p>
+                </div>
+
+                {/* STRONA B: ODPOWIEDŹ (Błyskawiczna zmiana ramki w 75ms przy swipe) */}
+                <div className={`absolute inset-0 w-full h-full rounded-3xl border transition-all duration-75 ${
+                  swipeDirection === "left" 
+                    ? "border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.25)]" 
+                    : swipeDirection === "right" 
+                      ? "border-emerald-500/50 shadow-[0_0_30px_rgba(16,185,129,0.25)]" 
+                      : "border-amber-950/40"
+                } bg-[#161210] p-8 flex flex-col justify-between backface-hidden rotate-y-180 shadow-xl`}>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-emerald-500 font-bold uppercase tracking-widest bg-emerald-500/10 px-2.5 py-1 rounded border border-emerald-500/20">
+                      Odpowiedź
+                    </span>
+                    <span className="text-stone-500 font-semibold font-mono">
+                      {activeCard?.category}
+                    </span>
+                  </div>
+
+                  <div className="my-auto overflow-y-auto max-h-56 pr-1 scrollbar-thin scrollbar-thumb-stone-800">
+                    <p className="text-sm sm:text-base text-stone-200 leading-relaxed font-serif pr-2 select-text">
+                      {activeCard?.answer}
+                    </p>
+                  </div>
+
+                  <p className="text-center text-[10px] text-stone-500 uppercase tracking-widest font-semibold">
+                    Kliknij, aby wrócić do pytania 🔄
+                  </p>
+                </div>
+
+              </div>
             </div>
 
-            {/* Przyciski kontrolne */}
-            <div className="grid grid-cols-3 gap-3 mt-6">
+            {/* INTERAKTYWNE KLAWISZE SPRAWDZENIA WIEDZY */}
+            <div className="grid grid-cols-2 gap-3.5 w-full">
+              <button
+                onClick={() => handleMarkStatusGame(activeCard?.id, "learning")}
+                disabled={!!swipeDirection}
+                className="py-3 px-5 rounded-2xl text-xs font-bold border border-red-900/30 bg-red-950/10 hover:bg-red-900/20 text-red-400 hover:text-red-300 transition-all flex items-center justify-center gap-2 shadow-sm active:scale-95 disabled:opacity-50"
+              >
+                <span>❌</span> Jeszcze nie znam
+              </button>
+              <button
+                onClick={() => handleMarkStatusGame(activeCard?.id, "mastered")}
+                disabled={!!swipeDirection}
+                className="py-3 px-5 rounded-2xl text-xs font-bold border border-emerald-900/30 bg-emerald-950/10 hover:bg-emerald-900/20 text-emerald-400 hover:text-emerald-300 transition-all flex items-center justify-center gap-2 shadow-sm active:scale-95 disabled:opacity-50"
+              >
+                <span>✅</span> Opanowałem!
+              </button>
+            </div>
+
+            {/* NAWIGACJA POPRZEDNIA / NASTĘPNA */}
+            <div className="flex justify-between items-center w-full px-2 mt-1">
               <button
                 onClick={handlePrev}
-                className="py-2.5 rounded-xl border border-stone-800 text-stone-400 hover:text-stone-200 hover:border-stone-700 text-xs font-semibold transition-all"
+                className="text-xs text-stone-500 hover:text-stone-300 transition-colors font-semibold"
               >
                 ← Poprzednia
               </button>
-              <button
-                onClick={() => setIsFlipped(!isFlipped)}
-                className="py-2.5 rounded-xl border border-stone-800 text-stone-400 hover:text-stone-200 hover:border-stone-700 text-xs font-semibold transition-all"
-              >
-                Odwróć
-              </button>
+              
+              {/* Kropki postępu na dole */}
+              <div className="flex gap-1">
+                {filteredCards.map((_, idx) => (
+                  <span 
+                    key={idx}
+                    className={`w-1.5 h-1.5 rounded-full transition-all ${
+                      idx === safeCurrentIndex ? "bg-amber-500 w-3" : "bg-stone-800"
+                    }`}
+                  />
+                ))}
+              </div>
+
               <button
                 onClick={handleNext}
-                className="py-2.5 rounded-xl bg-[#c68a4c] hover:bg-[#d99c5d] text-stone-950 text-xs font-bold transition-all shadow-md"
+                className="text-xs text-stone-500 hover:text-stone-300 transition-colors font-semibold"
               >
                 Następna →
               </button>
             </div>
-          </>
+
+          </div>
         ) : (
-          <div className="h-64 flex flex-col items-center justify-center text-center p-6 border border-dashed border-stone-800 rounded-2xl">
-            <span className="text-3xl mb-2">🦉</span>
-            <p className="text-xs text-stone-500">Brak dostępnych fiszek w bazie danych.</p>
+          
+          /* TRYB WYGODNEJ, SZYBKIEJ LISTY (Płynny, natychmiastowy zapis bez przesuwania indeksów) */
+          <div className="w-full flex flex-col gap-4 animate-slide-in select-none">
+            {filteredCards.map((card) => (
+              <div 
+                key={card.id}
+                className={`p-5 rounded-2xl border ${currentTheme.cardBorder} bg-[#161210] flex flex-col gap-3.5 shadow-md relative group`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] uppercase tracking-widest text-amber-500 font-extrabold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                    📍 {card.category}
+                  </span>
+                  
+                  {/* Szybka akcja bezpośrednio z poziomu wiersza na liście (Używa handleMarkStatusList) */}
+                  <div className="flex gap-2">
+                    {filter === "learning" ? (
+                      <button
+                        onClick={() => handleMarkStatusList(card.id, "mastered")}
+                        className="text-[10px] font-bold px-3 py-1 rounded-xl bg-emerald-950/40 border border-emerald-900/30 text-emerald-400 hover:bg-emerald-900/20 hover:text-emerald-300 transition-all flex items-center gap-1"
+                      >
+                        <span>✅</span> Opanowane
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleMarkStatusList(card.id, "learning")}
+                        className="text-[10px] font-bold px-3 py-1 rounded-xl bg-red-950/40 border border-red-900/30 text-red-400 hover:bg-red-900/20 hover:text-red-300 transition-all flex items-center gap-1"
+                      >
+                        <span>❌</span> Do nauki
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <h4 className="text-base font-bold text-stone-100 font-serif leading-snug">
+                    {card.question}
+                  </h4>
+                  <p className="text-xs text-stone-400 leading-relaxed pl-3 border-l-2 border-stone-800 italic font-serif select-text">
+                    {card.answer}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
         )}
-
-      </div>
+      </main>
     </div>
   );
 }

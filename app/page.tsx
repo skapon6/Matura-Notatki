@@ -20,9 +20,25 @@ import { PaymentTiers } from "./components/PaymentTiers";
 import { NotesBrowser } from "./components/NotesBrowser";
 import { PersonalNotesList } from "./components/PersonalNotesList";
 import { PersonalNotesModal } from "./components/PersonalNotesModal";
+import { MaturaCountdown } from "./components/MaturaCountdown";
+
+// Import globalnego odtwarzacza Lo-Fi
+import { useLofi } from "./context/LofiContext";
 
 export default function Home() {
   const router = useRouter();
+
+  // POBIERANIE GLOBALNEGO ODTWARZACZA LO-FI (Czysto i bez zbędnego kodu w tym pliku!)
+  const {
+    lofiActive,
+    currentTrackIndex,
+    lofiVolume,
+    lofiTracks,
+    toggleLofi,
+    handleNextTrack,
+    handlePrevTrack,
+    handleVolumeChange
+  } = useLofi();
 
   // Theme state
   const [cozyTheme, setCozyTheme] = useState<CozyTheme>("library");
@@ -253,78 +269,6 @@ export default function Home() {
     }
   };
 
-  // ODTWARZACZ LO-FI: Konfiguracja i obsługa
-  const lofiAudioRef = useRef<HTMLAudioElement | null>(null);
-  const [lofiActive, setLofiActive] = useState(false);
-  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
-  const [lofiVolume, setLofiVolume] = useState(0.3); // domyślna głośność: 30%
-  
-  const lofiTracks = [
-    { name: "Chill Lofi 1", src: "/audio/track1.mp3" },
-    { name: "Cozy Lofi 2", src: "/audio/track2.mp3" },
-  ];
-
-  const toggleLofi = () => {
-    if (!lofiAudioRef.current) {
-      lofiAudioRef.current = new Audio(lofiTracks[currentTrackIndex].src);
-      lofiAudioRef.current.volume = lofiVolume;
-      
-      // Kiedy utwór się zakończy, odtwarzaj automatycznie kolejny
-      lofiAudioRef.current.addEventListener("ended", () => {
-        handleNextTrack();
-      });
-    }
-
-    if (lofiActive) {
-      lofiAudioRef.current.pause();
-      setLofiActive(false);
-    } else {
-      lofiAudioRef.current.play().catch((err) => {
-        console.error("Autoodtwarzanie zablokowane przez przeglądarkę:", err);
-      });
-      setLofiActive(true);
-    }
-  };
-
-  const handleNextTrack = () => {
-    playSound("click");
-    setCurrentTrackIndex((prevIndex) => (prevIndex + 1) % lofiTracks.length);
-  };
-
-  const handlePrevTrack = () => {
-    playSound("click");
-    setCurrentTrackIndex((prevIndex) => (prevIndex - 1 + lofiTracks.length) % lofiTracks.length);
-  };
-
-  const handleVolumeChange = (newVolume: number) => {
-    setLofiVolume(newVolume);
-    if (lofiAudioRef.current) {
-      lofiAudioRef.current.volume = newVolume;
-    }
-  };
-
-  // Obsługa zmiany utworu w tle
-  useEffect(() => {
-    if (lofiAudioRef.current) {
-      const wasPlaying = lofiActive;
-      lofiAudioRef.current.pause();
-      lofiAudioRef.current.src = lofiTracks[currentTrackIndex].src;
-      lofiAudioRef.current.load();
-      if (wasPlaying) {
-        lofiAudioRef.current.play().catch((err) => console.error(err));
-      }
-    }
-  }, [currentTrackIndex]);
-
-  // Wyłączenie muzyki przy wyjściu z aplikacji
-  useEffect(() => {
-    return () => {
-      if (lofiAudioRef.current) {
-        lofiAudioRef.current.pause();
-      }
-    };
-  }, []);
-
   // GLOBALNY INTELIGENTNY NASŁUCHIWAĆ KLIKNIĘĆ
   useEffect(() => {
     const handleGlobalClick = (event: MouseEvent) => {
@@ -390,20 +334,32 @@ export default function Home() {
         .animate-slide-in { animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
       `}} />
 
-      {/* HEADER SECTION */}
-      <header className={`border-b ${currentTheme.cardBorder} px-6 py-4 flex items-center justify-between backdrop-blur-md sticky top-0 z-40 transition-colors duration-500`}>
-        <button
-          onClick={() => setIsSettingsOpen(true)}
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 transition-all text-sm font-medium ${currentTheme.subText} hover:text-stone-100`}
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-          Ustawienia Klimatu
-        </button>
+      {/* HEADER SECTION (Zaktualizowany na elastyczny i w pełni responsywny) */}
+      <header className={`border-b ${currentTheme.cardBorder} px-4 sm:px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 backdrop-blur-md sticky top-0 z-40 transition-colors duration-500`}>
+        
+        {/* Lewa strefa: Ustawienia Klimatu oraz logo na komórkach */}
+        <div className="flex w-full md:w-auto items-center justify-between md:justify-start gap-4">
+          <div className="flex md:hidden items-center gap-2 select-none">
+            <span className="text-xl">📖</span>
+            <h1 className="text-sm font-bold tracking-wide bg-gradient-to-r from-amber-200 via-orange-300 to-amber-100 bg-clip-text text-transparent drop-shadow-sm">
+              Wiedza Szyta na Miarę
+            </h1>
+          </div>
 
-        <div className="flex flex-col items-center select-none">
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 transition-all text-xs sm:text-sm font-medium ${currentTheme.subText} hover:text-stone-100`}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Ustawienia Klimatu
+          </button>
+        </div>
+
+        {/* Środkowa strefa: Logo (widoczne tylko od tabletów/komputerów w górę) */}
+        <div className="hidden md:flex flex-col items-center select-none">
           <div className="flex items-center gap-2">
             <span className="text-2xl">📖</span>
             <h1 className="text-xl font-semibold tracking-wide bg-gradient-to-r from-amber-200 via-orange-300 to-amber-100 bg-clip-text text-transparent drop-shadow-sm">
@@ -415,18 +371,19 @@ export default function Home() {
           </span>
         </div>
 
-        <div className="flex items-center gap-4">
+        {/* Prawa strefa: Panel Lo-Fi oraz Profil użytkownika */}
+        <div className="flex w-full md:w-auto items-center justify-between md:justify-end gap-3 sm:gap-4 border-t md:border-t-0 border-stone-800/40 pt-3 md:pt-0">
           
           {/* NOWY, ELEGANCKI, WIĘKSZY PANEL STEROWANIA MUZYKĄ LO-FI */}
-          <div className={`flex items-center gap-4 px-5 py-2.5 rounded-2xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} transition-all select-none shadow-md`}>
+          <div className={`flex items-center gap-3 sm:gap-4 px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} transition-all select-none shadow-md`}>
             {/* Poprzedni utwór */}
             <button 
               type="button"
               onClick={handlePrevTrack} 
-              className="text-stone-400 hover:text-amber-400 p-1.5 rounded-xl hover:bg-stone-800/40 transition-colors"
+              className="text-stone-400 hover:text-amber-400 p-1 rounded-xl hover:bg-stone-800/40 transition-colors"
               title="Poprzedni utwór"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.334 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z" />
               </svg>
             </button>
@@ -435,19 +392,19 @@ export default function Home() {
             <button 
               type="button"
               onClick={toggleLofi} 
-              className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 hover:text-amber-400 border border-amber-500/20 transition-all font-semibold text-sm active:scale-95"
+              className="flex items-center gap-1.5 sm:gap-2 px-3 py-1 sm:px-4 sm:py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 hover:text-amber-400 border border-amber-500/20 transition-all font-semibold text-xs active:scale-95"
             >
               {lofiActive ? (
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               ) : (
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               )}
-              <span className="hidden md:inline text-xs tracking-wide">
+              <span className="hidden md:inline text-[10px] sm:text-xs tracking-wide">
                 {lofiTracks[currentTrackIndex].name}
               </span>
             </button>
@@ -456,18 +413,18 @@ export default function Home() {
             <button 
               type="button"
               onClick={handleNextTrack} 
-              className="text-stone-400 hover:text-amber-400 p-1.5 rounded-xl hover:bg-stone-800/40 transition-colors"
+              className="text-stone-400 hover:text-amber-400 p-1 rounded-xl hover:bg-stone-800/40 transition-colors"
               title="Następny utwór"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 005 8v8a1 1 0 001.6.8l5.334-4zM19.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.334-4z" />
               </svg>
             </button>
             
-            {/* Płynny suwak głośności */}
-            <div className="flex items-center gap-2.5 ml-1 border-l border-stone-800/80 pl-3">
-              <svg className="w-5 h-5 text-stone-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+            {/* Płynny suwak głośności (ukryty na telefonach ze względu na fizyczne klawisze) */}
+            <div className="hidden sm:flex items-center gap-2 sm:gap-2.5 ml-1 border-l border-stone-800/80 pl-2 sm:pl-3">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-stone-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 12H3a1 1 0 01-1-1V9a1 1 0 011-1h1.586l3.707-3.707a1 1 0 011.09-.217z" clipRule="evenodd" />
               </svg>
               <input 
                 type="range" 
@@ -476,7 +433,7 @@ export default function Home() {
                 step="0.05" 
                 value={lofiVolume} 
                 onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-                className="w-16 sm:w-20 h-1.5 bg-stone-850 rounded-lg appearance-none cursor-pointer accent-amber-500 focus:outline-none"
+                className="w-14 sm:w-16 md:w-20 h-1 bg-stone-850 rounded-lg appearance-none cursor-pointer accent-amber-500 focus:outline-none"
                 style={{
                   WebkitAppearance: "none",
                 }}
@@ -486,7 +443,7 @@ export default function Home() {
           
           {user ? (
             <div className="flex items-center gap-2">
-              <div className="hidden sm:flex items-center gap-2 px-3 py-1 text-xs rounded-full bg-stone-900/60 border border-stone-800">
+              <div className="hidden lg:flex items-center gap-2 px-3 py-1 text-xs rounded-full bg-stone-900/60 border border-stone-800">
                 <span className={`w-2 h-2 rounded-full ${hasAccess ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
                 <span>
                   {user.email.split('@')[0]} (
@@ -510,7 +467,7 @@ export default function Home() {
                     router.refresh();
                   }
                 }}
-                className="px-3 py-1.5 rounded-xl text-xs font-semibold border border-red-900/30 bg-red-950/20 text-red-400 hover:bg-red-900 hover:text-white transition-all"
+                className="px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl text-[10px] sm:text-xs font-semibold border border-red-900/30 bg-red-950/20 text-red-400 hover:bg-red-900 hover:text-white transition-all whitespace-nowrap"
               >
                 Wyloguj
               </button>
@@ -624,6 +581,9 @@ export default function Home() {
             
             {/* COLUMN 1: NAVIGATION & AI ESSAY INFO */}
             <section className="lg:col-span-3 flex flex-col gap-6">
+              {/* LICZNIK DO MATURY */}
+              <MaturaCountdown currentTheme={currentTheme} />
+
               <div className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-4 transition-colors duration-500`}>
                 <h3 className="text-xs uppercase tracking-widest text-amber-500 font-semibold mb-3 px-1">
                   Nawigacja
