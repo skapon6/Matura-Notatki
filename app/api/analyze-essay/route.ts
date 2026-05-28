@@ -172,36 +172,26 @@ Zwróć WYŁĄCZNIE obiekt JSON. Bez znaczników markdown, bez \`\`\`json.
     }
 
     const parsedResult = JSON.parse(cleanJson.trim());
-
-    // --- GENEROWANIE WEKTORA (EMBEDDING) DLA PGVECTOR (Z AUTOMATYCZNĄ PRÓBĄ AWARYJNĄ) ---
+    // --- GENEROWANIE WEKTORA (EMBEDDING) DLA PGVECTOR (MATURA 2026) ---
     let embeddingVector: number[] | null = null;
     try {
-      // 1. Próba z zalecaną pełną nazwą modelu (z prefiksem "models/")
-      console.log("-> Próba generowania wektora za pomocą: models/text-embedding-004...");
-      const embeddingModel = genAI.getGenerativeModel({ model: "models/text-embedding-004" });
-      const embeddingResult = await embeddingModel.embedContent(essayText);
+      console.log("-> Generowanie wektora za pomocą: models/gemini-embedding-001...");
+      const embeddingModel = genAI.getGenerativeModel({ model: "models/gemini-embedding-001" });
+      
+
+      // Stosujemy rzutowanie "as any", ponieważ typy TypeScript w zainstalowanej wersji SDK nie mają zadeklarowanego pola outputDimensionality, mimo że API Google je wspiera.
+      const embeddingResult = await embeddingModel.embedContent({
+        content: { role: "user", parts: [{ text: essayText }] },
+        outputDimensionality: 768,
+      } as any);
       
       if (embeddingResult.embedding?.values) {
         embeddingVector = embeddingResult.embedding.values;
-        console.log("-> Sukces: Wygenerowano wektor embedding (768 wymiarów).");
+        console.log(`-> Sukces: Wygenerowano wektor embedding (wymiary: ${embeddingVector.length})`);
       }
     } catch (embedError: any) {
-      console.error("!!! Pierwsza próba (models/text-embedding-004) nie powiodła się. Błąd:", embedError?.message || embedError);
-      
-      try {
-        // 2. Próba awaryjna z uproszczoną nazwą modelu
-        console.log("-> Próba awaryjna za pomocą: text-embedding-004...");
-        const fallbackModel = genAI.getGenerativeModel({ model: "text-embedding-004" });
-        const fallbackResult = await fallbackModel.embedContent(essayText);
-        
-        if (fallbackResult.embedding?.values) {
-          embeddingVector = fallbackResult.embedding.values;
-          console.log("-> Sukces (Awaryjny): Wygenerowano wektor za pomocą trybu uproszczonego.");
-        }
-      } catch (fallbackError: any) {
-        console.error("!!! Druga próba również się nie powiodła. Powód:", fallbackError?.message || fallbackError);
-        console.warn("-> Zapisywanie analizy bez wektora (embedding zostanie ustawiony na NULL). Sprawdź uprawnienia klucza API w Google AI Studio.");
-      }
+      console.error("!!! Błąd generowania wektora (gemini-embedding-001):", embedError?.message || embedError);
+      console.warn("-> Zapisywanie analizy bez wektora (embedding zostanie ustawiony na NULL).");
     }
 
     // Zapis do historii z uwzględnieniem kolumny 'embedding'
