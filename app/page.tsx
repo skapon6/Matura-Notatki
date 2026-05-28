@@ -68,6 +68,10 @@ export default function Home() {
   // Stan otwarcia modalu doładowań tokenów
   const [isTokenModalOpen, setIsTokenModalOpen] = useState(false);
 
+  // Stan otwarcia nowego menu nawigacji u góry
+  const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
+  const navMenuRef = useRef<HTMLDivElement>(null);
+
   // AUTH & STRIPE STATES
   const [user, setUser] = useState<any>(null);
   const [hasAccess, setHasAccess] = useState(false);
@@ -248,6 +252,19 @@ export default function Home() {
     }
   }, []);
 
+  // 7. OBSŁUGA ZAMYKANIA DROPDOWNA NAWIGACJI PO KLIKNIĘCIU POZA NIM
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (navMenuRef.current && !navMenuRef.current.contains(event.target as Node)) {
+        setIsNavMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   // Inicjalizacja transakcji Stripe
   const handlePaymentInit = async (tier: 'mini' | 'medium' | 'premium') => {
     setPaymentLoading(true);
@@ -281,7 +298,7 @@ export default function Home() {
       return;
     }
     
-    if (path === "/ocenianie-rozprawek" || path === "/matura-ustna") {
+    if (path === "/ocenianie-rozprawek" || path === "/matura-ustna" || path === "/notes") {
       router.push(path);
     } else if (!hasAccess) {
       triggerNotification(
@@ -359,8 +376,7 @@ export default function Home() {
       `}} />
 
       {/* HEADER SECTION */}
-      <header className={`border-b ${currentTheme.cardBorder} px-4 sm:px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 backdrop-blur-md sticky top-0 z-40 transition-colors duration-500`}>
-        
+        <header className={`border-b ${currentTheme.cardBorder} px-4 sm:px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 backdrop-blur-md sticky top-0 z-40 transition-colors duration-500`}>  
         {/* Lewa strefa: Ustawienia Klimatu oraz logo na komórkach */}
         <div className="flex w-full md:w-auto items-center justify-between md:justify-start gap-4">
           <div className="flex md:hidden items-center gap-2 select-none">
@@ -371,6 +387,88 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* ROZWIJANE MENU SKRÓTÓW I NAWIGACJI */}
+            <div className="relative" ref={navMenuRef}>
+              <button
+                onClick={() => setIsNavMenuOpen(!isNavMenuOpen)}
+                className={`flex items-center gap-1.5 sm:gap-2 px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 transition-all text-xs sm:text-sm font-semibold text-stone-300 hover:text-stone-100`}
+              >
+                <span>🧭</span>
+                <span className="hidden sm:inline">Nawigacja</span>
+                <svg className={`w-3 h-3 text-stone-500 transition-transform duration-200 ${isNavMenuOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {isNavMenuOpen && (
+                <div className={`absolute left-0 mt-2 w-52 rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-2 shadow-xl z-50 animate-slide-in flex flex-col gap-1 backdrop-blur-lg`}>
+                  <div className="px-3 py-1.5 text-[10px] uppercase font-bold tracking-widest text-stone-500 border-b border-stone-800/40 mb-1">
+                    Szybka Nawigacja
+                  </div>
+                  <button
+                    onClick={() => {
+                      setIsNavMenuOpen(false);
+                      handlePremiumNavigation("/notes");
+                    }}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-stone-300 hover:text-amber-400 hover:bg-stone-900/40 transition-all text-left w-full"
+                  >
+                    <span>📚</span> Wszystkie Notatki
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsNavMenuOpen(false);
+                      handlePremiumNavigation("/postepy");
+                    }}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-stone-300 hover:text-amber-400 hover:bg-stone-900/40 transition-all text-left w-full"
+                  >
+                    <span>📈</span> Moje Postępy
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsNavMenuOpen(false);
+                      handlePremiumNavigation("/fiszki");
+                    }}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-stone-300 hover:text-amber-400 hover:bg-stone-900/40 transition-all text-left w-full"
+                  >
+                    <span>⚡</span> Szybkie Fiszki
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsNavMenuOpen(false);
+                      handleOpenPersonalNotes();
+                    }}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-stone-300 hover:text-amber-400 hover:bg-stone-900/40 transition-all text-left w-full"
+                  >
+                    <span>⭐</span> Zapamiętane Cytaty
+                  </button>
+                  
+                  <div className="border-t border-stone-800/40 my-1" />
+                  
+                  <div className="px-3 py-1.5 text-[10px] uppercase font-bold tracking-widest text-purple-400">
+                    Wirtualna Nauka AI
+                  </div>
+                  <button
+                    onClick={() => {
+                      setIsNavMenuOpen(false);
+                      handlePremiumNavigation("/ocenianie-rozprawek");
+                    }}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-stone-300 hover:text-purple-400 hover:bg-stone-900/40 transition-all text-left w-full"
+                  >
+                    <span>✍️</span> Edytor Rozprawek AI
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsNavMenuOpen(false);
+                      handlePremiumNavigation("/matura-ustna");
+                    }}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-stone-300 hover:text-purple-400 hover:bg-stone-900/40 transition-all text-left w-full"
+                  >
+                    <span>🎙️</span> Matura Ustna AI
+                  </button>
+                </div>
+              )}
+            </div>
+
             <button
               onClick={() => setIsSettingsOpen(true)}
               className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 transition-all text-xs sm:text-sm font-medium ${currentTheme.subText} hover:text-stone-100`}
@@ -382,21 +480,22 @@ export default function Home() {
               Ustawienia
             </button>
 
-            {/* DUSTY, INTERAKTYWNA INSTRUKCJA ❓ */}
+            {/* CZYTELNA, INTERAKTYWNA INSTRUKCJA Z NAPISEM */}
             <button
               onClick={() => setIsHelpOpen(true)}
-              className={`flex items-center justify-center p-2 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 transition-all text-stone-400 hover:text-stone-100`}
+              className={`flex items-center gap-1.5 sm:gap-2 px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 transition-all text-xs sm:text-sm font-medium ${currentTheme.subText} hover:text-stone-100`}
               title="Przewodnik i Pomoc"
             >
-              <svg className="w-4.5 h-4.5 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-4 h-4 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
+              <span className="hidden sm:inline">Pomoc</span>
             </button>
           </div>
         </div>
 
-        {/* Środkowa strefa: Logo (widoczne tylko od tabletów/komputerów w górę) */}
-        <div className="hidden md:flex flex-col items-center select-none">
+        {/* Środkowa strefa: Logo (wycentrowane absolutnie na desktopie za pomocą md:absolute) */}
+        <div className="hidden md:flex flex-col items-center select-none md:absolute md:left-1/2 md:-translate-x-1/2 md:transform z-10">
           <div className="flex items-center gap-2">
             <span className="text-2xl">📖</span>
             <h1 className="text-xl font-semibold tracking-wide bg-gradient-to-r from-amber-200 via-orange-300 to-amber-100 bg-clip-text text-transparent drop-shadow-sm">
@@ -411,9 +510,8 @@ export default function Home() {
         {/* Prawa strefa: Panel Lo-Fi oraz Profil użytkownika */}
         <div className="flex w-full md:w-auto items-center justify-between md:justify-end gap-3 sm:gap-4 border-t md:border-t-0 border-stone-800/40 pt-3 md:pt-0">
           
-          {/* NOWY, ELEGANCKI, WIĘKSZY PANEL STEROWANIA MUZYKĄ LO-FI */}
-          <div className={`flex items-center gap-3 sm:gap-4 px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} transition-all select-none shadow-md`}>
-            {/* Poprzedni utwór */}
+        {/* LEKKO ZMNIEJSZONY PANEL MUZYKI LO-FI Z EFEKTEM HOVER */}
+          <div className={`flex items-center gap-2 sm:gap-3 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} transition-all duration-300 select-none shadow-md hover:border-amber-500/20 hover:bg-stone-900/30 hover:shadow-lg hover:shadow-amber-500/5`}>            {/* Poprzedni utwór */}
             <button 
               type="button"
               onClick={handlePrevTrack} 
@@ -458,7 +556,7 @@ export default function Home() {
               </svg>
             </button>
             
-            {/* Płynny suwak głośności (ukryty na telefonach ze względu na fizyczne klawisze) */}
+            {/* Płynny suwak głośności */}
             <div className="hidden sm:flex items-center gap-2 sm:gap-2.5 ml-1 border-l border-stone-800/80 pl-2 sm:pl-3">
               <svg className="w-4 h-4 sm:w-5 sm:h-5 text-stone-500" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 12H3a1 1 0 01-1-1V9a1 1 0 011-1h1.586l3.707-3.707a1 1 0 011.09-.217z" clipRule="evenodd" />
@@ -478,43 +576,57 @@ export default function Home() {
             </div>
           </div>
           
-          {user ? (
-            <div className="flex items-center gap-2">
-              <div className="hidden lg:flex items-center gap-2 px-3 py-1 text-xs rounded-full bg-stone-900/60 border border-stone-800">
-                <span className={`w-2 h-2 rounded-full ${hasAccess ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-                <span>
-                  {user.email.split('@')[0]} (
-                  {!hasAccess 
-                    ? 'Darmowy' 
-                    : profile?.subscription_status 
-                      ? (profile.subscription_status.charAt(0).toUpperCase() + profile.subscription_status.slice(1)) 
-                      : 'Premium'}
-                  )
-                </span>
-              </div>
+          <div className="flex items-center gap-2">
+            {/* WYŚWIETLANIE LICZBY AKTYWNYCH TOKENÓW W NAGŁÓWKU */}
+            {user && (
               <button
-                onClick={async () => {
-                  try {
-                    await supabase.auth.signOut();
-                  } catch (err) {
-                    console.warn("Wylogowanie pominięte:", err);
-                  } finally {
-                    setUser(null);
-                    setHasAccess(false);
-                    router.refresh();
-                  }
-                }}
-                className="px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl text-[10px] sm:text-xs font-semibold border border-red-900/30 bg-red-950/20 text-red-400 hover:bg-red-900 hover:text-white transition-all whitespace-nowrap"
+                onClick={() => setIsTokenModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-purple-900/30 bg-purple-950/20 text-purple-300 hover:bg-purple-900/30 active:scale-95 transition-all text-xs font-bold"
+                title="Twoje tokeny AI. Kliknij, aby doładować."
               >
-                Wyloguj
+                <span>🪙</span>
+                <span className="font-mono">{profile?.essay_credits ?? 0}</span>
               </button>
-            </div>
-          ) : (
-            <div className={`hidden sm:flex items-center gap-2 px-3 py-1 text-xs rounded-full bg-stone-900/60 border ${currentTheme.cardBorder}`}>
-              <span className="w-2 h-2 rounded-full bg-stone-500"></span>
-              <span>Gość</span>
-            </div>
-          )}
+            )}
+
+            {user ? (
+              <div className="flex items-center gap-2">
+                <div className="hidden lg:flex items-center gap-2 px-3 py-1 text-xs rounded-full bg-stone-900/60 border border-stone-800">
+                  <span className={`w-2 h-2 rounded-full ${hasAccess ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                  <span>
+                    {user.email.split('@')[0]} (
+                    {!hasAccess 
+                      ? 'Darmowy' 
+                      : profile?.subscription_status 
+                        ? (profile.subscription_status.charAt(0).toUpperCase() + profile.subscription_status.slice(1)) 
+                        : 'Premium'}
+                    )
+                  </span>
+                </div>
+                <button
+                  onClick={async () => {
+                    try {
+                      await supabase.auth.signOut();
+                    } catch (err) {
+                      console.warn("Wylogowanie pominięte:", err);
+                    } finally {
+                      setUser(null);
+                      setHasAccess(false);
+                      router.refresh();
+                    }
+                  }}
+                  className="px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl text-[10px] sm:text-xs font-semibold border border-red-900/30 bg-red-950/20 text-red-400 hover:bg-red-900 hover:text-white transition-all whitespace-nowrap"
+                >
+                  Wyloguj
+                </button>
+              </div>
+            ) : (
+              <div className={`hidden sm:flex items-center gap-2 px-3 py-1 text-xs rounded-full bg-stone-900/60 border ${currentTheme.cardBorder}`}>
+                <span className="w-2 h-2 rounded-full bg-stone-500"></span>
+                <span>Gość</span>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -675,7 +787,7 @@ export default function Home() {
                 </nav>
               </div>
 
-              {/* TUTAJ CHCĘ NOWY ELEMENT: ZAPAMIĘTANE CYTATY */}
+              {/* ZAPAMIĘTANE CYTATY */}
               <div className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-5 transition-colors duration-500 flex flex-col gap-3`}>
                 <h3 className="text-xs uppercase tracking-widest text-amber-500 font-semibold px-1 flex items-center justify-between">
                   <span>Zapamiętane cytaty ⭐</span>
@@ -691,12 +803,12 @@ export default function Home() {
                   setPersonalNotes={setPersonalNotes}
                   triggerNotification={triggerNotification}
                   loading={personalNotesLoading}
-                  onOpenModal={handleOpenPersonalNotes} // <-- DODAJ TĘ LINIJKĘ
+                  onOpenModal={handleOpenPersonalNotes}
                 />
                 </div>
               </div>
 
-              {/* ZAKTUALIZOWANA NAZWA: STREFA NAUKI AI 🤖 Z DWOMA PRZYCISKAMI */}
+              {/* STREFA NAUKI AI 🤖 Z DWOMA PRZYCISKAMI */}
               <div className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-5 relative overflow-hidden transition-colors duration-500 group`}>
                 <div className="absolute top-0 right-0 w-24 h-24 bg-purple-600/5 rounded-full blur-2xl group-hover:bg-purple-600/10 transition-all duration-500" />
                 
@@ -717,7 +829,7 @@ export default function Home() {
 
                 {/* PRZYCISKI DO DWÓCH MODUŁÓW AI */}
                 <div className="flex flex-col gap-2.5 mt-4">
-                  {/* Przycisk 1: Edytor Rozprawek (Zawsze dostępny) */}
+                  {/* Przycisk 1: Edytor Rozprawek */}
                   <button
                     onClick={() => handlePremiumNavigation("/ocenianie-rozprawek")}
                     className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2"
@@ -725,10 +837,10 @@ export default function Home() {
                     <span>✍️</span> Edytor Rozprawek AI (1 Token)
                   </button>
 
-                  {/* Przycisk 2: Symulator Matury Ustnej (Nowy moduł) */}
+                  {/* Przycisk 2: Symulator Matury Ustnej */}
                   <button
                     onClick={() => handlePremiumNavigation("/matura-ustna")}
-                    className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white border border-indigo-500/40 font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/30"
+                    className="w-full py-2.5 bg-stone-900 border border-stone-800 text-stone-300 hover:bg-stone-850 hover:text-stone-100 font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2"
                   >
                     <span>🎙️</span> Matura Ustna AI (3 Tokeny)
                   </button>
@@ -785,9 +897,24 @@ export default function Home() {
                 notes={notes}
                 loading={loading}
                 hasAccess={hasAccess}
+                limit={5}
                 currentTheme={currentTheme}
                 triggerNotification={triggerNotification}
               />
+
+              {/* PRZYCISK PRZEJŚCIA DO PEŁNEJ BAZY NOTATEK (Pokazuje się po załadowaniu) */}
+              {!loading && notes.length > 5 && (
+                <div className="animate-slide-in">
+                  <Link
+                    href="/notes"
+                    onClick={() => playSound("click")}
+                    className={`flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-[1.01] active:scale-[0.99] transition-all text-xs sm:text-sm font-bold text-amber-500 hover:text-amber-400 hover:border-amber-500/40 shadow-md`}
+                  >
+                    <span>Przejdź do pełnej bazy wszystkich notatek ({notes.length})</span>
+                    <span>📚 →</span>
+                  </Link>
+                </div>
+              )}
             </section>
 
             {/* COLUMN 3: STUDY CORNER SIDEBAR */}
@@ -847,7 +974,7 @@ export default function Home() {
         selectedNote={selectedPersonalNote}
       />
 
-      {/* MODAL DOŁADOWAŃ TOKENÓW (DODAJEMY GO NA SAMYM DOLE) */}
+      {/* MODAL DOŁADOWAŃ TOKENÓW */}
       <TokenRechargeModal 
         isOpen={isTokenModalOpen}
         onClose={() => setIsTokenModalOpen(false)}
@@ -855,7 +982,7 @@ export default function Home() {
         triggerNotification={triggerNotification}
       />
 
-      {/* DUSTY, INTERAKTYWNA INSTRUKCJA (DODAJEMY JĄ NA SAMYM DOLE) */}
+      {/* DUSTY, INTERAKTYWNA INSTRUKCJA */}
       <HelpModal 
         isOpen={isHelpOpen}
         onClose={() => setIsHelpOpen(false)}

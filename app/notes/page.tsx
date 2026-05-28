@@ -9,6 +9,7 @@ import { useLofi } from "../context/LofiContext";
 import { getThemeClasses } from "../lib/theme";
 import { CozyNotification } from "../components/CozyNotification";
 
+
 export default function WszystkieNotatkiPage() {
   const router = useRouter();
   const currentTheme = getThemeClasses("library");
@@ -61,7 +62,8 @@ export default function WszystkieNotatkiPage() {
     "Pozytywizm",
     "Młoda Polska",
     "Dwudziestolecie",
-    "Współczesność"
+    "Wojna i Okupacja",
+    "Współczesność",
   ];
 
   // Monitorowanie sesji, profilu i wczytywanie notatek z bazy
@@ -142,6 +144,29 @@ export default function WszystkieNotatkiPage() {
 
     return true;
   });
+
+      // GLOBALNY INTELIGENTNY NASŁUCHIWAĆ KLIKNIĘĆ
+    useEffect(() => {
+      const handleGlobalClick = (event: MouseEvent) => {
+        const target = event.target as HTMLElement;
+
+        const isInteractive = 
+          target.closest("button") || 
+          target.closest("a") || 
+          target.closest("[role='button']") ||
+          window.getComputedStyle(target).cursor === "pointer";
+
+        if (isInteractive) {
+          playSound("click");
+        }
+      };
+
+      window.addEventListener("click", handleGlobalClick);
+
+      return () => {
+        window.removeEventListener("click", handleGlobalClick);
+      };
+    }, []);
 
   // Obsługa kliknięcia w notatkę (zabezpieczenie Premium)
   const handleOpenNote = (note: any) => {
@@ -325,13 +350,14 @@ export default function WszystkieNotatkiPage() {
                   </div>
 
                   <div className="flex flex-col gap-3 mt-2">
-                    {/* Lista tagów (chips) */}
+                   {/* Lista tagów (chips) */}
                     {Array.isArray(note.chips) && (
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex flex-wrap gap-1.5"> {/* Zwiększony odstęp między hasztagami */}
                         {note.chips.map((chip: string) => (
                           <span 
                             key={chip}
-                            className="text-[9px] text-stone-500 bg-stone-950 px-2 py-1 rounded-md border border-stone-900"
+                            // ZMIANA: text-xs (większy tekst), px-2.5 (większa szerokość), text-stone-400 (lepszy kontrast)
+                            className="text-xs text-stone-400 bg-stone-950 px-2.5 py-1 rounded-md border border-stone-900 transition-colors hover:text-stone-200"
                           >
                             #{chip}
                           </span>
@@ -340,24 +366,23 @@ export default function WszystkieNotatkiPage() {
                     )}
 
                     {/* Przycisk otwierania (z kłódką dla zablokowanych lektur) */}
-                    <button
-                      onClick={() => handleOpenNote(note)}
-                      className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
-                        isLocked 
-                          ? "bg-stone-950 border border-stone-900 text-stone-500 hover:bg-stone-900/40"
-                          : "bg-amber-500 text-stone-950 hover:bg-amber-400 shadow-md"
-                      }`}
-                    >
-                      {isLocked ? (
-                        <>
-                          <span>🔒</span> Zablokowane (Premium)
-                        </>
-                      ) : (
-                        <>
-                          Otwórz notatkę 📖
-                        </>
-                      )}
-                    </button>
+                   {isLocked ? (
+                      <button
+                        onClick={() => handleOpenNote(note)}
+                        className="w-full py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 bg-stone-950 border border-stone-900 text-stone-500 hover:bg-stone-900/40"
+                      >
+                        <span>🔒</span> Zablokowane (Premium)
+                      </button>
+                    ) : (
+                      <a
+                        href={`/notes/${note.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 bg-amber-500 text-stone-950 hover:bg-amber-400 shadow-md"
+                      >
+                        Otwórz notatkę 📖
+                      </a>
+                    )}
                   </div>
                 </div>
               );

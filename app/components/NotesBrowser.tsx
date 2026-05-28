@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { ThemeClasses } from "../lib/theme";
+import Link from "next/link"; // <-- DODANO IMPORT LINKU
 
 const epochKeywords: Record<string, string[]> = {
   "Antyk": ["antyk", "starożytność", "mitologia", "homer", "sofokles", "biblia", "mit", "antygona", "król edyp", "iliada", "odyseja"],
@@ -23,6 +24,7 @@ interface NotesBrowserProps {
   hasAccess: boolean;
   currentTheme: ThemeClasses;
   triggerNotification: (message: string, type?: "success" | "error" | "info") => void;
+  limit?: number;
 }
 
 export const NotesBrowser: React.FC<NotesBrowserProps> = ({
@@ -31,6 +33,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
   hasAccess,
   currentTheme,
   triggerNotification,
+  limit,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("Wszystkie");
@@ -79,6 +82,8 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
     
     return matchesSearch && matchesSubject;
   });
+
+  const displayedNotes = limit ? filteredNotes.slice(0, limit) : filteredNotes;
 
   return (
     <>
@@ -139,12 +144,13 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
           <h3 className="text-sm font-semibold font-serif text-stone-100 flex items-center gap-2">
             📂 Baza Notatek
             <span className={`text-[10px] font-sans font-normal px-2 py-0.5 rounded-full bg-stone-900 border ${currentTheme.cardBorder} text-stone-400`}>
-              {filteredNotes.length} z {notes.length}
+              {displayedNotes.length} z {notes.length}
             </span>
           </h3>
-          <a href="/notes" className="text-xs text-amber-500/80 hover:text-amber-400 transition-colors font-medium">
+          {/* ZMIENIONO Z <a> NA <Link> */}
+          <Link href="/notes" className="text-xs text-amber-500/80 hover:text-amber-400 transition-colors font-medium">
             zobacz wszystkie →
-          </a>
+          </Link>
         </div>
 
         {loading ? (
@@ -152,7 +158,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
             ☕ Parzenie herbaty i pobieranie notatek z Supabase...
           </div>
         ) : filteredNotes.length > 0 ? (
-          filteredNotes.map((note) => {
+          displayedNotes.map((note) => {
             const handleNoteClick = (e: React.MouseEvent) => {
               if (!hasAccess && !note.is_free) {
                 e.preventDefault();

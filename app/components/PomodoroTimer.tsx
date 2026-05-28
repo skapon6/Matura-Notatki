@@ -18,9 +18,10 @@ export const PomodoroTimer: React.FC<PomodoroTimerProps> = ({ currentTheme, trig
   const [dailyGoal, setDailyGoal] = useState<number>(25);
   const [minutesStudiedToday, setMinutesStudiedToday] = useState<number>(0);
 
-  // Wczytywanie celu i dzisiejszego czasu nauki z localStorage
+  // 1. WCZYTYWANIE CELU, CZASU NAUKI ORAZ STANU TIMERA Z LOCALSTORAGE PRZY ROZRUCHU
   useEffect(() => {
     if (typeof window !== "undefined") {
+      // Dzienny cel nauki
       const savedGoal = localStorage.getItem("cozy_study_goal");
       if (savedGoal) {
         setDailyGoal(parseInt(savedGoal));
@@ -39,69 +40,134 @@ export const PomodoroTimer: React.FC<PomodoroTimerProps> = ({ currentTheme, trig
           setMinutesStudiedToday(parseFloat(savedMinutes));
         }
       }
+
+      // Stan Pomodoro Timer
+      const savedMode = localStorage.getItem("cozy_pomodoro_mode") as "work" | "break" | null;
+      const savedRunning = localStorage.getItem("cozy_pomodoro_running") === "true";
+      
+      const mode = savedMode || "work";
+      setPomodoroMode(mode);
+      setTimerRunning(savedRunning);
+
+      if (savedRunning) {
+        const savedEndTime = localStorage.getItem("cozy_pomodoro_endTime");
+        if (savedEndTime) {
+          const parsedEndTime = parseInt(savedEndTime);
+          const remaining = Math.max(0, Math.round((parsedEndTime - Date.now()) / 1000));
+          setTimeLeft(remaining);
+        }
+      } else {
+        const savedTimeLeft = localStorage.getItem("cozy_pomodoro_timeLeft");
+        if (savedTimeLeft) {
+          setTimeLeft(parseInt(savedTimeLeft));
+        } else {
+          setTimeLeft(mode === "work" ? 25 * 60 : 5 * 60);
+        }
+      }
     }
   }, []);
 
-  // Główna pętla timera
+  // 2. GŁÓWNA PĘTLA TIMERA (OPARTA O REZOLUCJĘ CZASU SYSTEMOWEGO)
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    
-    if (timerRunning && timeLeft > 0) {
-      interval = setInterval(() => {
-        setTimeLeft((prev) => prev - 1);
+    if (!timerRunning) return;
 
-        // Jeśli jesteśmy w trybie Nauki (work), dodajemy czas do celu dziennego oraz łącznego
-        if (pomodoroMode === "work") {
-          setMinutesStudiedToday((prev) => {
-            const updated = prev + 1 / 60;
-            localStorage.setItem("cozy_study_minutes_today", updated.toString());
-            return updated;
-          });
-
-          // Zapis łącznego (all-time) czasu nauki
-          if (typeof window !== "undefined") {
-            const currentTotal = localStorage.getItem("cozy_total_study_minutes");
-            const updatedTotal = parseFloat(currentTotal || "0") + 1 / 60;
-            localStorage.setItem("cozy_total_study_minutes", updatedTotal.toString());
-          }
-        }
-      }, 1000);
-    } else if (timeLeft === 0) {
-      setTimerRunning(false);
-      playSound("success");
-
-      if (pomodoroMode === "work") {
-        setPomodoroMode("break");
-        setTimeLeft(5 * 60);
-        triggerNotification("Czas na przerwę! Napij się herbaty ☕", "success");
-      } else {
-        setPomodoroMode("work");
-        setTimeLeft(25 * 60);
-        triggerNotification("Czas wracać do pracy! Skupienie 📚", "info");
+    const tick = () => {
+      const savedEndTime = localStorage.getItem("cozy_pomodoro_endTime");
+      if (!savedEndTime) {
+        setTimerRunning(false);
+        return;
       }
-    }
-    
-    return () => {
-      if (interval) clearInterval(interval);
+
+      const parsedEndTime = parseInt(savedEndTime);
+      const remaining = Math.max(0, Math.round((parsedEndTime - Date.now()) / 1000));
+
+      setTimeLeft(remaining);
+
+      // Jeśli jesteśmy w trybie Nauki (work), dodajemy czas do celu dziennego oraz łącznego
+      if (pomodoroMode === "work") {
+        setMinutesStudiedToday((prev) => {
+          const updated = prev + 1 / 60;
+          localStorage.setItem("cozy_study_minutes_today", updated.toString());
+          return updated;
+        });
+
+        // Zapis łącznego (all-time) czasu nauki
+        const currentTotal = localStorage.getItem("cozy_total_study_minutes");
+        const updatedTotal = parseFloat(currentTotal || "0") + 1 / 60;
+        localStorage.setItem("cozy_total_study_minutes", updatedTotal.toString());
+      }
+
+      // Warunek zakończenia odliczania
+      if (remaining <= 0) {
+        setTimerRunning(false);
+        playSound("success");
+
+        if (pomodoroMode === "work") {
+          setPomodoroMode("break");
+          const breakTime = 5 * 60;
+          setTimeLeft(breakTime);
+          localStorage.setItem("cozy_pomodoro_mode", "break");
+          localStorage.setItem("cozy_pomodoro_running", "false");
+          localStorage.setItem("cozy_pomodoro_timeLeft", breakTime.toString());
+          triggerNotification("Czas na przerwę! Napij się herbaty ☕", "success");
+        } else {
+          setPomodoroMode("work");
+          const workTime = 25 * 60;
+          setTimeLeft(workTime);
+          localStorage.setItem("cozy_pomodoro_mode", "work");
+          localStorage.setItem("cozy_pomodoro_running", "false");
+          localStorage.setItem("cozy_pomodoro_timeLeft", workTime.toString());
+          triggerNotification("Czas wracać do pracy! Skupienie 📚", "info");
+        }
+      }
     };
-  }, [timerRunning, timeLeft, pomodoroMode, triggerNotification]);
+
+    // Uruchamiamy natychmiast przy starcie, aby uniknąć opóźnienia 1 sekundy
+    tick();
+
+    const interval = setInterval(tick, 1000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [timerRunning, pomodoroMode, triggerNotification]);
 
   const toggleTimer = () => {
     playSound("click");
-    setTimerRunning(!timerRunning);
+    const nextRunning = !timerRunning;
+    setTimerRunning(nextRunning);
+    
+    if (nextRunning) {
+      // Obliczamy i zapisujemy dokładny timestamp ukończenia pracy w przyszłości
+      const endTime = Date.now() + timeLeft * 1000;
+      localStorage.setItem("cozy_pomodoro_endTime", endTime.toString());
+      localStorage.setItem("cozy_pomodoro_running", "true");
+    } else {
+      localStorage.setItem("cozy_pomodoro_running", "false");
+      localStorage.setItem("cozy_pomodoro_timeLeft", timeLeft.toString());
+    }
   };
 
   const resetTimer = () => {
     playSound("click");
     setTimerRunning(false);
-    setTimeLeft(pomodoroMode === "work" ? 25 * 60 : 5 * 60);
+    const defaultTime = pomodoroMode === "work" ? 25 * 60 : 5 * 60;
+    setTimeLeft(defaultTime);
+    
+    localStorage.setItem("cozy_pomodoro_running", "false");
+    localStorage.setItem("cozy_pomodoro_timeLeft", defaultTime.toString());
   };
 
   const switchPomodoroMode = (mode: "work" | "break") => {
     playSound("click");
     setTimerRunning(false);
     setPomodoroMode(mode);
-    setTimeLeft(mode === "work" ? 25 * 60 : 5 * 60);
+    const defaultTime = mode === "work" ? 25 * 60 : 5 * 60;
+    setTimeLeft(defaultTime);
+    
+    localStorage.setItem("cozy_pomodoro_running", "false");
+    localStorage.setItem("cozy_pomodoro_mode", mode);
+    localStorage.setItem("cozy_pomodoro_timeLeft", defaultTime.toString());
   };
 
   const formatTime = (seconds: number) => {
