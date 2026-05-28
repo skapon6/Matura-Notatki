@@ -5,6 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
 
+interface Match {
+  start: number;
+  end: number;
+  annotation: any;
+}
+
 export default function OcenianieRozprawekPage() {
   const router = useRouter();
 
@@ -17,7 +23,10 @@ export default function OcenianieRozprawekPage() {
   const [essayText, setEssayText] = useState("");
   const [selectedTopic, setSelectedTopic] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isGenerationMode, setIsGenerationMode] = useState(false); // Tryb generowania przykładowej pracy
   const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [generatedContexts, setGeneratedContexts] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
 
   // Stan historii ocen
@@ -123,7 +132,6 @@ export default function OcenianieRozprawekPage() {
       setAnalysisResult(data.analysisResult);
       setActiveTab("preview");
       
-      // Odśwież listę historii, aby nowo oceniona praca od razu się tam pojawiła
       if (user) {
         await fetchUserHistory(user.id);
       }
@@ -138,11 +146,61 @@ export default function OcenianieRozprawekPage() {
     }
   };
 
-  // Ładowanie historycznej pracy bezpośrednio do stanów
+  const handleGenerateEssay = async () => {
+    if (!selectedTopic.trim()) {
+      triggerAlert("Wprowadź temat rozprawki, na który mam napisać przykładową pracę!", "error");
+      return;
+    }
+
+    if (!profile || profile.essay_credits <= 0) {
+      triggerAlert("Brak wolnych kredytów na wygenerowanie rozprawki! Kup pakiet Premium.", "error");
+      return;
+    }
+
+    setIsGenerating(true);
+    setGeneratedContexts([]);
+    setAnalysisResult(null);
+
+    try {
+      const response = await fetch("/api/generate-essay", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          topic: selectedTopic,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Wystąpił błąd podczas generowania wypracowania.");
+      }
+
+      setProfile((prev: any) => ({ ...prev, essay_credits: data.newCredits }));
+      setEssayText(data.essayText);
+      if (data.alternativeContexts) {
+        setGeneratedContexts(data.alternativeContexts);
+      }
+      setIsGenerationMode(false); // Wyłączamy tryb generowania po sukcesie, by użytkownik mógł edytować/analizować tekst
+      setActiveTab("write");
+      triggerAlert("Przykładowa rozprawka została wygenerowana! Pobrano 1 kredyt.", "success");
+
+    } catch (err: any) {
+      console.error("Błąd podczas generowania wypracowania:", err);
+      triggerAlert(err.message || "Wystąpił błąd serwera. Spróbuj ponownie.", "error");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const loadFromHistory = (item: any) => {
     setSelectedTopic(item.topic);
     setEssayText(item.essay_text);
     setAnalysisResult(item.analysis_result);
+    setGeneratedContexts([]);
+    setIsGenerationMode(false);
     setActiveTab("preview");
     triggerAlert("Pomyślnie wczytano pracę z historii (0 kredytów)!", "success");
   };
@@ -152,41 +210,80 @@ export default function OcenianieRozprawekPage() {
       return <p className="whitespace-pre-wrap leading-relaxed">{essayText}</p>;
     }
 
-    let tempText = essayText
+    const escapedText = essayText
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;");
 
-    const sortedAnnotations = [...analysisResult.annotations].sort(
-      (a, b) => b.original.length - a.original.length
-    );
+    const matches: Match[] = [];
 
-    sortedAnnotations.forEach((anno: any) => {
-      if (!anno.original.trim()) return;
+    analysisResult.annotations.forEach((anno: any) => {
+      if (!anno.original || !anno.original.trim()) return;
 
-      const escapedOriginal = anno.original.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
-      const regex = new RegExp(`(${escapedOriginal})`, "g");
+      const escapedOriginal = anno.original
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+      let idx = escapedText.indexOf(escapedOriginal);
+      while (idx !== -1) {
+        matches.push({
+          start: idx,
+          end: idx + escapedOriginal.length,
+          annotation: anno
+        });
+        idx = escapedText.indexOf(escapedOriginal, idx + 1);
+      }
+    });
+
+    matches.sort((a, b) => {
+      if (a.start !== b.start) {
+        return a.start - b.start;
+      }
+      return (b.end - b.start) - (a.end - a.start);
+    });
+
+    const nonOverlappingMatches: Match[] = [];
+    let lastIndex = 0;
+
+    for (const m of matches) {
+      if (m.start >= lastIndex) {
+        nonOverlappingMatches.push(m);
+        lastIndex = m.end;
+      }
+    }
+
+    let resultHtml = "";
+    let currentIdx = 0;
+
+    nonOverlappingMatches.forEach((m) => {
+      resultHtml += escapedText.substring(currentIdx, m.start);
 
       let colorClass = "";
-      if (anno.type === "rzeczowy") {
+      if (m.annotation.type === "rzeczowy") {
         colorClass = "bg-amber-950/50 border-b-2 border-amber-500 text-amber-200 cursor-help";
-      } else if (anno.type === "językowy") {
+      } else if (m.annotation.type === "językowy") {
         colorClass = "bg-blue-950/50 border-b-2 border-blue-500 text-blue-200 cursor-help";
-      } else if (anno.type === "ortograficzny") {
+      } else if (m.annotation.type === "ortograficzny") {
         colorClass = "bg-purple-950/50 border-b-2 border-purple-500 text-purple-200 cursor-help";
       } else {
         colorClass = "bg-red-950/50 border-b-2 border-red-500 text-red-200 cursor-help";
       }
 
-      tempText = tempText.replace(
-        regex,
-        `<span class="${colorClass} relative group inline-block font-medium">${anno.original}<span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-72 bg-stone-900 border border-stone-800 text-stone-300 text-[11px] p-3 rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 leading-relaxed font-sans font-normal"><strong class="text-[#c68a4c] uppercase tracking-wider block mb-1">Błąd ${anno.type}:</strong>${anno.explanation}<br/><span class="text-emerald-400 font-semibold block mt-1.5">Poprawnie: ${anno.replacement}</span></span></span>`
-      );
+      const originalText = escapedText.substring(m.start, m.end);
+      const explanation = m.annotation.explanation.replace(/"/g, "&quot;");
+      const replacement = m.annotation.replacement.replace(/"/g, "&quot;");
+
+      resultHtml += `<span class="${colorClass} relative group inline-block font-medium">${originalText}<span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-72 bg-stone-900 border border-stone-800 text-stone-300 text-[11px] p-3 rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 leading-relaxed font-sans font-normal"><strong class="text-[#c68a4c] uppercase tracking-wider block mb-1">Błąd ${m.annotation.type}:</strong>${explanation}<br/><span class="text-emerald-400 font-semibold block mt-1.5">Poprawnie: ${replacement}</span></span></span>`;
+
+      currentIdx = m.end;
     });
+
+    resultHtml += escapedText.substring(currentIdx);
 
     return (
       <div 
-        dangerouslySetInnerHTML={{ __html: tempText }} 
+        dangerouslySetInnerHTML={{ __html: resultHtml }} 
         className="whitespace-pre-wrap leading-loose text-stone-300 font-sans text-xs sm:text-sm"
       />
     );
@@ -272,9 +369,31 @@ export default function OcenianieRozprawekPage() {
                 placeholder="Wpisz tutaj pełny temat swojej rozprawki..."
                 value={selectedTopic}
                 onChange={(e) => setSelectedTopic(e.target.value)}
-                disabled={isAnalyzing}
+                disabled={isAnalyzing || isGenerating}
                 className="w-full bg-stone-900 border border-stone-800 rounded-xl py-2.5 px-3.5 text-xs sm:text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-700/60 font-sans"
               />
+            </div>
+
+            {/* Tryb wyboru generowania rozprawki */}
+            <div className="flex items-center gap-2.5 bg-stone-900/40 border border-stone-800/60 p-3 rounded-xl">
+              <input 
+                type="checkbox"
+                id="generationMode"
+                checked={isGenerationMode}
+                onChange={(e) => {
+                  setIsGenerationMode(e.target.checked);
+                  if (e.target.checked) {
+                    setEssayText(""); // Czyścimy tekst, by nie wprowadzać w błąd podczas generowania nowej rozprawki
+                    setGeneratedContexts([]);
+                    setAnalysisResult(null);
+                  }
+                }}
+                disabled={isAnalyzing || isGenerating}
+                className="w-4 h-4 rounded border-stone-800 text-amber-500 focus:ring-amber-500 bg-stone-950 cursor-pointer accent-[#c68a4c]"
+              />
+              <label htmlFor="generationMode" className="text-xs font-semibold text-stone-300 cursor-pointer select-none">
+                Chcę wygenerować przykładową rozprawkę przez AI (zamiast oceniać własną)
+              </label>
             </div>
 
             {analysisResult && (
@@ -309,11 +428,15 @@ export default function OcenianieRozprawekPage() {
                 </label>
                 <textarea
                   rows={12}
-                  placeholder="Wklej tutaj treść swojej rozprawki (minimum 50 słów)..."
+                  placeholder={
+                    isGenerationMode 
+                      ? "Opcja automatycznego generowania rozprawki przez AI jest włączona. Treść Twojego wypracowania jest zablokowana. Wpisz temat powyżej i kliknij przycisk generowania." 
+                      : "Wklej tutaj treść swojej rozprawki (minimum 50 słów)..."
+                  }
                   value={essayText}
                   onChange={(e) => setEssayText(e.target.value)}
-                  disabled={isAnalyzing}
-                  className="w-full bg-stone-900/80 border border-stone-800 rounded-2xl p-4 text-xs sm:text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-700/60 font-sans leading-relaxed"
+                  disabled={isAnalyzing || isGenerating || isGenerationMode}
+                  className="w-full bg-stone-900/80 border border-stone-800 rounded-2xl p-4 text-xs sm:text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-700/60 font-sans leading-relaxed disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <div className="flex justify-between text-[11px] text-stone-500 mt-1">
                   <span>Liczba znaków: {essayText.length}</span>
@@ -331,16 +454,50 @@ export default function OcenianieRozprawekPage() {
             )}
 
             {creditsRemaining > 0 ? (
-              <button
-                onClick={handleAnalyze}
-                disabled={isAnalyzing}
-                className="w-full py-3 rounded-xl bg-[#c68a4c] hover:bg-[#d99c5d] text-stone-950 font-bold transition-all text-xs sm:text-sm shadow-md disabled:bg-stone-800 disabled:text-stone-500"
-              >
-                {isAnalyzing ? "🤖 Trwa analiza tekstu przez AI... (to potrwa chwilę)" : "Przeanalizuj rozprawkę (Pobiera 1 kredyt)"}
-              </button>
+              <div className="flex flex-col sm:flex-row gap-3">
+                {isGenerationMode ? (
+                  <button
+                    onClick={handleGenerateEssay}
+                    disabled={isAnalyzing || isGenerating}
+                    className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold transition-all text-xs sm:text-sm shadow-md disabled:bg-stone-800 disabled:text-stone-500"
+                  >
+                    {isGenerating ? "✍ Trwa generowanie rozprawki..." : "Generuj przykładową rozprawkę (1 kredyt)"}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleAnalyze}
+                    disabled={isAnalyzing || isGenerating}
+                    className="w-full py-3 rounded-xl bg-[#c68a4c] hover:bg-[#d99c5d] text-stone-950 font-bold transition-all text-xs sm:text-sm shadow-md disabled:bg-stone-800 disabled:text-stone-500"
+                  >
+                    {isAnalyzing ? "🤖 Trwa analiza tekstu..." : "Przeanalizuj rozprawkę (1 kredyt)"}
+                  </button>
+                )}
+              </div>
             ) : (
               <div className="text-center p-3.5 bg-red-950/20 border border-red-950/40 rounded-xl text-xs text-red-400">
                 Wykorzystałeś wszystkie darmowe oceny wypracowań. Kup pakiet Premium, aby natychmiast otrzymać kolejne próby! 🚀
+              </div>
+            )}
+
+            {/* Alternatywne konteksty wyświetlane pod edytorem */}
+            {activeTab === "write" && generatedContexts.length > 0 && (
+              <div className="mt-4 p-4 rounded-2xl bg-stone-950/50 border border-stone-800/80 animate-fade-in">
+                <h4 className="text-xs uppercase tracking-widest text-amber-500 font-bold mb-3 flex items-center gap-2">
+                  <span>💡</span> Propozycje alternatywnych kontekstów do tego tematu:
+                </h4>
+                <div className="grid grid-cols-1 gap-3">
+                  {generatedContexts.map((ctx, index) => (
+                    <div key={index} className="p-3 rounded-xl bg-stone-900/60 border border-stone-800/50 text-[11px] leading-relaxed">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-stone-200">{ctx.title}</span>
+                        <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-amber-950/40 text-amber-400 border border-amber-900/30">
+                          {ctx.type}
+                        </span>
+                      </div>
+                      <p className="text-stone-400">{ctx.description}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -404,7 +561,7 @@ export default function OcenianieRozprawekPage() {
 
         </div>
 
-        {/* [NOWOŚĆ] Sekcja historii prac użytkownika na samym dole strony */}
+        {/* Sekcja historii prac użytkownika na samym dole strony */}
         {history.length > 0 && (
           <div className="border-t border-stone-800/60 pt-6 mt-2">
             <h3 className="text-xs uppercase tracking-widest text-amber-500 font-bold mb-4 flex items-center gap-2">
