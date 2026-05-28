@@ -69,7 +69,7 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: dbError.message }, { status: 500 });
         }
 
-      // 2. OBSŁUGA ZAKUPU SUBSKRYPCJI (Dotychczasowa logika)
+      // 2. OBSŁUGA ZAKUPU SUBSKRYPCJI (POPRAWIONA LOGIKA - DODANO TOKENY)
       } else if (purchaseType === 'subscription') {
         const tier = metadata.subscriptionTier;
         
@@ -83,17 +83,42 @@ export async function POST(request: Request) {
         }
 
         try {
+          // KROK 1: Najpierw pobieramy aktualną liczbę tokenów użytkownika z bazy danych
+          const { data: profile, error: fetchError } = await supabase
+            .from('profiles')
+            .select('essay_credits')
+            .eq('id', userId)
+            .single();
+
+          if (fetchError) throw fetchError;
+
+          const currentCredits = profile?.essay_credits || 0;
+
+          // KROK 2: Ustalamy ile tokenów dodać w zależności od wybranego pakietu
+          let tokenIncrement = 0;
+          if (tier === 'mini') {
+            tokenIncrement = 5;
+          } else if (tier === 'medium') {
+            tokenIncrement = 10;
+          } else if (tier === 'premium') {
+            tokenIncrement = 10;
+          }
+
+          const newCredits = currentCredits + tokenIncrement;
+
+          // KROK 3: Aktualizujemy profil o status, czas wygaśnięcia oraz NOWE TOKENY
           const { error: subUpdateError } = await supabase
             .from('profiles')
             .update({
               subscription_status: tier,
-              expires_at: expirationDate.toISOString()
+              expires_at: expirationDate.toISOString(),
+              essay_credits: newCredits // <-- POPRAWKA
             })
             .eq('id', userId);
 
           if (subUpdateError) throw subUpdateError;
 
-          console.log(`Pomyślnie zaktualizowano subskrypcję ${tier} dla użytkownika ${userId}`);
+          console.log(`Pomyślnie zaktualizowano subskrypcję ${tier} dla użytkownika ${userId} oraz przyznano ${tokenIncrement} tokenów.`);
         } catch (dbError: any) {
           console.error('Błąd aktualizacji bazy przy subskrypcji:', dbError.message);
           return NextResponse.json({ error: dbError.message }, { status: 500 });
