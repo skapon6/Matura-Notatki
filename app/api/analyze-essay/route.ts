@@ -34,8 +34,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Brak tematu lub treści wypracowania." }, { status: 400 });
     }
     const wordCount = essayText.split(/\s+/).filter(Boolean).length;
+    
+    // Walidacja limitów długości tekstu
     if (wordCount < 50) {
       return NextResponse.json({ error: "Tekst jest zbyt krótki (minimum 50 słów)." }, { status: 400 });
+    }
+    if (wordCount > 1500) {
+      return NextResponse.json({ error: "Tekst przekracza maksymalny limit 1500 słów." }, { status: 400 });
     }
 
     // 3. Kredyty
@@ -168,16 +173,35 @@ Zwróć WYŁĄCZNIE obiekt JSON. Bez znaczników markdown, bez \`\`\`json.
 
     const parsedResult = JSON.parse(cleanJson.trim());
 
-    // --- GENEROWANIE WEKTORA (EMBEDDING) DLA PGVECTOR ---
+    // --- GENEROWANIE WEKTORA (EMBEDDING) DLA PGVECTOR (Z AUTOMATYCZNĄ PRÓBĄ AWARYJNĄ) ---
     let embeddingVector: number[] | null = null;
     try {
-      const embeddingModel = genAI.getGenerativeModel({ model: "text-embedding-004" });
+      // 1. Próba z zalecaną pełną nazwą modelu (z prefiksem "models/")
+      console.log("-> Próba generowania wektora za pomocą: models/text-embedding-004...");
+      const embeddingModel = genAI.getGenerativeModel({ model: "models/text-embedding-004" });
       const embeddingResult = await embeddingModel.embedContent(essayText);
+      
       if (embeddingResult.embedding?.values) {
         embeddingVector = embeddingResult.embedding.values;
+        console.log("-> Sukces: Wygenerowano wektor embedding (768 wymiarów).");
       }
-    } catch (embedError) {
-      console.error("Błąd generowania wektora (embedding):", embedError);
+    } catch (embedError: any) {
+      console.error("!!! Pierwsza próba (models/text-embedding-004) nie powiodła się. Błąd:", embedError?.message || embedError);
+      
+      try {
+        // 2. Próba awaryjna z uproszczoną nazwą modelu
+        console.log("-> Próba awaryjna za pomocą: text-embedding-004...");
+        const fallbackModel = genAI.getGenerativeModel({ model: "text-embedding-004" });
+        const fallbackResult = await fallbackModel.embedContent(essayText);
+        
+        if (fallbackResult.embedding?.values) {
+          embeddingVector = fallbackResult.embedding.values;
+          console.log("-> Sukces (Awaryjny): Wygenerowano wektor za pomocą trybu uproszczonego.");
+        }
+      } catch (fallbackError: any) {
+        console.error("!!! Druga próba również się nie powiodła. Powód:", fallbackError?.message || fallbackError);
+        console.warn("-> Zapisywanie analizy bez wektora (embedding zostanie ustawiony na NULL). Sprawdź uprawnienia klucza API w Google AI Studio.");
+      }
     }
 
     // Zapis do historii z uwzględnieniem kolumny 'embedding'

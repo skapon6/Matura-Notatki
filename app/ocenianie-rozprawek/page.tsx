@@ -100,6 +100,10 @@ export default function OcenianieRozprawekPage() {
       triggerAlert("Wprowadzona rozprawka jest za krótka! Wklej co najmniej 50 słów, aby przeprowadzić analizę.", "error");
       return;
     }
+    if (wordCount > 1500) {
+      triggerAlert("Wprowadzona rozprawka przekracza maksymalny limit 1500 słów. Skróć tekst przed analizą.", "error");
+      return;
+    }
 
     if (!profile || profile.essay_credits <= 0) {
       triggerAlert("Brak wolnych kredytów na ocenę! Kup pakiet Premium, aby otrzymać dodatkowe próby.", "error");
@@ -302,6 +306,7 @@ export default function OcenianieRozprawekPage() {
 
   const creditsRemaining = profile?.essay_credits ?? 0;
   const isPremiumUser = profile?.subscription_status === "paid" || profile?.subscription_status === "admin";
+  const currentWordCount = essayText.split(/\s+/).filter(Boolean).length;
 
   return (
     <div className="min-h-screen bg-[#14100e] text-stone-200 font-sans p-6 flex flex-col items-center">
@@ -440,7 +445,9 @@ export default function OcenianieRozprawekPage() {
                 />
                 <div className="flex justify-between text-[11px] text-stone-500 mt-1">
                   <span>Liczba znaków: {essayText.length}</span>
-                  <span>Orientacyjna liczba słów: {essayText.split(/\s+/).filter(Boolean).length}</span>
+                  <span className={currentWordCount > 1500 ? "text-red-400 font-semibold" : ""}>
+                    Orientacyjna liczba słów: {currentWordCount} / 1500
+                  </span>
                 </div>
               </div>
             ) : (
@@ -557,6 +564,13 @@ export default function OcenianieRozprawekPage() {
                 <li className="flex gap-2"><span>✔</span> Wykrywanie ewentualnego błędu kardynalnego</li>
               </ul>
             </div>
+
+            {/* Przypis umieszczony na samym dole kolumny (zawsze widoczny, poza przewijalną kartą) */}
+            {analysisResult && (
+              <div className="text-[10px] text-stone-500 leading-relaxed font-sans px-1 animate-fade-in">
+                * Uwaga: Model AI dokonuje bardzo rygorystycznej i dosłownej oceny według wytycznych CKE. Rzeczywista punktacja na egzaminie państwowym może różnić się na korzyść zdającego z uwagi na bardziej elastyczną i holistyczną ocenę ludzkiego egzaminatora.
+              </div>
+            )}
           </div>
 
         </div>
