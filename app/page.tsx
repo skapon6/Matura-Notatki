@@ -382,7 +382,7 @@ export default function Home() {
                 </div>
                 <span className="text-[11px] text-stone-500 mt-1">
                   {!hasAccess && "Zyskaj pełną moc nauki"}
-                  {hasAccess && (profile?.subscription_status === 'premium' || !['mini', 'medium'].includes(profile?.subscription_status)) && "Dostęp dożywotni bez reklam"}
+                  {hasAccess && (profile?.subscription_status === 'premium' || !['mini', 'medium'].includes(profile?.subscription_status)) && "Dostęp dożywotni"}
                 </span>
               </div>
             </div>
