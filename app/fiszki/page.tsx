@@ -41,18 +41,53 @@ export default function FiszkiPage() {
   // Kierunek animacji Swipe ('left' lub 'right')
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
 
-  // Monitorowanie sesji oraz pobieranie danych
+  // Monitorowanie sesji oraz pobieranie danych + ZABEZPIECZENIE PREMIUM
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
       try {
+        // 1. Sprawdzamy sesję użytkownika
         const { data: { session } } = await supabase.auth.getSession();
-        let userId = null;
-        if (session?.user) {
-          setUser(session.user);
-          userId = session.user.id;
+        
+        if (!session?.user) {
+          router.push("/"); // Brak sesji -> natychmiastowy powrót na główną
+          return;
         }
 
+        // 2. Pobieramy status premium z bazy danych
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("subscription_status, expires_at")
+          .eq("id", session.user.id)
+          .single();
+
+        if (profileError || !profileData) {
+          router.push("/"); // Brak profilu -> powrót na główną
+          return;
+        }
+
+        const activeStatuses = ['mini', 'medium', 'premium', 'admin', 'paid'];
+        const isStatusActive = activeStatuses.includes(profileData.subscription_status);
+        
+        let isExpired = false;
+        if (profileData.expires_at) {
+          const expirationTime = new Date(profileData.expires_at).getTime();
+          const currentTime = new Date().getTime();
+          isExpired = currentTime > expirationTime;
+        }
+
+        const hasPremiumAccess = isStatusActive && !isExpired;
+
+        // 3. Sprawdzamy, czy użytkownik ma uprawnienia Premium
+        if (!hasPremiumAccess) {
+          router.push("/"); // Jeśli konto darmowe -> natychmiastowy powrót na główną [1]
+          return;
+        }
+
+        // Zapisujemy poprawnego użytkownika
+        setUser(session.user);
+
+        // 4. Pobieramy same fiszki
         const { data: cardsData, error: cardsError } = await supabase
           .from("flashcards")
           .select("*")
@@ -68,11 +103,11 @@ export default function FiszkiPage() {
           setFlashcards(mappedCards);
         }
 
-        if (userId) {
-          const { data: progressData, error: progressError } = await supabase
-            .from("flashcard_progress")
-            .select("flashcard_id, status")
-            .eq("user_id", userId);
+        // 5. Pobieramy postępy fiszek
+        const { data: progressData, error: progressError } = await supabase
+          .from("flashcard_progress")
+          .select("flashcard_id, status")
+          .eq("user_id", session.user.id);
             
           if (!progressError && progressData) {
             const progressMap: Record<string, "mastered" | "learning"> = {};
@@ -81,16 +116,16 @@ export default function FiszkiPage() {
             });
             setProgress(progressMap);
           }
-        }
       } catch (err) {
-        console.error("Błąd pobierania danych z Supabase:", err);
+        console.error("Błąd weryfikacji i pobierania danych:", err);
+        router.push("/");
       } finally {
         setLoading(false);
       }
     }
     
     fetchData();
-  }, []);
+  }, [router]);
 
   // Filtrowanie fiszek na podstawie wybranej zakładki
   const filteredCards = flashcards.filter((card) => {
@@ -162,7 +197,7 @@ export default function FiszkiPage() {
       console.error("Błąd zapisu postępu:", err);
     }
 
-    // Płynne wunięcie kolejnej karty
+    // Płynne wsunięcie kolejnej karty
     setTimeout(() => {
       setIsFlipped(false);
       setSwipeDirection(null);
@@ -172,7 +207,7 @@ export default function FiszkiPage() {
     }, 250);
   };
 
-  // OBSŁUGA DLA TRYBU LISTY (Natychmiastowe przeniesienie bez animacji i przesuwania indeksów)
+  // OBSŁUGA DLA TRYBU LISTY
   const handleMarkStatusList = async (cardId: string, status: "mastered" | "learning") => {
     if (!user || !cardId) return;
 
@@ -206,6 +241,18 @@ export default function FiszkiPage() {
   // Liczenie statystyk wyłącznie na podstawie aktualnie pobranych fiszek z bazy
   const masteredCount = flashcards.filter(card => progress[card.id] === "mastered").length;
   const learningCount = flashcards.length - masteredCount;
+
+  // Bezpieczny ekran ładowania podczas autoryzacji chroniący przed miganiem layoutu
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#14100e] text-stone-200 flex flex-col items-center justify-center p-8">
+        <div className="text-4xl animate-bounce mb-4">☕</div>
+        <p className="text-sm tracking-widest font-semibold text-stone-400">
+          Weryfikacja dostępu do strefy fiszek...
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-500 ${currentTheme.bg} text-stone-200 font-sans`}>
@@ -311,9 +358,7 @@ export default function FiszkiPage() {
           </div>
         </div>
 
-        {loading ? (
-          <div className="text-center py-12 text-stone-500">Wczytywanie Twojej strefy fiszek...</div>
-        ) : filteredCards.length === 0 ? (
+        {filteredCards.length === 0 ? (
           <div className="text-center py-16 px-4 border border-dashed border-stone-800 rounded-3xl w-full text-stone-500 select-none">
             <span className="text-3xl block mb-2">⭐</span>
             <p className="text-sm font-semibold">Brak fiszek w tej kategorii.</p>
@@ -346,7 +391,7 @@ export default function FiszkiPage() {
             >
               <div className={`relative w-full h-full duration-500 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
                 
-                {/* STRONA A: PYTANIE (Błyskawiczna zmiana ramki w 75ms przy swipe) */}
+                {/* STRONA A: PYTANIE */}
                 <div className={`absolute inset-0 w-full h-full rounded-3xl border transition-all duration-75 ${
                   swipeDirection === "left" 
                     ? "border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.25)]" 
@@ -374,7 +419,7 @@ export default function FiszkiPage() {
                   </p>
                 </div>
 
-                {/* STRONA B: ODPOWIEDŹ (Błyskawiczna zmiana ramki w 75ms przy swipe) */}
+                {/* STRONA B: ODPOWIEDŹ */}
                 <div className={`absolute inset-0 w-full h-full rounded-3xl border transition-all duration-75 ${
                   swipeDirection === "left" 
                     ? "border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.25)]" 
@@ -455,7 +500,7 @@ export default function FiszkiPage() {
           </div>
         ) : (
           
-          /* TRYB WYGODNEJ, SZYBKIEJ LISTY (Płynny, natychmiastowy zapis bez przesuwania indeksów) */
+          /* TRYB WYGODNEJ, SZYBKIEJ LISTY */
           <div className="w-full flex flex-col gap-4 animate-slide-in select-none">
             {filteredCards.map((card) => (
               <div 
@@ -467,7 +512,7 @@ export default function FiszkiPage() {
                     📍 {card.category}
                   </span>
                   
-                  {/* Szybka akcja bezpośrednio z poziomu wiersza na liście (Używa handleMarkStatusList) */}
+                  {/* Szybka akcja bezpośrednio z poziomu wiersza na liście */}
                   <div className="flex gap-2">
                     {filter === "learning" ? (
                       <button

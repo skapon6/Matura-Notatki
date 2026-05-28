@@ -98,6 +98,7 @@ export function Header({
                 <div className="px-3 py-1.5 text-[10px] uppercase font-bold tracking-widest text-stone-500 border-b border-stone-800/40 mb-1">
                   Szybka Nawigacja
                 </div>
+                
                 <button
                   onClick={() => {
                     setIsNavMenuOpen(false);
@@ -107,24 +108,70 @@ export function Header({
                 >
                   <span>📚</span> Wszystkie Notatki
                 </button>
+                
+                {/* Przycisk: Moje Postępy (Zabezpieczony kłódką dla kont darmowych) */}
                 <button
                   onClick={() => {
                     setIsNavMenuOpen(false);
                     handlePremiumNavigation("/postepy");
                   }}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-stone-300 hover:text-amber-400 hover:bg-stone-900/40 transition-all text-left w-full"
+                  className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-stone-300 hover:text-amber-400 hover:bg-stone-900/40 transition-all text-left w-full group"
                 >
-                  <span>📈</span> Moje Postępy
+                  <div className="flex items-center gap-2.5">
+                    <span>📈</span>
+                    <span>Moje Postępy</span>
+                  </div>
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full border ${
+                    hasAccess 
+                      ? 'bg-emerald-950/50 border-emerald-900/60 text-emerald-400 font-semibold' 
+                      : 'bg-stone-900/60 border-stone-800 text-stone-500'
+                  }`}>
+                    {hasAccess ? "Wejdź" : "Premium 🔒"}
+                  </span>
                 </button>
+                
+                {/* Przycisk: Szybkie Fiszki (Zabezpieczony kłódką dla kont darmowych) */}
                 <button
                   onClick={() => {
                     setIsNavMenuOpen(false);
                     handlePremiumNavigation("/fiszki");
                   }}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-stone-300 hover:text-amber-400 hover:bg-stone-900/40 transition-all text-left w-full"
+                  className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-stone-300 hover:text-amber-400 hover:bg-stone-900/40 transition-all text-left w-full group"
                 >
-                  <span>⚡</span> Szybkie Fiszki
+                  <div className="flex items-center gap-2.5">
+                    <span>⚡</span>
+                    <span>Szybkie Fiszki</span>
+                  </div>
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full border ${
+                    hasAccess 
+                      ? 'bg-purple-950/50 border-purple-900/60 text-purple-300 font-semibold' 
+                      : 'bg-stone-900/60 border-stone-800 text-stone-500'
+                  }`}>
+                    {hasAccess ? "Graj" : "Premium 🔒"}
+                  </span>
                 </button>
+
+                {/* Przycisk: Mapa Myśli */}
+                <button 
+                  onClick={() => {
+                    setIsNavMenuOpen(false);
+                    handlePremiumNavigation("/mapa-mysli");
+                  }}
+                  className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-stone-300 hover:text-amber-400 hover:bg-stone-900/40 transition-all text-left w-full group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span>🧠</span>
+                    <span>Mapa Myśli</span>
+                  </div>
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full border ${
+                    hasAccess 
+                      ? 'bg-amber-950/50 border-amber-900/60 text-amber-400 font-semibold' 
+                      : 'bg-stone-900/60 border-stone-800 text-stone-500'
+                  }`}>
+                    {hasAccess ? "Wejdź" : "Premium 🔒"}
+                  </span>
+                </button>
+
                 <button
                   onClick={() => {
                     setIsNavMenuOpen(false);
@@ -140,6 +187,7 @@ export function Header({
                 <div className="px-3 py-1.5 text-[10px] uppercase font-bold tracking-widest text-purple-400">
                   Wirtualna Nauka AI
                 </div>
+                
                 <button
                   onClick={() => {
                     setIsNavMenuOpen(false);
@@ -149,6 +197,7 @@ export function Header({
                 >
                   <span>✍️</span> Edytor Rozprawek AI
                 </button>
+                
                 <button
                   onClick={() => {
                     setIsNavMenuOpen(false);
@@ -186,7 +235,7 @@ export function Header({
         </div>
       </div>
 
-      {/* Środkowa strefa: Logo (przywrócone do standardowego układu flexbox) */}
+      {/* Środkowa strefa: Logo */}
       <div className="hidden md:flex flex-col items-center select-none">
         <div className="flex items-center gap-2">
           <span className="text-2xl">📖</span>

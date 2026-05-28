@@ -250,7 +250,7 @@ export default function Home() {
     }
   };
 
-  // Bezpieczna nawigacja
+  // Bezpieczna nawigacja (OBSŁUGUJE TERAZ RÓWNIEŻ PRZEJŚCIE DO /mapa-mysli)
   const handlePremiumNavigation = (path: string) => {
     if (!user) {
       triggerNotification("🔑 Aby skorzystać z tej funkcji, najpierw się zaloguj!", "info");
@@ -327,14 +327,14 @@ export default function Home() {
               <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl z-0 pointer-events-none" />
               <div className="absolute bottom-0 left-0 w-80 h-80 bg-orange-600/5 rounded-full blur-3xl z-0 pointer-events-none" />
 
-              {/* ZOPTYMALIZOWANY I ZMNIEJSZONY ZNAK WODNY (MIEŚCI SIĘ W CAŁOŚCI) */}
+              {/* ZOPTYMALIZOWANY I ZMNIEJSZONY ZNAK WODNY */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden z-0">
                 <span className="text-xl sm:text-2xl md:text-[3.5vw] font-black uppercase tracking-[0.18em] text-amber-500/[0.04] whitespace-nowrap leading-none font-serif -rotate-6">
                   Wiedza Szyta na Miarę
                 </span>
               </div>
 
-              {/* LEWA KOLUMNA (Z TREŚCIĄ) - DODANO RELATIVE Z-10 */}
+              {/* LEWA KOLUMNA (Z TREŚCIĄ) */}
               <div className="max-w-xl text-center md:text-left relative z-10">
                 <span className="text-xs font-semibold uppercase tracking-widest text-amber-500 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
                   {hasAccess ? "Dostęp Aktywny 🎉" : "Matura 2026 🔑"}
@@ -366,7 +366,7 @@ export default function Home() {
                 )}
               </div>
 
-              {/* PRAWA KOLUMNA (Z PLANEM) - DODANO RELATIVE Z-10 */}
+              {/* PRAWA KOLUMNA (Z PLANEM) */}
               <div className="flex flex-col items-center md:items-end justify-center text-center md:text-right border-t md:border-t-0 md:border-l border-stone-800/80 pt-4 md:pt-0 md:pl-8 relative z-10">
                 <span className="text-3xl font-extrabold bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent uppercase">
                   {!hasAccess && "FREE"}
@@ -395,10 +395,12 @@ export default function Home() {
             <section className="lg:col-span-3 flex flex-col gap-6">
               <MaturaCountdown currentTheme={currentTheme} />
 
-              {/* NAWIGACJA W OPAKOWANIU GLOW */}
+              {/* NAWIGACJA */}
               <CozyGlowCard currentTheme={currentTheme} className="p-4">
                 <h3 className="text-xs uppercase tracking-widest text-amber-500 font-semibold mb-3 px-1">Nawigacja</h3>
                 <nav className="flex flex-col gap-1">
+                  
+                  {/* Przycisk: Przejście do Wszystkich Notatek */}
                   <Link href="/notes" className="flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-900/60 group transition-all">
                     <div className="flex items-center gap-3">
                       <span className="text-lg">📚</span>
@@ -406,6 +408,25 @@ export default function Home() {
                     </div>
                     <span className="text-xs bg-stone-900 border border-stone-800 text-amber-500/80 px-2 py-0.5 rounded-full">{notes.length}</span>
                   </Link>
+
+                  {/* Przycisk: Przejście do Mapy Myśli */}
+                  <button 
+                    onClick={() => handlePremiumNavigation("/mapa-mysli")} 
+                    className="flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-900/60 group transition-all text-left w-full"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">🧠</span>
+                      <span className="text-sm font-medium group-hover:text-amber-400 transition-colors">Mapa Myśli</span>
+                    </div>
+                    {/* Zmiana wyglądu plakietki w zależności od poziomu konta */}
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                      hasAccess 
+                        ? 'bg-amber-950/50 border-amber-900/60 text-amber-400 font-semibold' 
+                        : 'bg-stone-900/60 border-stone-800 text-stone-500'
+                    }`}>
+                      {hasAccess ? "Wejdź 🧠" : "Premium 🔒"}
+                    </span>
+                  </button>
 
                   <button onClick={() => handlePremiumNavigation("/postepy")} className="flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-900/60 group transition-all text-left w-full">
                     <div className="flex items-center gap-3">
@@ -461,9 +482,11 @@ export default function Home() {
               </CozyGlowCard>
             </section>
 
-            {/* COLUMN 2: CENTRAL NOTES BROWSER */}
+            {/* COLUMN 2: CENTRAL NOTES BROWSER ONLY */}
             <section className="lg:col-span-6 flex flex-col gap-5">
+              
               <NotesBrowser notes={notes} loading={loading} hasAccess={hasAccess} limit={5} currentTheme={currentTheme} triggerNotification={triggerNotification} />
+              
               {!loading && notes.length > 5 && (
                 <div className="animate-slide-in">
                   <Link href="/notes" onClick={() => playSound("click")} className={`flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-[1.01] active:scale-[0.99] transition-all text-xs sm:text-sm font-bold text-amber-500 hover:text-amber-400 hover:border-amber-500/40 shadow-md`}>
@@ -472,6 +495,7 @@ export default function Home() {
                   </Link>
                 </div>
               )}
+              
             </section>
 
             {/* COLUMN 3: STUDY CORNER SIDEBAR */}

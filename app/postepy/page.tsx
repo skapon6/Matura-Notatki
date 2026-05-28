@@ -31,7 +31,7 @@ export default function PostepyPage() {
   const [savedQuotesCount, setSavedQuotesCount] = useState(0);
   const [essayCredits, setEssayCredits] = useState(0);
 
-  // NOWY STAN: Łączny czas nauki (pobierany z localStorage)
+  // Łączny czas nauki (pobierany z localStorage)
   const [totalStudyMinutes, setTotalStudyMinutes] = useState<number>(0);
 
   // STANY DLA DYNAMICZNEGO POSTĘPU EPOK (Porównanie tabel flashcards i flashcard_progress)
@@ -45,13 +45,46 @@ export default function PostepyPage() {
         // 1. Sprawdź zalogowanego użytkownika
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) {
-          setLoading(false);
+          router.push("/"); // Brak sesji -> powrót na główną [1]
           return;
         }
+
+        // 2. Pobierz profil z bazy, aby sprawdzić status premium
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("subscription_status, expires_at, essay_credits")
+          .eq("id", session.user.id)
+          .single();
+
+        if (profileError || !profileData) {
+          router.push("/"); // Błąd pobierania profilu -> powrót na główną
+          return;
+        }
+
+        const activeStatuses = ['mini', 'medium', 'premium', 'admin', 'paid'];
+        const isStatusActive = activeStatuses.includes(profileData.subscription_status);
+        
+        let isExpired = false;
+        if (profileData.expires_at) {
+          const expirationTime = new Date(profileData.expires_at).getTime();
+          const currentTime = new Date().getTime();
+          isExpired = currentTime > expirationTime;
+        }
+
+        const hasPremiumAccess = isStatusActive && !isExpired;
+
+        // 3. Route Guard: wyrzucenie darmowego użytkownika z powrotem na główną [1]
+        if (!hasPremiumAccess) {
+          router.push("/");
+          return;
+        }
+
+        // Zapisanie zalogowanego użytkownika i jego tokenów z bazy
         setUser(session.user);
+        setEssayCredits(profileData.essay_credits);
         const userId = session.user.id;
 
-        // 2. Pobierz liczbę ocenionych rozprawek użytkownika z tabeli essay_evaluations
+        // 4. Pobierz liczbę ocenionych rozprawek użytkownika z tabeli essay_evaluations
         const { count: essays, error: essayError } = await supabase
           .from("essay_evaluations")
           .select("*", { count: "exact", head: true })
@@ -60,7 +93,7 @@ export default function PostepyPage() {
           setEssayCount(essays);
         }
 
-        // 3. Pobierz liczbę zapisanych cytatów użytkownika z tabeli personal_notes
+        // 5. Pobierz liczbę zapisanych cytatów użytkownika z tabeli personal_notes
         const { count: quotes, error: quotesError } = await supabase
           .from("personal_notes")
           .select("*", { count: "exact", head: true })
@@ -69,17 +102,7 @@ export default function PostepyPage() {
           setSavedQuotesCount(quotes);
         }
 
-        // 4. Pobierz liczbę pozostałych tokenów (essay_credits) z profilu użytkownika
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("essay_credits")
-          .eq("id", userId)
-          .single();
-        if (!profileError && profileData) {
-          setEssayCredits(profileData.essay_credits);
-        }
-
-        // 5. Pobierz informacje o wszystkich fiszkach w systemie (ich id oraz epoki)
+        // 6. Pobierz informacje o wszystkich fiszkach w systemie (ich id oraz epoki)
         const { data: cardsData, error: cardsError } = await supabase
           .from("flashcards")
           .select("id, era");
@@ -87,7 +110,7 @@ export default function PostepyPage() {
           setFlashcards(cardsData);
         }
 
-        // 6. Pobierz postępy fiszek dla danego użytkownika z tabeli flashcard_progress
+        // 7. Pobierz postępy fiszek dla danego użytkownika z tabeli flashcard_progress
         const { data: progressData, error: progressError } = await supabase
           .from("flashcard_progress")
           .select("flashcard_id, status")
@@ -100,7 +123,7 @@ export default function PostepyPage() {
           setProgress(progressMap);
         }
 
-        // 7. Wczytaj łączny czas nauki z localStorage
+        // 8. Wczytaj łączny czas nauki z localStorage
         if (typeof window !== "undefined") {
           const savedTotal = localStorage.getItem("cozy_total_study_minutes");
           if (savedTotal) {
@@ -110,13 +133,14 @@ export default function PostepyPage() {
 
       } catch (err) {
         console.error("Błąd podczas wczytywania statystyk:", err);
+        router.push("/");
       } finally {
         setLoading(false);
       }
     }
 
     fetchProgressData();
-  }, []);
+  }, [router]);
 
   // Funkcja obliczająca rzeczywisty, dynamiczny procent opanowania danej grupy epok
   const getEpochProgressPercent = (eras: string[]) => {
@@ -145,6 +169,18 @@ export default function PostepyPage() {
     const mins = Math.floor(minutes % 60);
     return mins > 0 ? `${hours} godz. ${mins} min` : `${hours} godz.`;
   };
+
+  // Czysty i bezpieczny ekran ładowania podczas autoryzacji
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#14100e] text-stone-200 flex flex-col items-center justify-center p-8">
+        <div className="text-4xl animate-bounce mb-4">☕</div>
+        <p className="text-sm tracking-widest font-semibold text-stone-400">
+          Weryfikacja dostępu do dziennika postępów...
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-500 ${currentTheme.bg} text-stone-200 font-sans`}>
@@ -226,158 +262,144 @@ export default function PostepyPage() {
       {/* RENDEROWANIE ZAWARTOŚCI */}
       <main className="max-w-4xl mx-auto w-full p-6 flex flex-col justify-center flex-1 select-none animate-slide-in">
         
-        {!user && !loading ? (
-          <div className="text-center py-16 px-4 border border-dashed border-stone-800 rounded-3xl w-full text-stone-500">
-            <span className="text-3xl block mb-2">🔑</span>
-            <p className="text-sm font-semibold">Zaloguj się, aby śledzić swoje postępy.</p>
-            <p className="text-xs text-stone-600 mt-1 leading-relaxed">
-              Dostęp do statystyk wymaga aktywnego konta użytkownika.
-            </p>
-          </div>
-        ) : loading ? (
-          <div className="text-center py-12 text-stone-500 text-sm">
-            Wczytywanie Twojego dziennika postępów...
-          </div>
-        ) : (
-          <div className="w-full flex flex-col gap-6">
+        <div className="w-full flex flex-col gap-6">
+          
+          {/* PANEL DYNAMICZNYCH STATYSTYK */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             
-            {/* PANEL DYNAMICZNYCH STATYSTYK (ROZBUDOWANY DO 4 KAFELKÓW) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              
-              {/* KAFELEK 1: ZAPISANE CYTATY */}
-              <div className={`p-5 rounded-2xl border ${currentTheme.cardBorder} bg-[#161210] flex flex-col items-center justify-center text-center shadow-md`}>
-                <span className="text-2xl mb-1">⭐</span>
-                <span className="text-2xl font-bold font-mono text-stone-100">{savedQuotesCount}</span>
-                <span className="text-[10px] uppercase tracking-widest text-stone-500 font-bold mt-1">
-                  Zapisane Cytaty
-                </span>
-              </div>
-
-              {/* KAFELEK 2: POZOSTAŁE TOKENY */}
-              <div className={`p-5 rounded-2xl border ${currentTheme.cardBorder} bg-[#161210] flex flex-col items-center justify-center text-center shadow-md`}>
-                <span className="text-2xl mb-1">🪙</span>
-                <span className="text-2xl font-bold font-mono text-amber-500">{essayCredits}</span>
-                <span className="text-[10px] uppercase tracking-widest text-stone-500 font-bold mt-1">
-                  Pozostałe Tokeny AI
-                </span>
-              </div>
-
-              {/* KAFELEK 3: OCENIONE ROZPRAWKI */}
-              <div className={`p-5 rounded-2xl border ${currentTheme.cardBorder} bg-[#161210] flex flex-col items-center justify-center text-center shadow-md`}>
-                <span className="text-2xl mb-1">✍️</span>
-                <span className="text-2xl font-bold font-mono text-stone-100">{essayCount}</span>
-                <span className="text-[10px] uppercase tracking-widest text-stone-500 font-bold mt-1">
-                  Ocenione Rozprawki
-                </span>
-              </div>
-
-              {/* NOWY KAFELEK 4: ŁĄCZNY CZAS NAUKI (Sformatowany dynamicznie!) */}
-              <div className={`p-5 rounded-2xl border ${currentTheme.cardBorder} bg-[#161210] flex flex-col items-center justify-center text-center shadow-md`}>
-                <span className="text-2xl mb-1">⏱️</span>
-                <span className="text-xl font-bold font-mono text-stone-100 whitespace-nowrap">
-                  {formatStudyTime(totalStudyMinutes)}
-                </span>
-                <span className="text-[10px] uppercase tracking-widest text-stone-500 font-bold mt-1">
-                  Łączny Czas Nauki
-                </span>
-              </div>
-
+            {/* KAFELEK 1: ZAPISANE CYTATY */}
+            <div className={`p-5 rounded-2xl border ${currentTheme.cardBorder} bg-[#161210] flex flex-col items-center justify-center text-center shadow-md`}>
+              <span className="text-2xl mb-1">⭐</span>
+              <span className="text-2xl font-bold font-mono text-stone-100">{savedQuotesCount}</span>
+              <span className="text-[10px] uppercase tracking-widest text-stone-500 font-bold mt-1">
+                Zapisane Cytaty
+              </span>
             </div>
 
-            {/* PANEL DYNAMICZNEGO POSTĘPU OPANOWANIA EPOK */}
-            <div className={`p-6 sm:p-8 rounded-3xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} shadow-lg flex flex-col gap-6`}>
-              <div>
-                <h3 className="text-xs uppercase tracking-widest text-amber-500 font-bold">
-                  Postęp Opanowania Epok (Na Podstawie Fiszek)
-                </h3>
-                <p className="text-[11px] text-stone-500 mt-1 leading-relaxed">
-                  Procenty wyliczają się automatycznie na podstawie fiszek, które oznaczyłeś jako „Opanowane” w strefie nauki.
-                </p>
-              </div>
+            {/* KAFELEK 2: POZOSTAŁE TOKENY */}
+            <div className={`p-5 rounded-2xl border ${currentTheme.cardBorder} bg-[#161210] flex flex-col items-center justify-center text-center shadow-md`}>
+              <span className="text-2xl mb-1">🪙</span>
+              <span className="text-2xl font-bold font-mono text-amber-500">{essayCredits}</span>
+              <span className="text-[10px] uppercase tracking-widest text-stone-500 font-bold mt-1">
+                Pozostałe Tokeny AI
+              </span>
+            </div>
 
-              <div className="flex flex-col gap-5">
-                
-                {/* Epoka 1: Starożytność i Średniowiecze */}
-                {(() => {
-                  const percent = getEpochProgressPercent(["Antyk", "Średniowiecze"]);
-                  return (
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex justify-between text-xs font-semibold">
-                        <span className="text-stone-300 font-serif">Starożytność i Średniowiecze</span>
-                        <span className="font-mono text-stone-400">{percent}%</span>
-                      </div>
-                      <div className="w-full h-2 bg-stone-950/60 rounded-full overflow-hidden border border-stone-900">
-                        <div 
-                          className="h-full bg-emerald-500 rounded-full transition-all duration-1000" 
-                          style={{ width: `${percent}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })()}
+            {/* KAFELEK 3: OCENIONE ROZPRAWKI */}
+            <div className={`p-5 rounded-2xl border ${currentTheme.cardBorder} bg-[#161210] flex flex-col items-center justify-center text-center shadow-md`}>
+              <span className="text-2xl mb-1">✍️</span>
+              <span className="text-2xl font-bold font-mono text-stone-100">{essayCount}</span>
+              <span className="text-[10px] uppercase tracking-widest text-stone-500 font-bold mt-1">
+                Ocenione Rozprawki
+              </span>
+            </div>
 
-                {/* Epoka 2: Renesans, Barok i Oświecenie */}
-                {(() => {
-                  const percent = getEpochProgressPercent(["Renesans", "Barok", "Oświecenie"]);
-                  return (
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex justify-between text-xs font-semibold">
-                        <span className="text-stone-300 font-serif">Renesans, Barok i Oświecenie</span>
-                        <span className="font-mono text-stone-400">{percent}%</span>
-                      </div>
-                      <div className="w-full h-2 bg-stone-950/60 rounded-full overflow-hidden border border-stone-900">
-                        <div 
-                          className="h-full bg-amber-500 rounded-full transition-all duration-1000" 
-                          style={{ width: `${percent}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* Epoka 3: Romantyzm i Pozytywizm */}
-                {(() => {
-                  const percent = getEpochProgressPercent(["Romantyzm", "Pozytywizm"]);
-                  return (
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex justify-between text-xs font-semibold">
-                        <span className="text-stone-300 font-serif">Romantyzm i Pozytywizm (Lektury kluczowe)</span>
-                        <span className="font-mono text-stone-400">{percent}%</span>
-                      </div>
-                      <div className="w-full h-2 bg-stone-950/60 rounded-full overflow-hidden border border-stone-900">
-                        <div 
-                          className="h-full bg-amber-600 rounded-full transition-all duration-1000" 
-                          style={{ width: `${percent}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* Epoka 4: Współczesność i Dwudziestolecie */}
-                {(() => {
-                  const percent = getEpochProgressPercent(["Współczesność", "XX Międzywojenne"]);
-                  return (
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex justify-between text-xs font-semibold">
-                        <span className="text-stone-300 font-serif">Współczesność i Międzywojenne</span>
-                        <span className="font-mono text-stone-400">{percent}%</span>
-                      </div>
-                      <div className="w-full h-2 bg-stone-950/60 rounded-full overflow-hidden border border-stone-900">
-                        <div 
-                          className="h-full bg-stone-700 rounded-full transition-all duration-1000" 
-                          style={{ width: `${percent}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })()}
-
-              </div>
+            {/* KAFELEK 4: ŁĄCZNY CZAS NAUKI */}
+            <div className={`p-5 rounded-2xl border ${currentTheme.cardBorder} bg-[#161210] flex flex-col items-center justify-center text-center shadow-md`}>
+              <span className="text-2xl mb-1">⏱️</span>
+              <span className="text-xl font-bold font-mono text-stone-100 whitespace-nowrap">
+                {formatStudyTime(totalStudyMinutes)}
+              </span>
+              <span className="text-[10px] uppercase tracking-widest text-stone-500 font-bold mt-1">
+                Łączny Czas Nauki
+              </span>
             </div>
 
           </div>
-        )}
+
+          {/* PANEL DYNAMICZNEGO POSTĘPU OPANOWANIA EPOK */}
+          <div className={`p-6 sm:p-8 rounded-3xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} shadow-lg flex flex-col gap-6`}>
+            <div>
+              <h3 className="text-xs uppercase tracking-widest text-amber-500 font-bold">
+                Postęp Opanowania Epok (Na Podstawie Fiszek)
+              </h3>
+              <p className="text-[11px] text-stone-500 mt-1 leading-relaxed">
+                Procenty wyliczają się automatycznie na podstawie fiszek, które oznaczyłeś jako „Opanowane” w strefie nauki.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-5">
+              
+              {/* Epoka 1: Starożytność i Średniowiecze */}
+              {(() => {
+                const percent = getEpochProgressPercent(["Antyk", "Średniowiecze"]);
+                return (
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span className="text-stone-300 font-serif">Starożytność i Średniowiecze</span>
+                      <span className="font-mono text-stone-400">{percent}%</span>
+                    </div>
+                    <div className="w-full h-2 bg-stone-950/60 rounded-full overflow-hidden border border-stone-900">
+                      <div 
+                        className="h-full bg-emerald-500 rounded-full transition-all duration-1000" 
+                        style={{ width: `${percent}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Epoka 2: Renesans, Barok i Oświecenie */}
+              {(() => {
+                const percent = getEpochProgressPercent(["Renesans", "Barok", "Oświecenie"]);
+                return (
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span className="text-stone-300 font-serif">Renesans, Barok i Oświecenie</span>
+                      <span className="font-mono text-stone-400">{percent}%</span>
+                    </div>
+                    <div className="w-full h-2 bg-stone-950/60 rounded-full overflow-hidden border border-stone-900">
+                      <div 
+                        className="h-full bg-amber-500 rounded-full transition-all duration-1000" 
+                        style={{ width: `${percent}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Epoka 3: Romantyzm i Pozytywizm */}
+              {(() => {
+                const percent = getEpochProgressPercent(["Romantyzm", "Pozytywizm"]);
+                return (
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span className="text-stone-300 font-serif">Romantyzm i Pozytywizm (Lektury kluczowe)</span>
+                      <span className="font-mono text-stone-400">{percent}%</span>
+                    </div>
+                    <div className="w-full h-2 bg-stone-950/60 rounded-full overflow-hidden border border-stone-900">
+                      <div 
+                        className="h-full bg-amber-600 rounded-full transition-all duration-1000" 
+                        style={{ width: `${percent}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Epoka 4: Współczesność i Dwudziestolecie */}
+              {(() => {
+                const percent = getEpochProgressPercent(["Współczesność", "XX Międzywojenne"]);
+                return (
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span className="text-stone-300 font-serif">Współczesność i Międzywojenne</span>
+                      <span className="font-mono text-stone-400">{percent}%</span>
+                    </div>
+                    <div className="w-full h-2 bg-stone-950/60 rounded-full overflow-hidden border border-stone-900">
+                      <div 
+                        className="h-full bg-stone-700 rounded-full transition-all duration-1000" 
+                        style={{ width: `${percent}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
+
+            </div>
+          </div>
+
+        </div>
       </main>
     </div>
   );
