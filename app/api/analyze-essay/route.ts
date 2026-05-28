@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     }
     const wordCount = essayText.split(/\s+/).filter(Boolean).length;
     
-    // Walidacja limitów długości tekstu
+    // Walidacja limitu słów (50 - 1500)
     if (wordCount < 50) {
       return NextResponse.json({ error: "Tekst jest zbyt krótki (minimum 50 słów)." }, { status: 400 });
     }
@@ -68,7 +68,77 @@ export async function POST(req: NextRequest) {
     }
     creditDeducted = true;
 
-    // 5. Prompt systemowy
+    // 5. --- KROK RAG: GENEROWANIE WEKTORA (EMBEDDING) NAJPIERW (Z OBSŁUGĄ RETRY) ---
+    let embeddingVector: number[] | null = null;
+    let embedRetries = 3;
+    let embedDelay = 3000;
+
+    for (let i = 0; i < embedRetries; i++) {
+      try {
+        console.log(`-> Generowanie wektora embedding (Próba ${i + 1}/${embedRetries})...`);
+        const embeddingModel = genAI.getGenerativeModel({ model: "models/gemini-embedding-001" });
+        
+        const embeddingResult = await embeddingModel.embedContent({
+          content: { role: "user", parts: [{ text: essayText }] },
+          outputDimensionality: 768,
+        } as any);
+        
+        if (embeddingResult.embedding?.values) {
+          embeddingVector = embeddingResult.embedding.values;
+          console.log(`-> Sukces: Wygenerowano wektor embedding (wymiary: ${embeddingVector.length})`);
+          break;
+        }
+      } catch (embedError: any) {
+        const is503 = embedError?.message?.includes("503") || embedError?.message?.includes("UNAVAILABLE") || embedError?.status === 503;
+        if (is503 && i < embedRetries - 1) {
+          console.warn(`[PRZECIĄŻENIE EMBEDDING 503] Ponawianie próby za ${embedDelay / 1000}s...`);
+          await new Promise((resolve) => setTimeout(resolve, embedDelay));
+          embedDelay *= 1.5;
+          continue;
+        }
+        console.error("!!! Błąd generowania wektora (gemini-embedding-001):", embedError?.message || embedError);
+        break;
+      }
+    }
+
+    // 6. --- KROK RAG: PRZESZUKIWANIE BAZY WYSZUKIWANIA SEMANTYCZNEGO ---
+    let similarEssaysContext = "";
+    if (embeddingVector) {
+      try {
+        console.log("-> Odpytywanie bazy Supabase o podobne rozprawki...");
+        const { data: similar, error: rpcError } = await supabaseAdmin.rpc("match_essays", {
+          query_embedding: embeddingVector,
+          match_threshold: 0.85,
+          match_count: 2
+        });
+
+        if (rpcError) {
+          console.error("!!! Błąd wywołania RPC match_essays:", rpcError);
+        } else if (similar && similar.length > 0) {
+          similarEssaysContext = `\n\n=== REPREZENTATYWNE PRZYKŁADY Z BAZY WIEDZY (WZORCE OCENIANIA) ===
+Poniżej znajdują się podobne rozprawki, które zostały już wcześniej ocenione i zatwierdzone przez administratora lub starszego egzaminatora. Twoja aktualna ocena musi być w pełni spójna z poniższymi wzorcami pod względem surowości i kryteriów. Naśladuj ich stil oceniania i zachowaj konsekwencję punktacji:\n`;
+
+          similar.forEach((item: any, index: number) => {
+            similarEssaysContext += `
+Przykład ${index + 1}:
+Temat: "${item.topic}"
+Ocena końcowa: ${item.score}
+Treść wypracowania: ${item.essay_text}
+Komentarz i uzasadnienie egzaminatora: ${JSON.stringify(item.analysis_result)}
+---\n`;
+          });
+
+          similarEssaysContext += `\nUżyj powyższych przykładów jako nadrzędnego punktu odniesienia. Jeśli analizowana praca wykazuje podobne mocne lub słabe strony co powyższe wzorce, odzwierciedl to proporcjonalnie w punktacji i kryteriach, aby zachować pełną spójność systemu.\n`;
+          console.log(`-> RAG: Znaleziono i wstrzyknięto ${similar.length} podobne przykłady z bazy danych.`);
+        } else {
+          console.log("-> RAG: Brak podobnych wypracowań (zbieżność >= 85%) w bazie.");
+        }
+      } catch (dbError) {
+        console.error("!!! Błąd bazy danych podczas szukania podobieństw:", dbError);
+      }
+    }
+
+    // 7. Dynamiczne budowanie promptu systemowego z wstrzykniętymi przykładami
     const systemPrompt = `Jesteś precyzyjnym egzaminatorem CKE oceniającym wypracowania maturalne z języka polskiego (poziom podstawowy, Formuła 2023, skala 35 punktów). Oceniaj rzetelnie i sprawiedliwie – ani zbyt surowo, ani zbyt pobłażliwie. Stosuj DOKŁADNIE kryteria z poniższej bazy wiedzy CKE.
 
 === BAZA WIEDZY CKE ===
@@ -105,6 +175,8 @@ KROK 5 – JW: Język (0–11 pkt):
 a) Zakres językowy (szeroki/zadowalający/wąski) → policz błędy → odczytaj punkty z tabeli 4a
 b) Policz błędy ortograficzne → tabela 4b
 c) Policz błędy interpunkcyjne → tabela 4c
+Ważna informacja: nie doczepiaj się do np dwukropków czy przecinka postawionego jedną spację za daleko albo użyetgo złego cudzysłowia. Traktuj to jak bardziej tekst pisany przez ucznia na kartce a nie na komputerze
+${similarEssaysContext}
 
 === FORMAT ODPOWIEDZI ===
 Zwróć WYŁĄCZNIE obiekt JSON. Bez znaczników markdown, bez \`\`\`json.
@@ -147,18 +219,38 @@ Zwróć WYŁĄCZNIE obiekt JSON. Bez znaczników markdown, bez \`\`\`json.
 
     const userMessage = `Temat: "${topic}"\n\nWypracowanie:\n${essayText}`;
 
+    // 8. Wywołanie modelu oceniającego z wbudowaną pętlą retry (RAG + CKE)
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
       systemInstruction: systemPrompt,
     });
 
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: userMessage }] }],
-      generationConfig: {
-        responseMimeType: "application/json",
-        temperature: 0.1,
-      },
-    });
+    let result: any;
+    let textRetries = 3;
+    let textDelay = 5000; // Czekamy 5 sekund w razie przeciążenia
+
+    for (let i = 0; i < textRetries; i++) {
+      try {
+        console.log(`-> Wywołanie Gemini 2.5 Flash - Analiza (Próba ${i + 1}/${textRetries})...`);
+        result = await model.generateContent({
+          contents: [{ role: "user", parts: [{ text: userMessage }] }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            temperature: 0.1,
+          },
+        });
+        break;
+      } catch (error: any) {
+        const is503 = error?.message?.includes("503") || error?.message?.includes("UNAVAILABLE") || error?.status === 503;
+        if (is503 && i < textRetries - 1) {
+          console.warn(`[PRZECIĄŻENIE GEneratora 503] Model przeciążony. Automatyczny retry za ${textDelay / 1000}s...`);
+          await new Promise((resolve) => setTimeout(resolve, textDelay));
+          textDelay *= 1.5;
+          continue;
+        }
+        throw error;
+      }
+    }
 
     const responseText = result.response.text();
 
@@ -172,29 +264,8 @@ Zwróć WYŁĄCZNIE obiekt JSON. Bez znaczników markdown, bez \`\`\`json.
     }
 
     const parsedResult = JSON.parse(cleanJson.trim());
-    // --- GENEROWANIE WEKTORA (EMBEDDING) DLA PGVECTOR (MATURA 2026) ---
-    let embeddingVector: number[] | null = null;
-    try {
-      console.log("-> Generowanie wektora za pomocą: models/gemini-embedding-001...");
-      const embeddingModel = genAI.getGenerativeModel({ model: "models/gemini-embedding-001" });
-      
 
-      // Stosujemy rzutowanie "as any", ponieważ typy TypeScript w zainstalowanej wersji SDK nie mają zadeklarowanego pola outputDimensionality, mimo że API Google je wspiera.
-      const embeddingResult = await embeddingModel.embedContent({
-        content: { role: "user", parts: [{ text: essayText }] },
-        outputDimensionality: 768,
-      } as any);
-      
-      if (embeddingResult.embedding?.values) {
-        embeddingVector = embeddingResult.embedding.values;
-        console.log(`-> Sukces: Wygenerowano wektor embedding (wymiary: ${embeddingVector.length})`);
-      }
-    } catch (embedError: any) {
-      console.error("!!! Błąd generowania wektora (gemini-embedding-001):", embedError?.message || embedError);
-      console.warn("-> Zapisywanie analizy bez wektora (embedding zostanie ustawiony na NULL).");
-    }
-
-    // Zapis do historii z uwzględnieniem kolumny 'embedding'
+    // 9. Zapis do historii z wektorem embedding, oceną i analizą
     const { error: insertError } = await supabaseAdmin
       .from("essay_evaluations")
       .insert({
@@ -203,10 +274,10 @@ Zwróć WYŁĄCZNIE obiekt JSON. Bez znaczników markdown, bez \`\`\`json.
         essay_text: essayText,
         score: parsedResult.score,
         analysis_result: parsedResult,
-        embedding: embeddingVector, // nowa kolumna do dopasowań semantycznych pgvector
+        embedding: embeddingVector, // zapisujemy wektor do pgvector w Supabase
       });
     if (insertError) {
-      console.error("Błąd zapisu oceny:", insertError);
+      console.error("!!! Błąd zapisu oceny do bazy danych:", insertError);
     }
 
     return NextResponse.json({

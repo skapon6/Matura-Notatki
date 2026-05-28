@@ -30,7 +30,7 @@ export default function MaturaUstnaPage() {
   // Dynamiczna lista pytań pobrana ze Supabase
   const [ckeQuestions, setCkeQuestions] = useState<any[]>([]);
   
-  // NOWY STAN: Wylosowany pełny zestaw egzaminacyjny (Jawne + Niejawne)
+  // Wylosowany pełny zestaw egzaminacyjny (Jawne + Niejawne)
   const [selectedSet, setSelectedSet] = useState<{
     publicQuestion: any;
     unseenQuestion: any;
@@ -45,8 +45,8 @@ export default function MaturaUstnaPage() {
   const [prepTimeLeft, setPrepTimeLeft] = useState(15 * 60);
   const [isPrepTimerRunning, setIsPrepTimerRunning] = useState(false);
 
-  // Rezultat z wirtualnej komisji AI
-  const [evaluationResult, setEvaluationResult] = useState<string | null>(null);
+  // Rezultat z wirtualnej komisji AI (zmieniony typ na any dla obiektu JSON)
+  const [evaluationResult, setEvaluationResult] = useState<any | null>(null);
   const [evaluating, setEvaluating] = useState(false);
 
   // Dyktowanie głosowe
@@ -418,16 +418,16 @@ export default function MaturaUstnaPage() {
                         Zadanie 2: Pytanie Niejawne ({selectedSet.unseenQuestion.category})
                       </span>
                       
-                      {/* Wyświetlanie dołączonego obrazu bodźcowego (Poprawione - nie ucina obrazu) */}
-                        {selectedSet.unseenQuestion.image_url && (
+                      {/* Wyświetlanie dołączonego obrazu bodźcowego */}
+                      {selectedSet.unseenQuestion.image_url && (
                         <div className="w-full rounded-xl overflow-hidden border border-stone-900 bg-stone-950/50 shadow-md my-2 flex items-center justify-center max-h-64 sm:max-h-72">
-                            <img 
+                          <img 
                             src={selectedSet.unseenQuestion.image_url} 
                             alt="Materiał bodźcowy CKE"
                             className="max-w-full max-h-64 sm:max-h-72 object-contain select-none pointer-events-none"
-                            />
+                          />
                         </div>
-                        )}
+                      )}
 
                       <h4 className="text-sm sm:text-base font-bold text-stone-100 font-serif leading-snug">
                         {selectedSet.unseenQuestion.question}
@@ -538,7 +538,7 @@ export default function MaturaUstnaPage() {
                     value={speechText}
                     onChange={(e) => setSpeechText(e.target.value)}
                     rows={8}
-                    className="w-full bg-stone-950/80 border border-stone-800/80 rounded-2xl p-4 text-xs sm:text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-700/60 leading-relaxed font-sans"
+                    className="w-full bg-stone-900/80 border border-stone-800/80 rounded-2xl p-4 text-xs sm:text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-700/60 leading-relaxed font-sans"
                   />
 
                   <button
@@ -554,24 +554,90 @@ export default function MaturaUstnaPage() {
 
             {/* KROK 4: REZULTAT OCENY KOMISJI */}
             {evaluationResult && (
-              <div className={`p-6 sm:p-8 rounded-3xl border border-emerald-900/30 bg-[#121614] flex flex-col gap-4 shadow-xl animate-slide-in`}>
-                <div className="flex items-center gap-2 border-b border-stone-900 pb-3">
-                  <span className="text-xl">🎓</span>
+              <div className="p-6 sm:p-8 rounded-3xl border border-emerald-900/30 bg-[#121614] flex flex-col gap-6 shadow-xl animate-slide-in w-full text-left">
+                
+                {/* Nagłówek wyniku z dużym badgem punktacji */}
+                <div className="flex flex-col sm:flex-row items-center justify-between border-b border-stone-800 pb-5 gap-4">
                   <div>
-                    <h3 className="text-sm font-bold text-stone-100 font-serif">
-                      Oficjalny Protokół Egzaminu Ustnego (Ocena Komisji AI)
+                    <h3 className="text-sm sm:text-base font-bold text-stone-100 font-serif flex items-center gap-2">
+                      <span>🎓</span> Oficjalny Protokół Egzaminu Ustnego (Ocena Komisji AI)
                     </h3>
                     <p className="text-[10px] uppercase tracking-widest text-emerald-400 font-semibold mt-0.5">
                       Przeanalizowano oba zadania pomyślnie na podstawie kryteriów CKE
                     </p>
                   </div>
-                </div>
-
-                <div className="overflow-y-auto max-h-[500px] pr-1 scrollbar-thin scrollbar-thumb-stone-800">
-                  <div className="text-xs sm:text-sm text-stone-300 leading-relaxed font-serif whitespace-pre-wrap select-text pr-2">
-                    {evaluationResult}
+                  <div className="flex flex-col items-center shrink-0">
+                    <span className="text-2xl sm:text-3xl font-black text-emerald-400 font-mono tracking-tight bg-stone-950 px-5 py-2.5 rounded-2xl border border-stone-800 shadow-xl">
+                      {evaluationResult.score}
+                    </span>
+                    <span className={`text-[9px] uppercase font-bold tracking-wider mt-2 px-2.5 py-0.5 rounded-full ${
+                      evaluationResult.status === "ZDANE" 
+                        ? "bg-emerald-950/40 text-emerald-400 border border-emerald-900/30" 
+                        : "bg-red-950/40 text-red-400 border border-red-900/30"
+                    }`}>
+                      {evaluationResult.status}
+                    </span>
                   </div>
                 </div>
+
+                {/* Kryteria szczegółowe CKE w siatce dwukolumnowej */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {evaluationResult.details?.map((detail: any, idx: number) => (
+                    <div key={idx} className="p-4 rounded-2xl bg-stone-950/60 border border-stone-900 hover:border-amber-500/20 transition-all flex flex-col justify-between">
+                      <div className="flex justify-between font-bold text-[10px] uppercase tracking-wider text-stone-200 mb-2">
+                        <span>{detail.criterion}</span>
+                        <span className="text-amber-500 font-mono">{detail.points}</span>
+                      </div>
+                      <p className="text-[11.5px] text-stone-400 leading-relaxed font-sans">{detail.comment}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Analiza obrazu i Podsumowanie komisji */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {evaluationResult.imageAnalysis && (
+                    <div className="p-4 rounded-2xl bg-stone-950/45 border border-stone-900/80">
+                      <h4 className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                        <span>🖼</span> Ocena interpretacji obrazu w Zadaniu 2:
+                      </h4>
+                      <p className="text-[11.5px] text-stone-400 leading-relaxed font-sans">{evaluationResult.imageAnalysis}</p>
+                    </div>
+                  )}
+                  {evaluationResult.summary && (
+                    <div className="p-4 rounded-2xl bg-stone-950/45 border border-stone-900/80">
+                      <h4 className="text-[10px] font-bold text-[#c68a4c] uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                        <span>💡</span> Podsumowanie komisji:
+                      </h4>
+                      <p className="text-[11.5px] text-stone-400 italic leading-relaxed font-sans">{evaluationResult.summary}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Pytania dopytujące od Komisji (Follow-up) w wyróżnionej ramce */}
+                {evaluationResult.followUpQuestions && evaluationResult.followUpQuestions.length > 0 && (
+                  <div className="p-5 rounded-2xl bg-stone-950/60 border border-stone-900 flex flex-col gap-3">
+                    <h4 className="text-[10px] font-bold text-stone-200 uppercase tracking-widest flex items-center gap-2">
+                      <span>💬</span> Pytania dopytujące od Komisji (Follow-up):
+                    </h4>
+                    <p className="text-[9px] text-stone-500 mb-1 leading-normal">
+                      Wzorując się na prawdziwym egzaminie ustnym, komisja zadaje Ci dwa pytania bezpośrednio nawiązujące do Twojego monologu:
+                    </p>
+                    <div className="grid grid-cols-1 gap-3">
+                      {evaluationResult.followUpQuestions.map((question: string, qIdx: number) => (
+                        <div key={qIdx} className="p-3.5 rounded-xl bg-stone-900/40 border border-stone-850 text-[11.5px] text-stone-300 leading-relaxed font-serif flex gap-3">
+                          <span className="text-amber-500 font-bold shrink-0">{qIdx + 1}.</span>
+                          <p className="italic">{question}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Informacja małym drukiem */}
+                <div className="text-[9px] text-stone-500 leading-relaxed font-sans px-1 mt-1 border-t border-stone-900/60 pt-3">
+                  * Uwaga: Symulator AI ocenia odpowiedź bardzo rygorystycznie i dosłownie na podstawie kryteriów CKE dla Formuły 2023. Rzeczywista ocena ludzkiej komisji na prawdziwym egzaminie państwowym może różnić się na korzyść zdającego z uwagi na bardziej holistyczną ocenę i dynamiczną reakcję podczas rozmowy.
+                </div>
+
               </div>
             )}
 

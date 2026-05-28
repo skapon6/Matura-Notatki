@@ -33,7 +33,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Brak tematu rozprawki." }, { status: 400 });
     }
 
-    // Sprawdzenie dostępnych kredytów
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("essay_credits")
@@ -50,7 +49,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Brak wolnych kredytów." }, { status: 403 });
     }
 
-    // Pobranie 1 kredytu
     const newCredits = originalCredits - 1;
     const { error: updateError } = await supabaseAdmin
       .from("profiles")
@@ -64,10 +62,10 @@ export async function POST(req: NextRequest) {
 
     creditDeducted = true;
 
-    const systemPrompt = `Jesteś polskim licealistą przygotowującym się do matury 2026 z języka polskiego na poziomie podstawowym (Formuła 2023). Twoim zadaniem jest napisanie przykładowej rozprawki na podany temat.
+    const systemPrompt = `Jesteś polskim licealistą przygotowującym się do matury 2026 z języka polskiego na poziomie podstawowym (Formuła 2023). Twoim zadaniem jest napisanie przykładowego, wzorcowego wypracowania na podany przez użytkownika temat.
 
 STYL I JĘZYK:
-- Pisz naturalnym, poprawnym i bezpośrednim językiem ambitnego ucznia. Unikaj przesadnie archaicznego, kwiecistego stylu naukowego, ale pilnuj wysokiej poprawności językowej, ortograficznej i interpunkcyjnej. Tekst ma brzmieć autentycznie, jak wypracowanie napisane przez inteligentnego ucznia szkoły średniej, który dobrze rozumie lektury i argumentuje w sposób przejrzysty i logiczny.
+- Pisz naturalnym, poprawnym i bezpośrednim językiem ambitnego ucznia. Unikaj przesadnie archaicznego, kwiecistego stylu naukowego, ale pilnuj wysokiej poprawności językowej, ortograficznej i interpunkcyjnej. Tekst ma brzmieć autentycznie, jak wypracowanie napisane przez inteligentnego ucznia szkoły średniej, który doskonale rozumie lektury i argumentuje w sposób przejrzysty i logiczny.
 
 WYMAGANIA DOTYCZĄCE LEKTUR (MATURA 2026):
 - Odwołaj się wyłącznie do lektur obowiązkowych z podstawy programowej 2026 dla poziomu podstawowego (wybierz dokładnie 2 utwory, np.: Lalka Bolesława Prusa, Dziady cz. III Adama Mickiewicza, Zbrodnia i kara Fiodora Dostojewskiego, Dżuma Alberta Camusa, Rok 1984 George'a Orwella, Wesele Stanisława Wyspiańskiego, Makbet Williama Szekspira, Chłopi Władysława Reymonta).
@@ -98,13 +96,33 @@ Zwróć odpowiedź WYŁĄCZNIE jako obiekt JSON o strukturze zgodnej z poniższy
       systemInstruction: systemPrompt,
     });
 
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: `Temat rozprawki: "${topic}"` }] }],
-      generationConfig: {
-        responseMimeType: "application/json",
-        temperature: 0.35,
-      },
-    });
+    // --- SYSTEM AUTOMATYCZNEGO PONAWIANIA PRÓB (RETRY ON 503) ---
+    let result: any;
+    const maxRetries = 3;
+    let delay = 5000; // Czekamy 5 sekund w razie przeciążenia
+
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        console.log(`-> Wywołanie Gemini 2.5 Flash - Generowanie Przykładowej (Próba ${i + 1}/${maxRetries})...`);
+        result = await model.generateContent({
+          contents: [{ role: "user", parts: [{ text: `Temat rozprawki: "${topic}"` }] }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            temperature: 0.35,
+          },
+        });
+        break;
+      } catch (error: any) {
+        const is503 = error?.message?.includes("503") || error?.message?.includes("UNAVAILABLE") || error?.status === 503;
+        if (is503 && i < maxRetries - 1) {
+          console.warn(`[PRZECIĄŻENIE GENERATORA 503] Serwer obciążony. Automatyczny retry za ${delay / 1000}s...`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          delay *= 1.5;
+          continue;
+        }
+        throw error;
+      }
+    }
 
     const responseText = result.response.text();
     let cleanJson = responseText.trim();
