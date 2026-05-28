@@ -144,6 +144,8 @@ Ten sam błąd ortograficzny w tym samym wyrazie / wyrazach z tej samej rodziny 
 
 Dysleksja: 2→0-15 | 1→16-30 | 0→≥31
 Brak cudzysłowu przy tytule = 1 błąd interpunkcyjny (jeśli konsekwentny w tym samym tytule – liczone raz).
+Uwaga!: nie zwracaj uwagi na przecinek postawiony o jedną spację za dużo albo o niepoprawny cudzysłów czy użycie za krótkiej pauzy. Traktuj tekst bardziej jako pisany przez ucznia na kartce, ale zwracaj uwagi na błędy gramatyczne!
+
 
 === ZASADY SZCZEGÓŁOWE (WAŻNE) ===
 
