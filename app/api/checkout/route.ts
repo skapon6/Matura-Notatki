@@ -76,7 +76,7 @@ export async function POST(request: Request) {
 
     } else {
       // 2. KLASYCZNA SUBSKRYPCJA (Używa stałych Price ID z .env)
-      mode = 'subscription';
+      mode = 'payment';
       let priceId = '';
 
       if (tier === 'mini') priceId = process.env.STRIPE_PRICE_MINI!;
