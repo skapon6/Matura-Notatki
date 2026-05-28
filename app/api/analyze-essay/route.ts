@@ -183,6 +183,7 @@ KROK 5 – JW: Język (0–11 pkt):
 a) Zakres językowy (szeroki/zadowalający/wąski) → policz błędy → odczytaj punkty z tabeli 4a
 b) Policz błędy ortograficzne → tabela 4b
 c) Policz błędy interpunkcyjne → tabela 4c
+Uwaga!: nie zwracaj uwagi na przecinek postawiony o jedną spację za dużo albo o niepoprawny cudzysłów czy użycie za krótkiej pauzy. Traktuj tekst bardziej jako pisany przez ucznia na kartce, ale zwracaj uwagi na błędy gramatyczne!
 ${similarEssaysContext}
 
 === FORMAT ODPOWIEDZI ===
