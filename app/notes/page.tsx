@@ -8,7 +8,7 @@ import { playSound } from "../lib/sounds";
 import { useLofi } from "../context/LofiContext";
 import { getThemeClasses } from "../lib/theme";
 import { CozyNotification } from "../components/CozyNotification";
-
+import { CozyGlowCard } from "../components/CozyGlowCard";
 
 export default function WszystkieNotatkiPage() {
   const router = useRouter();
@@ -145,28 +145,33 @@ export default function WszystkieNotatkiPage() {
     return true;
   });
 
-      // GLOBALNY INTELIGENTNY NASŁUCHIWAĆ KLIKNIĘĆ
-    useEffect(() => {
-      const handleGlobalClick = (event: MouseEvent) => {
+  // BEZPIECZNY, ODPORNY NA BŁĘDY NASŁUCHIWAČ KLIKNIĘĆ
+  useEffect(() => {
+    const handleGlobalClick = (event: MouseEvent) => {
+      try {
         const target = event.target as HTMLElement;
+        if (!target) return;
 
         const isInteractive = 
           target.closest("button") || 
           target.closest("a") || 
           target.closest("[role='button']") ||
-          window.getComputedStyle(target).cursor === "pointer";
+          (target.style && window.getComputedStyle(target).cursor === "pointer");
 
         if (isInteractive) {
           playSound("click");
         }
-      };
+      } catch (err) {
+        // Ciche zignorowanie błędu, np. w przypadku nietypowych ikon SVG
+      }
+    };
 
-      window.addEventListener("click", handleGlobalClick);
+    window.addEventListener("click", handleGlobalClick);
 
-      return () => {
-        window.removeEventListener("click", handleGlobalClick);
-      };
-    }, []);
+    return () => {
+      window.removeEventListener("click", handleGlobalClick);
+    };
+  }, []);
 
   // Obsługa kliknięcia w notatkę (zabezpieczenie Premium)
   const handleOpenNote = (note: any) => {
@@ -178,7 +183,6 @@ export default function WszystkieNotatkiPage() {
     // Jeśli notatka jest darmowa (is_free === true) lub użytkownik ma Premium (hasAccess === true)
     if (note.is_free || hasAccess) {
       playSound("success");
-      // Przekierowanie do renderowania notatki HTML
       router.push(`/notes/${note.slug}`);
     } else {
       triggerNotification(
@@ -198,11 +202,14 @@ export default function WszystkieNotatkiPage() {
         .animate-slide-in { animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
       `}} />
 
-      {/* HEADER SECTION (Identyczny jak na głównej - zapobiega przerwaniu Lo-Fi!) */}
+      {/* HEADER SECTION */}
       <header className={`border-b ${currentTheme.cardBorder} px-4 sm:px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 backdrop-blur-md sticky top-0 z-40 transition-colors duration-500`}>
         <div className="flex w-full md:w-auto items-center justify-between md:justify-start gap-4">
           <button
-            onClick={() => router.push("/")}
+            onClick={() => {
+              playSound("click"); // WYMUSZONE ODTWORZENIE PRZED STRZAŁEM STRONY
+              router.push("/");
+            }}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 transition-all text-xs font-medium ${currentTheme.subText} hover:text-stone-100`}
           >
             ← Wróć do kącika
@@ -220,7 +227,7 @@ export default function WszystkieNotatkiPage() {
 
         {/* Globalny Odtwarzacz Lofi */}
         <div className="flex w-full md:w-auto items-center justify-between md:justify-end gap-3 sm:gap-4 border-t md:border-t-0 border-stone-800/40 pt-3 md:pt-0">
-          <div className={`flex items-center gap-3 sm:gap-4 px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} transition-all select-none shadow-md`}>
+          <div className={`flex items-center gap-2 sm:gap-3 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} transition-all duration-300 select-none shadow-md hover:border-amber-500/20 hover:bg-stone-900/30 hover:shadow-lg hover:shadow-amber-500/5`}>
             <button type="button" onClick={handlePrevTrack} className="text-stone-400 hover:text-amber-400 p-1 rounded-xl hover:bg-stone-800/40 transition-colors">
               <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.334 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z" />
@@ -247,7 +254,7 @@ export default function WszystkieNotatkiPage() {
               </svg>
             </button>
             <div className="hidden sm:flex items-center gap-2 sm:gap-2.5 ml-1 border-l border-stone-800/80 pl-2 sm:pl-3">
-              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-stone-500" viewBox="0 0 20 20" fill="currentColor">
+              <svg className="w-4 h-4 text-stone-500" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 12H3a1 1 0 01-1-1V9a1 1 0 011-1h1.586l3.707-3.707a1 1 0 011.09-.217z" clipRule="evenodd" />
               </svg>
               <input 
@@ -268,7 +275,7 @@ export default function WszystkieNotatkiPage() {
       {/* RENDEROWANIE ZAWARTOŚCI */}
       <main className="max-w-7xl mx-auto w-full p-6 flex flex-col gap-6 flex-1 select-none animate-slide-in">
         
-        {/* PANEL WYSZUKIWANIA I FILTROWANIA (Identyczny jak na głównej!) */}
+        {/* PANEL WYSZUKIWANIA I FILTROWANIA */}
         <div className={`p-6 rounded-3xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} shadow-md flex flex-col gap-4`}>
           
           {/* Input Wyszukiwarki */}
@@ -302,7 +309,7 @@ export default function WszystkieNotatkiPage() {
 
         </div>
 
-        {/* SIATKA KART Z NOTATKAMI (Dla komputerów 3 kolumny, responsywne) */}
+        {/* SIATKA KART Z NOTATKAMI */}
         {loading ? (
           <div className="text-center py-16 text-stone-500 text-sm">
             Wczytywanie pełnej bazy notatek...
@@ -319,9 +326,10 @@ export default function WszystkieNotatkiPage() {
               const isLocked = !note.is_free && !hasAccess;
               
               return (
-                <div 
+                <CozyGlowCard 
                   key={note.id}
-                  className={`p-6 rounded-3xl border ${currentTheme.cardBorder} bg-[#161210] flex flex-col justify-between gap-4 shadow-lg hover:border-stone-800 transition-all`}
+                  currentTheme={currentTheme}
+                  className="p-6 flex flex-col justify-between gap-4 shadow-lg"
                 >
                   <div className="flex flex-col gap-3">
                     <div className="flex items-center justify-between">
@@ -352,11 +360,10 @@ export default function WszystkieNotatkiPage() {
                   <div className="flex flex-col gap-3 mt-2">
                    {/* Lista tagów (chips) */}
                     {Array.isArray(note.chips) && (
-                      <div className="flex flex-wrap gap-1.5"> {/* Zwiększony odstęp między hasztagami */}
+                      <div className="flex flex-wrap gap-1.5">
                         {note.chips.map((chip: string) => (
                           <span 
                             key={chip}
-                            // ZMIANA: text-xs (większy tekst), px-2.5 (większa szerokość), text-stone-400 (lepszy kontrast)
                             className="text-xs text-stone-400 bg-stone-950 px-2.5 py-1 rounded-md border border-stone-900 transition-colors hover:text-stone-200"
                           >
                             #{chip}
@@ -384,7 +391,7 @@ export default function WszystkieNotatkiPage() {
                       </a>
                     )}
                   </div>
-                </div>
+                </CozyGlowCard>
               );
             })}
           </div>
