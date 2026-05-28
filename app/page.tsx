@@ -27,6 +27,51 @@ import { HelpModal } from "./components/HelpModal";
 // Import globalnego odtwarzacza Lo-Fi
 import { useLofi } from "./context/LofiContext";
 
+// LOKALNY POMOCNICZY KOMPONENT DO INTERAKTYWNEGO EFEKTU ROZŚWIETLENIA (GLOW)
+function CozyGlowCard({
+  children,
+  className = "",
+  currentTheme,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  currentTheme: any;
+}) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [coords, setCoords] = useState({ x: 0, y: 0 });
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    setCoords({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    });
+  };
+
+  return (
+    <div
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className={`relative overflow-hidden rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} transition-all duration-300 hover:border-amber-500/20 hover:shadow-lg ${className}`}
+    >
+      {/* Warstwa podświetlenia podążająca za myszką */}
+      {isHovered && (
+        <div
+          className="pointer-events-none absolute -inset-px opacity-100 transition-opacity duration-300"
+          style={{
+            background: `radial-gradient(280px circle at ${coords.x}px ${coords.y}px, rgba(245, 158, 11, 0.05), transparent 80%)`,
+          }}
+        />
+      )}
+      <div className="relative z-10">{children}</div>
+    </div>
+  );
+}
+
 export default function Home() {
   const router = useRouter();
 
@@ -376,7 +421,7 @@ export default function Home() {
       `}} />
 
       {/* HEADER SECTION */}
-        <header className={`border-b ${currentTheme.cardBorder} px-4 sm:px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 backdrop-blur-md sticky top-0 z-40 transition-colors duration-500`}>  
+      <header className={`border-b ${currentTheme.cardBorder} px-4 sm:px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 backdrop-blur-md sticky top-0 z-40 transition-colors duration-500`}>  
         {/* Lewa strefa: Ustawienia Klimatu oraz logo na komórkach */}
         <div className="flex w-full md:w-auto items-center justify-between md:justify-start gap-4">
           <div className="flex md:hidden items-center gap-2 select-none">
@@ -510,8 +555,9 @@ export default function Home() {
         {/* Prawa strefa: Panel Lo-Fi oraz Profil użytkownika */}
         <div className="flex w-full md:w-auto items-center justify-between md:justify-end gap-3 sm:gap-4 border-t md:border-t-0 border-stone-800/40 pt-3 md:pt-0">
           
-        {/* LEKKO ZMNIEJSZONY PANEL MUZYKI LO-FI Z EFEKTEM HOVER */}
-          <div className={`flex items-center gap-2 sm:gap-3 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} transition-all duration-300 select-none shadow-md hover:border-amber-500/20 hover:bg-stone-900/30 hover:shadow-lg hover:shadow-amber-500/5`}>            {/* Poprzedni utwór */}
+          {/* LEKKO ZMNIEJSZONY PANEL MUZYKI LO-FI Z EFEKTEM HOVER */}
+          <div className={`flex items-center gap-2 sm:gap-3 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} transition-all duration-300 select-none shadow-md hover:border-amber-500/20 hover:bg-stone-900/30 hover:shadow-lg hover:shadow-amber-500/5`}>
+            {/* Poprzedni utwór */}
             <button 
               type="button"
               onClick={handlePrevTrack} 
@@ -733,7 +779,8 @@ export default function Home() {
               {/* LICZNIK DO MATURY */}
               <MaturaCountdown currentTheme={currentTheme} />
 
-              <div className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-4 transition-colors duration-500`}>
+              {/* NAWIGACJA W OPAKOWANIU GLOW */}
+              <CozyGlowCard currentTheme={currentTheme} className="p-4">
                 <h3 className="text-xs uppercase tracking-widest text-amber-500 font-semibold mb-3 px-1">
                   Nawigacja
                 </h3>
@@ -785,10 +832,10 @@ export default function Home() {
                     </span>
                   </button>
                 </nav>
-              </div>
+              </CozyGlowCard>
 
-              {/* ZAPAMIĘTANE CYTATY */}
-              <div className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-5 transition-colors duration-500 flex flex-col gap-3`}>
+              {/* ZAPAMIĘTANE CYTATY W OPAKOWANIU GLOW */}
+              <CozyGlowCard currentTheme={currentTheme} className="p-5 flex flex-col gap-3">
                 <h3 className="text-xs uppercase tracking-widest text-amber-500 font-semibold px-1 flex items-center justify-between">
                   <span>Zapamiętane cytaty ⭐</span>
                   <span className="text-[10px] bg-stone-900 border border-stone-800 text-amber-500/80 px-2 py-0.5 rounded-full">
@@ -806,10 +853,10 @@ export default function Home() {
                   onOpenModal={handleOpenPersonalNotes}
                 />
                 </div>
-              </div>
+              </CozyGlowCard>
 
-              {/* STREFA NAUKI AI 🤖 Z DWOMA PRZYCISKAMI */}
-              <div className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-5 relative overflow-hidden transition-colors duration-500 group`}>
+              {/* STREFA NAUKI AI W OPAKOWANIU GLOW */}
+              <CozyGlowCard currentTheme={currentTheme} className="p-5 group">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-purple-600/5 rounded-full blur-2xl group-hover:bg-purple-600/10 transition-all duration-500" />
                 
                 <div className="flex justify-between items-start">
@@ -888,7 +935,7 @@ export default function Home() {
                     )}
                   </div>
                 )}
-              </div>
+              </CozyGlowCard>
             </section>
 
             {/* COLUMN 2: CENTRAL NOTES BROWSER */}

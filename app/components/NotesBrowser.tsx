@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { ThemeClasses } from "../lib/theme";
-import Link from "next/link"; // <-- DODANO IMPORT LINKU
+import Link from "next/link";
 
 const epochKeywords: Record<string, string[]> = {
   "Antyk": ["antyk", "starożytność", "mitologia", "homer", "sofokles", "biblia", "mit", "antygona", "król edyp", "iliada", "odyseja"],
@@ -16,6 +16,63 @@ const epochKeywords: Record<string, string[]> = {
   "Dwudziestolecie": ["dwudziestolecie", "ferdydurke", "gombrowicz", "przedwiośnie", "żeromski", "granica", "nałkowska", "skamander", "schulz", "sklepy cynamonowe"],
   "Wojna i okupacja": ["wojna", "okupacja", "kamienie na szaniec", "baczyński", "borowski", "opoowiadania borowskiego", "inny świat", "grudziński"],
   "Współczesność": ["współczesność", "tango", "mrożek", "ocalenie", "szymborska", "różewicz", "herbert", "rok 1984", "orwell", "dżuma", "camus"]
+};
+
+// LOKALNY KOMPONENT POMOCNICZY DLA LINKÓW NOTATEK Z EFEKTEM PODĄŻANIA ROZŚWIETLENIA ZA MYSZKĄ
+const CozyGlowLinkCard = ({
+  children,
+  href,
+  onClick,
+  target,
+  rel,
+  className = "",
+  currentTheme,
+}: {
+  children: React.ReactNode;
+  href: string;
+  onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
+  target?: string;
+  rel?: string;
+  className?: string;
+  currentTheme: any;
+}) => {
+  const cardRef = React.useRef<HTMLAnchorElement>(null);
+  const [coords, setCoords] = React.useState({ x: 0, y: 0 });
+  const [isHovered, setIsHovered] = React.useState(false);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    setCoords({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    });
+  };
+
+  return (
+    <a
+      ref={cardRef}
+      href={href}
+      onClick={onClick}
+      target={target}
+      rel={rel}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className={`relative overflow-hidden rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} transition-all duration-300 hover:border-amber-500/20 hover:shadow-lg ${className}`}
+    >
+      {/* Warstwa podświetlenia podążająca za myszką */}
+      {isHovered && (
+        <div
+          className="pointer-events-none absolute -inset-px opacity-100 transition-opacity duration-300"
+          style={{
+            background: `radial-gradient(280px circle at ${coords.x}px ${coords.y}px, rgba(245, 158, 11, 0.05), transparent 80%)`,
+          }}
+        />
+      )}
+      <div className="relative z-10 w-full h-full flex flex-col justify-between">{children}</div>
+    </a>
+  );
 };
 
 interface NotesBrowserProps {
@@ -62,6 +119,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
     return note.era ? `Epoka: ${note.era}` : '';
   };
 
+  // 1. Najpierw filtrujemy całą bazę notatek przekazaną z góry
   const filteredNotes = notes.filter((note) => {
     const titleLower = (note.title || "").toLowerCase();
     const contentString = typeof note.content === 'string' ? note.content : JSON.stringify(note.content || "");
@@ -83,6 +141,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
     return matchesSearch && matchesSubject;
   });
 
+  // 2. Dopiero tutaj (poza filtrowaniem) nakładamy limit wyświetlania, np. na stronie głównej
   const displayedNotes = limit ? filteredNotes.slice(0, limit) : filteredNotes;
 
   return (
@@ -147,7 +206,6 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
               {displayedNotes.length} z {notes.length}
             </span>
           </h3>
-          {/* ZMIENIONO Z <a> NA <Link> */}
           <Link href="/notes" className="text-xs text-amber-500/80 hover:text-amber-400 transition-colors font-medium">
             zobacz wszystkie →
           </Link>
@@ -158,8 +216,9 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
             ☕ Parzenie herbaty i pobieranie notatek z Supabase...
           </div>
         ) : filteredNotes.length > 0 ? (
+          /* OPAKOWANE PRZEZ COZYGLOWLINKCARD ZAMIAST ZWYKŁEGO <a> */
           displayedNotes.map((note) => {
-            const handleNoteClick = (e: React.MouseEvent) => {
+            const handleNoteClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
               if (!hasAccess && !note.is_free) {
                 e.preventDefault();
                 triggerNotification("🔒 Ta notatka wymaga konta Premium. Kliknij 'Uzyskaj Pełny Dostęp' u góry strony, aby odblokować całą bazę notatek!", "error");
@@ -167,15 +226,16 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
             };
 
             return (
-              <a
+              <CozyGlowLinkCard
                 href={`/notes/${note.slug}`}
                 onClick={handleNoteClick}
                 target="_blank"
                 rel="noopener noreferrer"
                 key={note.id}
-                className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-5 hover:scale-[1.01] hover:shadow-lg transition-all duration-300 flex flex-col justify-between relative overflow-hidden group`}
+                currentTheme={currentTheme}
+                className="p-5 hover:scale-[1.01] group"
               >
-                <div className="flex items-center justify-between text-[11px] font-semibold text-stone-400">
+                <div className="flex items-center justify-between text-[11px] font-semibold text-stone-400 w-full">
                   <div className="flex items-center gap-1.5">
                     <span className="text-base">📕</span>
                     <span className="uppercase tracking-wider text-amber-500/80">{note.subject || "Język Polski"}</span>
@@ -189,19 +249,22 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
                     </span>
                   </div>
                 </div>
-                <h4 className="text-base font-bold text-stone-100 font-serif mt-3 tracking-tight group-hover:text-amber-200 transition-colors">
+                
+                <h4 className="text-base font-bold text-stone-100 font-serif mt-3 tracking-tight group-hover:text-amber-200 transition-colors w-full text-left">
                   {note.title} {!hasAccess && !note.is_free && "🔒"}
                 </h4>
-                <p className="text-xs text-stone-400/90 leading-relaxed mt-2 line-clamp-3">
+                
+                <p className="text-xs text-stone-400/90 leading-relaxed mt-2 line-clamp-3 w-full text-left">
                   {getExcerpt(note)}
                 </p>
-                <div className="border-t border-stone-800/40 mt-4 pt-3 flex items-center justify-between text-xs text-stone-500">
+                
+                <div className="border-t border-stone-800/40 mt-4 pt-3 flex items-center justify-between text-xs text-stone-500 w-full">
                   <span>Zaktualizowano niedawno</span>
                   <span className={`text-amber-500/80 group-hover:text-amber-400 font-medium flex items-center gap-1 transition-colors`}>
                     {hasAccess || note.is_free ? "Otwórz notatkę 📚" : "Odblokuj notatkę 🔒"}
                   </span>
                 </div>
-              </a>
+              </CozyGlowLinkCard>
             );
           })
         ) : (
