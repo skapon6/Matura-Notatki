@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     }
     creditDeducted = true;
 
-    // 5. --- KROK RAG: GENEROWANIE WEKTORA (EMBEDDING) NAJPIERW (Z OBSŁUGĄ RETRY) ---
+    // 5. --- KROK RAG: GENEROWANIE WEKTORA (EMBEDDING) NAJPIERW (Z OBSŁUGĄ RETRY DLA 503 I 429) ---
     let embeddingVector: number[] | null = null;
     let embedRetries = 3;
     let embedDelay = 3000;
@@ -89,9 +89,17 @@ export async function POST(req: NextRequest) {
           break;
         }
       } catch (embedError: any) {
-        const is503 = embedError?.message?.includes("503") || embedError?.message?.includes("UNAVAILABLE") || embedError?.status === 503;
-        if (is503 && i < embedRetries - 1) {
-          console.warn(`[PRZECIĄŻENIE EMBEDDING 503] Ponawianie próby za ${embedDelay / 1000}s...`);
+        // Sprawdzamy przeciążenie (503) lub limit częstotliwości (429)
+        const isRetryable = 
+          embedError?.status === 429 || 
+          embedError?.status === 503 || 
+          embedError?.message?.includes("429") || 
+          embedError?.message?.includes("503") || 
+          embedError?.message?.includes("RESOURCE_EXHAUSTED") || 
+          embedError?.message?.includes("UNAVAILABLE");
+
+        if (isRetryable && i < embedRetries - 1) {
+          console.warn(`[LIMIT/PRZECIĄŻENIE EMBEDDING] Ponawianie próby za ${embedDelay / 1000}s...`);
           await new Promise((resolve) => setTimeout(resolve, embedDelay));
           embedDelay *= 1.5;
           continue;
@@ -116,7 +124,7 @@ export async function POST(req: NextRequest) {
           console.error("!!! Błąd wywołania RPC match_essays:", rpcError);
         } else if (similar && similar.length > 0) {
           similarEssaysContext = `\n\n=== REPREZENTATYWNE PRZYKŁADY Z BAZY WIEDZY (WZORCE OCENIANIA) ===
-Poniżej znajdują się podobne rozprawki, które zostały już wcześniej ocenione i zatwierdzone przez administratora lub starszego egzaminatora. Twoja aktualna ocena musi być w pełni spójna z poniższymi wzorcami pod względem surowości i kryteriów. Naśladuj ich stil oceniania i zachowaj konsekwencję punktacji:\n`;
+Poniżej znajdują się podobne rozprawki, które zostały już wcześniej ocenione i zatwierdzone przez administratora lub starszego egzaminatora. Twoja aktualna ocena musi być w pełni spójna z poniższymi wzorcami pod względem surowości i kryteriów. Naśladuj ich styl oceniania i zachowaj konsekwencję punktacji:\n`;
 
           similar.forEach((item: any, index: number) => {
             similarEssaysContext += `
@@ -175,7 +183,6 @@ KROK 5 – JW: Język (0–11 pkt):
 a) Zakres językowy (szeroki/zadowalający/wąski) → policz błędy → odczytaj punkty z tabeli 4a
 b) Policz błędy ortograficzne → tabela 4b
 c) Policz błędy interpunkcyjne → tabela 4c
-Ważna informacja: nie doczepiaj się do np dwukropków czy przecinka postawionego jedną spację za daleko albo użyetgo złego cudzysłowia. Traktuj to jak bardziej tekst pisany przez ucznia na kartce a nie na komputerze
 ${similarEssaysContext}
 
 === FORMAT ODPOWIEDZI ===
@@ -241,9 +248,17 @@ Zwróć WYŁĄCZNIE obiekt JSON. Bez znaczników markdown, bez \`\`\`json.
         });
         break;
       } catch (error: any) {
-        const is503 = error?.message?.includes("503") || error?.message?.includes("UNAVAILABLE") || error?.status === 503;
-        if (is503 && i < textRetries - 1) {
-          console.warn(`[PRZECIĄŻENIE GEneratora 503] Model przeciążony. Automatyczny retry za ${textDelay / 1000}s...`);
+        // Dodana obsługa błędu 429 i limitu RESOURCE_EXHAUSTED
+        const isRetryable = 
+          error?.status === 429 || 
+          error?.status === 503 || 
+          error?.message?.includes("429") || 
+          error?.message?.includes("503") || 
+          error?.message?.includes("RESOURCE_EXHAUSTED") || 
+          error?.message?.includes("UNAVAILABLE");
+
+        if (isRetryable && i < textRetries - 1) {
+          console.warn(`[LIMIT/PRZECIĄŻENIE GENERATORA 503/429] Model zablokowany. Automatyczny retry za ${textDelay / 1000}s...`);
           await new Promise((resolve) => setTimeout(resolve, textDelay));
           textDelay *= 1.5;
           continue;
