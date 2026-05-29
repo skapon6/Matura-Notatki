@@ -69,7 +69,7 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: dbError.message }, { status: 500 });
         }
 
-      // 2. OBSŁUGA ZAKUPU SUBSKRYPCJI (POPRAWIONA LOGIKA - DODANO TOKENY)
+      // 2. OBSŁUGA ZAKUPU SUBSKRYPCJI (POPRAWIONA LOGIKA - DODANO TOKENY I 365 DNI WAŻNOŚCI)
       } else if (purchaseType === 'subscription') {
         const tier = metadata.subscriptionTier;
         
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
         } else if (tier === 'medium') {
           expirationDate.setDate(expirationDate.getDate() + 90);
         } else if (tier === 'premium') {
-          expirationDate.setFullYear(expirationDate.getFullYear() + 100); // Lifetime
+          expirationDate.setDate(expirationDate.getDate() + 365); // Ustawienie ważności na dokładnie 365 dni (1 rok) [1]
         }
 
         try {
@@ -101,7 +101,7 @@ export async function POST(request: Request) {
           } else if (tier === 'medium') {
             tokenIncrement = 10;
           } else if (tier === 'premium') {
-            tokenIncrement = 10;
+            tokenIncrement = 20; // Przyznanie 20 tokenów na start przy zakupie Premium (zamiast 10)
           }
 
           const newCredits = currentCredits + tokenIncrement;
@@ -112,7 +112,7 @@ export async function POST(request: Request) {
             .update({
               subscription_status: tier,
               expires_at: expirationDate.toISOString(),
-              essay_credits: newCredits // <-- POPRAWKA
+              essay_credits: newCredits
             })
             .eq('id', userId);
 

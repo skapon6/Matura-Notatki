@@ -1,3 +1,4 @@
+// app/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -205,13 +206,13 @@ export default function Home() {
     }
   }, []);
 
-  // Na stronie głównej (tam gdzie masz stan cozyTheme):
-    useEffect(() => {
-      const savedTheme = localStorage.getItem("app_theme") as CozyTheme;
-      if (savedTheme) {
-        setCozyTheme(savedTheme);
-      }
-    }, []);
+  // Wczytywanie zapisanego motywu przy załadowaniu strony
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("app_theme") as CozyTheme;
+    if (savedTheme) {
+      setCozyTheme(savedTheme);
+    }
+  }, []);
 
   // 7. GLOBALNY INTELIGENTNY NASŁUCHIWAĆ KLIKNIĘĆ (DLA DŹWIĘKU CLICK)
   useEffect(() => {
@@ -258,7 +259,7 @@ export default function Home() {
     }
   };
 
-  // Bezpieczna nawigacja (OBSŁUGUJE TERAZ RÓWNIEŻ PRZEJŚCIE DO /mapa-mysli)
+  // Bezpieczna nawigacja
   const handlePremiumNavigation = (path: string) => {
     if (!user) {
       triggerNotification("🔑 Aby skorzystać z tej funkcji, najpierw się zaloguj!", "info");
@@ -335,7 +336,7 @@ export default function Home() {
               <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl z-0 pointer-events-none" />
               <div className="absolute bottom-0 left-0 w-80 h-80 bg-orange-600/5 rounded-full blur-3xl z-0 pointer-events-none" />
 
-              {/* ZOPTYMALIZOWANY I ZMNIEJSZONY ZNAK WODNY */}
+              {/* ZNAK WODNY */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden z-0">
                 <span className="text-xl sm:text-2xl md:text-[3.5vw] font-black uppercase tracking-[0.18em] text-amber-500/[0.04] whitespace-nowrap leading-none font-serif -rotate-6">
                   Wiedza Szyta na Miarę
@@ -360,7 +361,7 @@ export default function Home() {
                 ) : (
                   <>
                     <h2 className="text-3xl sm:text-4xl font-bold text-stone-100 mt-3 leading-tight font-serif tracking-tight">
-                      Odblokuj pełny dostęp Premium.
+                      Odblokuj pełny dostęp.
                     </h2>
                     <p className={`mt-3 text-sm sm:text-base ${currentTheme.subText} leading-relaxed`}>
                       Masz darmowe konto. Wybierz jeden z pakietów, aby odblokować pełny zasób wiedzy:
@@ -390,7 +391,7 @@ export default function Home() {
                 </div>
                 <span className="text-[11px] text-stone-500 mt-1">
                   {!hasAccess && "Zyskaj pełną moc nauki"}
-                  {hasAccess && (profile?.subscription_status === 'premium' || !['mini', 'medium'].includes(profile?.subscription_status)) && "Dostęp dożywotni"}
+                  {hasAccess && (profile?.subscription_status === 'premium' || !['mini', 'medium'].includes(profile?.subscription_status)) && "Dostęp na 365 dni"}
                 </span>
               </div>
             </div>
@@ -426,7 +427,6 @@ export default function Home() {
                       <span className="text-lg">🧠</span>
                       <span className="text-sm font-medium group-hover:text-amber-400 transition-colors">Mapa Myśli</span>
                     </div>
-                    {/* Zmiana wyglądu plakietki w zależności od poziomu konta */}
                     <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
                       hasAccess 
                         ? 'bg-amber-950/50 border-amber-900/60 text-amber-400 font-semibold' 
@@ -490,9 +490,8 @@ export default function Home() {
               </CozyGlowCard>
             </section>
 
-            {/* COLUMN 2: CENTRAL NOTES BROWSER ONLY */}
+            {/* COLUMN 2: CENTRAL NOTES BROWSER */}
             <section className="lg:col-span-6 flex flex-col gap-5">
-              
               <NotesBrowser notes={notes} loading={loading} hasAccess={hasAccess} limit={5} currentTheme={currentTheme} triggerNotification={triggerNotification} />
               
               {!loading && notes.length > 5 && (
@@ -503,7 +502,6 @@ export default function Home() {
                   </Link>
                 </div>
               )}
-              
             </section>
 
             {/* COLUMN 3: STUDY CORNER SIDEBAR */}
