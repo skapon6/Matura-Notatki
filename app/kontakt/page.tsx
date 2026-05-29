@@ -159,7 +159,7 @@ export default function KontaktPage() {
               <div className="flex flex-col gap-3">
                 {/* TikTok */}
                 <a
-                  href="https://www.tiktok.com/@wiedza_szyta_na_miare" 
+                  href="https://www.tiktok.com/@wiedzaszytanamiare" 
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => playSound("click")}
@@ -168,13 +168,13 @@ export default function KontaktPage() {
                   <span className="text-2xl">📱</span>
                   <div className="flex flex-col text-left">
                     <span className="text-xs font-bold text-stone-200 group-hover:text-amber-400 transition-colors">TikTok</span>
-                    <span className="text-[10px] text-stone-500">@wiedza_szyta_na_miare</span>
+                    <span className="text-[10px] text-stone-500">@wiedzaszytanamiare</span>
                   </div>
                 </a>
 
                 {/* Instagram */}
                 <a
-                  href="https://www.instagram.com/wiedza_szyta_na_miare" 
+                  href="https://www.instagram.com/wiedzaszytanamiare" 
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => playSound("click")}
@@ -183,7 +183,7 @@ export default function KontaktPage() {
                   <span className="text-2xl">📸</span>
                   <div className="flex flex-col text-left">
                     <span className="text-xs font-bold text-stone-200 group-hover:text-amber-400 transition-colors">Instagram</span>
-                    <span className="text-[10px] text-stone-500">@wiedza_szyta_na_miare</span>
+                    <span className="text-[10px] text-stone-500">@wiedzaszytanamiare</span>
                   </div>
                 </a>
               </div>

@@ -473,8 +473,21 @@ export default function Home() {
                 <h3 className="text-base font-bold text-stone-100 mt-4 font-serif">Strefa Nauka AI 🤖</h3>
                 <p className="text-xs text-stone-400 mt-2 leading-relaxed">Wirtualni asystenci pomogą sprawdzić Twoje wypracowanie lub przeprowadzić próbny egzamin ustny na żywo według kryteriów CKE!</p>
                 <div className="flex flex-col gap-2.5 mt-4">
-                  <button onClick={() => handlePremiumNavigation("/ocenianie-rozprawek")} className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2">✍️ Edytor Rozprawek AI (1 Token)</button>
-                  <button onClick={() => handlePremiumNavigation("/matura-ustna")} className="w-full py-2.5 bg-stone-900 border border-stone-800 text-stone-300 hover:bg-stone-850 hover:text-stone-100 font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2">🎙️ Matura Ustna AI (3 Tokeny)</button>
+                  {/* Pierwszy przycisk - Fioletowy Gradient */}
+                  <button 
+                    onClick={() => handlePremiumNavigation("/ocenianie-rozprawek")} 
+                    className="w-full py-2.5 bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20"
+                  >
+                    ✍️ Edytor Rozprawek AI (1 Token)
+                  </button>
+
+                  {/* Drugi przycisk - Niebieski Gradient */}
+                  <button 
+                    onClick={() => handlePremiumNavigation("/matura-ustna")} 
+                    className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
+                  >
+                    🎙️ Matura Ustna AI (3 Tokeny)
+                  </button>
                 </div>
                 {user && (
                   <div className="mt-4 pt-4 border-t border-stone-800/60 flex flex-col gap-3">
@@ -482,7 +495,12 @@ export default function Home() {
                       <span className="text-[10px] text-purple-300 font-semibold uppercase tracking-wider">Pozostałe tokeny:</span>
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold font-mono text-purple-400 bg-stone-900 px-2 py-0.5 rounded-md border border-purple-900/40">{profile?.essay_credits ?? 0} tokeny</span>
-                        <button onClick={() => setIsTokenModalOpen(true)} className="text-[9px] uppercase tracking-wider font-extrabold bg-amber-500 text-stone-950 px-2 py-1 rounded-md hover:bg-amber-400 transition-all shadow">Doładuj 🪙</button>
+                        <button 
+                          onClick={() => setIsTokenModalOpen(true)} 
+                          className="text-[9px] uppercase tracking-wider font-extrabold bg-gradient-to-br from-amber-300 to-amber-500 text-stone-950 px-2 py-1 rounded-md hover:from-amber-200 hover:to-amber-400 transition-all shadow-md shadow-amber-500/20 flex items-center gap-1.5"
+                        >
+                          Doładuj <span className="text-[11px]">🪙</span>
+                        </button>
                       </div>
                     </div>
                   </div>

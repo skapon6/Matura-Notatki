@@ -11,14 +11,13 @@ import { getThemeClasses, CozyTheme } from "../lib/theme";
 import { CozyNotification } from "../components/CozyNotification";
 import { CozyGlowCard } from "../components/CozyGlowCard";
 
-
 export default function WszystkieNotatkiPage() {
   const router = useRouter();
 
   // 1. Zostawiamy tylko jeden główny stan dla motywu
   const [cozyTheme, setCozyTheme] = useState<CozyTheme>("library");
 
-  // 2. Wyliczamy klasy CSS dynamicznie (bez osobnego stanu!)
+  // 2. Wyliczamy klasy CSS dynamicznie
   const currentTheme = getThemeClasses(cozyTheme);
 
   // 3. Wczytujemy zapisany motyw z pamięci przy wejściu na stronę
@@ -29,7 +28,7 @@ export default function WszystkieNotatkiPage() {
     }
   }, []);
 
-  // Globalny odtwarzacz Lo-Fi (gra płynnie bez przerw przy nawigacji!)
+  // Globalny odtwarzacz Lo-Fi
   const {
     lofiActive,
     currentTrackIndex,
@@ -47,10 +46,10 @@ export default function WszystkieNotatkiPage() {
   const [notes, setNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Stany wyszukiwania i filtrowania epok oraz typu (lektura/epoka)
+  // Stany wyszukiwania i filtrowania epok oraz typu (Wszystkie | Epoki | Lektury | Inne)
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEra, setSelectedEra] = useState("Wszystkie");
-  const [selectedType, setSelectedType] = useState<"all" | "epoka" | "lektura">("all");
+  const [selectedType, setSelectedType] = useState<"all" | "epoka" | "lektura" | "inne">("all");
 
   // System przytulnych powiadomień
   const [cozyNotification, setCozyNotification] = useState<{
@@ -137,7 +136,7 @@ export default function WszystkieNotatkiPage() {
     fetchUserDataAndNotes();
   }, []);
 
-  // Filtrowanie notatek na podstawie wyszukiwarki, kafelków epok oraz typu (lektura/epoka)
+  // Filtrowanie notatek na podstawie wyszukiwarki, kafelków epok oraz typu (Wszystkie | Epoki | Lektury | Inne)
   const filteredNotes = notes.filter((note) => {
     // 1. Filtrowanie po wybranej epoce
     if (selectedEra !== "Wszystkie") {
@@ -149,9 +148,16 @@ export default function WszystkieNotatkiPage() {
       if (!eraMatch && !specialMatch) return false;
     }
 
-    // 2. Filtrowanie po rodzaju notatki (lektura vs epoka)
-    if (selectedType !== "all" && note.type !== selectedType) {
-      return false;
+    // 2. Filtrowanie po rodzaju notatki (lektura vs epoka vs pomocniki)
+    if (selectedType !== "all") {
+      if (selectedType === "inne") {
+        // "Inne" łapie wszystko co nie jest epoką i lekturą (np. pomocniki, rozprawki, syntezy)
+        if (note.type === "epoka" || note.type === "lektura") {
+          return false;
+        }
+      } else if (note.type !== selectedType) {
+        return false;
+      }
     }
 
     // 3. Filtrowanie po wpisanej frazie (tytuł, epoka, tagi)
@@ -166,7 +172,7 @@ export default function WszystkieNotatkiPage() {
     return true;
   });
 
-  // BEZPIECZNY, ODPORNY NA BŁĘDY NASŁUCHIWAČ KLIKNIĘĆ
+  // BEZPIECZNY NASŁUCHIWAĆ KLIKNIĘĆ
   useEffect(() => {
     const handleGlobalClick = (event: MouseEvent) => {
       try {
@@ -183,7 +189,7 @@ export default function WszystkieNotatkiPage() {
           playSound("click");
         }
       } catch (err) {
-        // Ciche zignorowanie błędu
+        // Ignorujemy cicho błędy
       }
     };
 
@@ -298,7 +304,7 @@ export default function WszystkieNotatkiPage() {
         {/* PANEL WYSZUKIWANIA I FILTROWANIA */}
         <div className={`p-6 rounded-3xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} shadow-md flex flex-col gap-4`}>
           
-          {/* Wybór typu: Wszystkie | Epoki | Lektury */}
+          {/* Wybór typu: Wszystkie | Epoki | Lektury | Inne */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 border-b border-stone-800/40 pb-3 mb-1">
             <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider pl-1 select-none">
               Rodzaj notatek:
@@ -308,6 +314,7 @@ export default function WszystkieNotatkiPage() {
                 { id: "all" as const, label: "Wszystkie" },
                 { id: "epoka" as const, label: "🏛️ Same Epoki" },
                 { id: "lektura" as const, label: "📖 Same Lektury" },
+                { id: "inne" as const, label: "📝 Pomocniki / Inne" },
               ].map((typeItem) => (
                 <button
                   key={typeItem.id}
@@ -384,16 +391,18 @@ export default function WszystkieNotatkiPage() {
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="text-[9px] uppercase tracking-widest text-amber-500 font-extrabold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                          📍 {note.era}
+                          📍 {note.era || "Pomocnik"}
                         </span>
                         
                         {/* Dynamiczny badge typu merytorycznego z bazy danych */}
                         <span className={`text-[9px] uppercase tracking-widest font-extrabold px-2 py-0.5 rounded border ${
                           note.type === "epoka" 
                             ? "bg-purple-950/40 border-purple-900/50 text-purple-400" 
-                            : "bg-amber-950/40 border-amber-900/50 text-amber-400"
+                            : note.type === "lektura"
+                              ? "bg-amber-950/40 border-amber-900/50 text-amber-400"
+                              : "bg-blue-950/40 border-blue-900/50 text-blue-300"
                         }`}>
-                          {note.type === "epoka" ? "🏛️ Epoka" : "📖 Lektura"}
+                          {note.type === "epoka" ? "🏛️ Epoka" : note.type === "lektura" ? "📖 Lektura" : "📝 Pomocnik"}
                         </span>
                       </div>
                       
@@ -436,7 +445,7 @@ export default function WszystkieNotatkiPage() {
                    {isLocked ? (
                       <button
                         onClick={() => handleOpenNote(note)}
-                        className="w-full py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 bg-stone-950 border border-stone-900 text-stone-500 hover:bg-stone-900/40"
+                        className="w-full py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 bg-stone-950 border border-stone-800 text-stone-500 hover:bg-stone-900/40"
                       >
                         <span>🔒</span> Zablokowane (Premium)
                       </button>

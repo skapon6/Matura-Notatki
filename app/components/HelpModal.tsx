@@ -1,128 +1,47 @@
+// components/HelpModal.tsx
 "use client";
 
 import React, { useState } from "react";
-import { ThemeClasses, CozyTheme } from "../lib/theme"; // <-- DODAJ COZYTHEME TUTAJ
 import { playSound } from "../lib/sounds";
 
 interface HelpModalProps {
   isOpen: boolean;
   onClose: () => void;
-  currentTheme: ThemeClasses;
+  currentTheme: any;
 }
 
+type SectionType = "general" | "essay" | "oral" | "flashcards" | "quotes" | "pricing";
+
 export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, currentTheme }) => {
-  // Stan kontrolujący, która sekcja instrukcji jest aktualnie rozwinięta
-  const [activeSection, setActiveSection] = useState<string | null>("intro");
+  const [activeSection, setActiveSection] = useState<SectionType | null>("general");
 
   if (!isOpen) return null;
 
-  const toggleSection = (section: string) => {
+  const toggleSection = (section: SectionType) => {
+    playSound("click");
     setActiveSection(activeSection === section ? null : section);
   };
 
-  const sections = [
-    {
-      id: "intro",
-      title: "🏡 O co chodzi w Kąciku Wiedzy Szytej na Miarę?",
-      content: (
-        <p className="text-xs sm:text-sm text-stone-300 leading-relaxed font-sans">
-          Witaj w swoim **maturalnym kąciku spokoju**! To miejsce zostało zaprojektowane tak, abyś mógł przygotować się do matury z języka polskiego bez zbędnego stresu. Połączyliśmy kompleksową bazę notatek z lektur, zaawansowane moduły sztucznej inteligencji, aktywne fiszki oraz przytulną oprawę dźwiękową (muzyka Lo-Fi), która ułatwia głębokie skupienie.
-        </p>
-      ),
-    },
-    {
-      id: "essay",
-      title: "✍️ Edytor Rozprawek AI (Sztuczna Inteligencja CKE)",
-      content: (
-        <div className="flex flex-col gap-2.5 text-xs sm:text-sm text-stone-300 leading-relaxed">
-          <p>Nasz moduł sztucznej inteligencji potrafi przeanalizować Twoje pisemne wypracowanie zgodnie z najnowszymi wytycznymi CKE w zaledwie kilka sekund!</p>
-          <ul className="list-disc pl-5 flex flex-col gap-1.5 text-stone-400">
-            <li><strong className="text-stone-300">Jak to działa?</strong> Kliknij przycisk „Uruchom Edytor AI”, wklej temat oraz treść rozprawki i zatwierdź. AI oceni merytorykę, kompozycję, błędy językowe, ortografię i wskaże punkty do poprawy.</li>
-            <li><strong className="text-stone-300">Koszt (Tokeny):</strong> Każda ocena rozprawki kosztuje dokładnie **1 token**.</li>
-            <li><strong className="text-stone-300">Doładowanie:</strong> Jeśli skończą Ci się darmowe tokeny, kliknij przycisk <span className="text-amber-500 font-bold">Doładuj 🪙</span> obok ich licznika. Bezpieczna płatność Stripe Checkout pozwoli Ci natychmiast zakupić pakiety: 5, 10 lub 20 tokenów.</li>
-          </ul>
-        </div>
-      ),
-    },
-    {
-      id: "oral",
-      title: "🎙️ NOWOŚĆ: Symulator Matury Ustnej AI",
-      content: (
-        <div className="flex flex-col gap-2.5 text-xs sm:text-sm text-stone-300 leading-relaxed">
-          <p>To nasz najbardziej zaawansowany moduł, który symuluje prawdziwy państwowy egzamin ustny!</p>
-          <ul className="list-disc pl-5 flex flex-col gap-1.5 text-stone-400">
-            <li><strong className="text-stone-300">Losowanie Zestawu:</strong> Zgodnie z wymogami CKE losujesz pełny zestaw: **Zadanie 1** (pytanie jawne z lektury) oraz **Zadanie 2** (pytanie niejawne, oparte na wyświetlanym obrazie lub plakacie) [1].</li>
-            <li><strong className="text-stone-300">Przygotowanie:</strong> Masz 15 minut (odliczane stoperem) na sporządzenie notatek w dwóch osobnych brudnopisach.</li>
-            <li><strong className="text-stone-300">Monolog i Ocena:</strong> Wygłaszasz mowę na oba pytania po kolei i przesyłasz ją do weryfikacji. AI (jako komisja CKE) oceni meritum, język, strukturę, wyliczy punkty (max 30 pkt) oraz zada Ci 2 trudne pytania dopytujące [1]!</li>
-            <li><strong className="text-stone-300">Koszt (Tokeny):</strong> Ze względu na wysoki stopień skomplikowania (analiza tekstu i obrazu jednocześnie) egzamin ustny kosztuje **3 tokeny** [1].</li>
-            <li><strong className="text-stone-300">🎙️ Ważne – Dyktowanie głosowe:</strong> Klikając przycisk *Mów (Dyktuj)*, możesz nagrać swoją mowę zamiast jej pisać [1]. <strong className="text-red-400">Uwaga: ta funkcja działa wyłącznie w przeglądarkach Google Chrome oraz Microsoft Edge</strong> [1.1, 1.2]. W przeglądarce Firefox (oraz niektórych innych) dyktowanie nie jest domyślnie wspierane i pokaże komunikat o błędzie – w takim wypadku po prostu wpisz tekst klawiaturą [1.1, 1.2].</li>
-          </ul>
-        </div>
-      ),
-    },
-    {
-      id: "fiszki",
-      title: "⚡ Szybkie Fiszki Maturalne i System Leitnera",
-      content: (
-        <div className="flex flex-col gap-2.5 text-xs sm:text-sm text-stone-300 leading-relaxed">
-          <p>Fiszki pomagają w błyskawicznej powtórce kluczowych motywów lektur przed samym egzaminem:</p>
-          <ul className="list-disc pl-5 flex flex-col gap-1.5 text-stone-400">
-            <li><strong className="text-stone-300">Tryb Gry (Zakładka Wszystkie):</strong> Klikaj kartę, aby odwrócić ją i poznać odpowiedź. Oznaczaj fiszki jako <span className="text-emerald-400">„Opanowane! ✅”</span> (przesuną się błyskawicznie w prawo) lub <span className="text-red-400">„Nie znam ❌”</span> (przesuną się w lewo).</li>
-            <li><strong className="text-stone-300">Tryb Szybkiej Listy (Do nauki / Opanowane):</strong> Te zakładki automatycznie zamieniają się w pionową, przejrzystą listę wszystkich pytań i odpowiedzi [2]. Możesz tam szybko wszystko przejrzeć bez odwracania kart i zmieniać ich statusy jednym kliknięciem [2].</li>
-          </ul>
-        </div>
-      ),
-    },
-    {
-      id: "selection",
-      title: "⭐ Funkcja: Zaznacz i Zapamiętaj (Złote Cytaty)",
-      content: (
-        <div className="flex flex-col gap-2.5 text-xs sm:text-sm text-stone-300 leading-relaxed">
-          <p>Podczas czytania dowolnej notatki możesz tworzyć swój osobisty, spersonalizowany zeszyt ściągawki:</p>
-          <ul className="list-disc pl-5 flex flex-col gap-1.5 text-stone-400">
-            <li><strong className="text-stone-300">Jak dodać?</strong> Przeciągnij kursorem myszy i zaznacz dowolne zdanie w notatce (maksymalnie 400 znaków). Nad zaznaczeniem pojawi się gwiazdka <span className="text-amber-500">⭐</span>. Kliknij ją, a cytat zostanie zapisany w bazie!</li>
-            <li><strong className="text-stone-300">Blokada Kopiowania:</strong> Aby chronić unikalne materiały naukowe, tradycyjne kopiowanie (Ctrl+C, Cmd+C) oraz prawy przycisk myszy są zablokowane. Tekst możesz jednak skopiować bezpośrednio ze swojego Zeszytu Cytatów na stronie głównej!</li>
-            <li><strong className="text-stone-300">Limit 50 cytatów:</strong> Aby chronić darmową bazę Supabase, każde konto może zapisać maksymalnie 50 cytatów. Jeśli osiągniesz limit, usuń starsze cytaty (czerwonym koszem), aby zwolnić miejsce na nowe.</li>
-          </ul>
-        </div>
-      ),
-    },
-    {
-      id: "cozy",
-      title: "🎵 Przytulny Klimat i Dźwięki (Tipy na 100% skupienia)",
-      content: (
-        <div className="flex flex-col gap-2.5 text-xs sm:text-sm text-stone-300 leading-relaxed">
-          <p>Zadbaliśmy o idealną atmosferę skupienia podczas nauki:</p>
-          <ul className="list-disc pl-5 flex flex-col gap-1.5 text-stone-400">
-            <li><strong className="text-stone-300">Muzyka nie przerywa (Persistent Audio):</strong> Dzięki globalnemu odtwarzaczowi w chmurze, gdy włączysz Lo-Fi na stronie głównej, muzyka będzie grać nieprzerwanie, kiedy wchodzisz na Fiszki czy przeglądasz listę notatek [1]!</li>
-            <li><strong className="text-stone-300">Dźwięki interfejsu (SFX):</strong> Klikanie przycisków, oznaczanie fiszek czy powiadomienia generują ciche, satysfakcjonujące dźwięki (np. odgłos sukcesu przy poprawnej fiszce) [2].</li>
-            <li><strong className="text-stone-300">💡 Tip na idealną sesję nauki:</strong> Kliknij przycisk <span className="text-amber-500">Ustawienia</span> i ustaw swój **Dzienny Cel Nauki** (np. 50 minut) [1]. Następnie na stronie głównej zaparz wirtualną herbatę klikając kubek, włącz muzykę lo-fi i uruchom stoper **Pomodoro**! Stoper będzie odliczał czas i sekunda po sekundzie uzupełniał Twój dzienny i łączny licznik czasu nauki [1, 2]!</li>
-          </ul>
-        </div>
-      ),
-    }
-  ];
-
   return (
     <div className="fixed inset-0 bg-stone-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-slide-in select-none">
-      <div className={`w-full max-w-2xl rounded-3xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} flex flex-col max-h-[85vh] shadow-2xl ${currentTheme.glow}`}>
+      
+      {/* GŁÓWNY KONTENER MODALU */}
+      <div className={`w-full max-w-xl rounded-3xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} flex flex-col h-[520px] max-h-[90vh] shadow-2xl overflow-hidden`}>
         
         {/* Header */}
-        <div className="p-6 border-b border-stone-800/60 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <span className="text-2xl animate-pulse">❓</span>
-            <div>
-              <h2 className="text-lg font-serif font-bold text-stone-100">
-                Dziennik i Przewodnik Pomocy
-              </h2>
-              <p className="text-[10px] uppercase tracking-widest text-amber-500 font-semibold mt-0.5">
-                Dowiedz się, jak wyciągnąć 100% z Wiedzy Szytej na Miarę
+        <div className="p-5 border-b border-stone-800/60 flex items-center justify-between shrink-0 gap-4">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="text-xl shrink-0">❓</span>
+            <div className="min-w-0">
+              <h2 className="text-base font-serif font-bold text-stone-100 truncate">Przewodnik Pomocy</h2>
+              <p className="text-[10px] uppercase tracking-widest text-amber-500 font-semibold mt-0.5 truncate">
+                Dowiedz się, jak krok po kroku korzystać z kącika nauki
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl hover:bg-stone-900 text-stone-400 hover:text-stone-200 transition-all border border-stone-850"
+            className="p-1.5 rounded-xl hover:bg-stone-900 text-stone-400 hover:text-stone-200 transition-all border border-stone-850 shrink-0"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -130,43 +49,180 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, currentTh
           </button>
         </div>
 
-        {/* Scrollable Accordions */}
-        <div className="p-6 overflow-y-auto flex-1 flex flex-col gap-3.5 scrollbar-thin scrollbar-thumb-stone-800">
-          {sections.map((section) => {
-            const isOpen = activeSection === section.id;
-            return (
-              <div 
-                key={section.id}
-                className={`rounded-2xl border transition-all duration-300 ${
-                  isOpen 
-                    ? "border-amber-500/30 bg-stone-900/30 shadow-md" 
-                    : "border-stone-800/40 bg-stone-900/10 hover:border-stone-800"
-                }`}
-              >
-                {/* Accordion Trigger */}
-                <button
-                  onClick={() => { playSound("click"); toggleSection(section.id); }}
-                  className="w-full text-left p-4 flex items-center justify-between text-xs sm:text-sm font-bold text-stone-200 font-serif focus:outline-none"
-                >
-                  <span>{section.title}</span>
-                  <span className={`text-stone-500 transform transition-transform duration-300 ${isOpen ? "rotate-180 text-amber-500" : ""}`}>
-                    ▼
-                  </span>
-                </button>
-
-                {/* Accordion Content */}
-                {isOpen && (
-                  <div className="px-4 pb-4 border-t border-stone-800/40 pt-3 animate-slide-in">
-                    {section.content}
-                  </div>
-                )}
+        {/* Zawartość przewodnika (Przewijana środkowa część) */}
+        <div className="pl-5 pr-3.5 pt-5 pb-8 overflow-y-auto flex-1 flex flex-col gap-2.5 scrollbar-thin scrollbar-thumb-stone-800/60">
+          
+          {/* SEKCJA 1: O CO CHODZI */}
+          <div className="border border-stone-800/60 rounded-xl overflow-hidden bg-stone-950/20 shrink-0">
+            <button
+              onClick={() => toggleSection("general")}
+              className="w-full p-3.5 flex items-center justify-between text-left hover:bg-stone-900/40 transition-all gap-2"
+            >
+              <span className="text-xs font-bold text-stone-100 font-serif flex items-center gap-2">
+                <span className="shrink-0">🏡</span> O co chodzi w Kąciku Wiedzy?
+              </span>
+              <span className="text-stone-500 text-xs shrink-0">{activeSection === "general" ? "▲" : "▼"}</span>
+            </button>
+            {activeSection === "general" && (
+              <div className="p-4 pt-1 border-t border-stone-800/40 text-xs text-stone-400 leading-relaxed space-y-2 animate-slide-in">
+                <p>
+                  Witaj w swoim <strong className="text-stone-100 font-semibold">maturalnym kąciku spokoju</strong>! Ta platforma została zaprojektowana tak, abyś mógł uczyć się do matury z <strong className="text-stone-100 font-semibold">języka polskiego</strong> oraz <strong className="text-stone-100 font-semibold">matematyki</strong> bez zbędnego stresu [2].
+                </p>
+                <p>
+                  W panelu ustawień możesz dostosować klimat wizualny (Ciepła Biblioteka, Deszczowy Dzień lub Przytulny Kominek), a wbudowany odtwarzacz pozwoli Ci włączyć uspokajającą muzykę Lo-Fi ułatwiającą pełne skupienie.
+                </p>
               </div>
-            );
-          })}
+            )}
+          </div>
+
+          {/* SEKCJA 2: EDYTOR ROZPRAWKI AI */}
+          <div className="border border-stone-800/60 rounded-xl overflow-hidden bg-stone-950/20 shrink-0">
+            <button
+              onClick={() => toggleSection("essay")}
+              className="w-full p-3.5 flex items-center justify-between text-left hover:bg-stone-900/40 transition-all gap-2"
+            >
+              <span className="text-xs font-bold text-stone-100 font-serif flex items-center gap-2">
+                <span className="shrink-0">✍️</span> Edytor Rozprawek AI (Koszt: 1 Token)
+              </span>
+              <span className="text-stone-500 text-xs shrink-0">{activeSection === "essay" ? "▲" : "▼"}</span>
+            </button>
+            {activeSection === "essay" && (
+              <div className="p-4 pt-1 border-t border-stone-800/40 text-xs text-stone-400 leading-relaxed space-y-2 animate-slide-in">
+                <p>
+                  Wklej temat i treść swojej rozprawki, a wirtualny egzaminator sprawdzi ją i wystawi ocenę punktową. 
+                </p>
+                <p>
+                  W zakładce z podglądem błędów zobaczysz swój tekst z kolorowymi podkreśleniami. Wystarczy, że <strong className="text-stone-100 font-semibold">najedziesz myszką na zaznaczony błąd</strong>, aby przeczytać proste wyjaśnienie, dlaczego jest to błąd i jak zapisać to poprawnie.
+                </p>
+                <p>
+                  <strong>Inteligentne podpowiedzi:</strong> Nasz system pamięta wcześniejsze, zweryfikowane przez nauczycieli poprawki. Jeśli piszesz na podobny temat, asystent automatycznie dostosuje swoje uwagi do tych wskazówek, dbając o sprawiedliwą ocenę.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* SEKCJA 3: MATURA USTNA AI */}
+          <div className="border border-stone-800/60 rounded-xl overflow-hidden bg-stone-950/20 shrink-0">
+            <button
+              onClick={() => toggleSection("oral")}
+              className="w-full p-3.5 flex items-center justify-between text-left hover:bg-stone-900/40 transition-all gap-2"
+            >
+              <span className="text-xs font-bold text-stone-100 font-serif flex items-center gap-2">
+                <span className="shrink-0">🎙️</span> Symulator Matury Ustnej (Koszt: 3 Tokeny)
+              </span>
+              <span className="text-stone-500 text-xs shrink-0">{activeSection === "oral" ? "▲" : "▼"}</span>
+            </button>
+            {activeSection === "oral" && (
+              <div className="p-4 pt-1 border-t border-stone-800/40 text-xs text-stone-400 leading-relaxed space-y-2 animate-slide-in">
+                <p>
+                  Przećwicz stresujący egzamin ustny w bezpiecznym domu. Kliknij losowanie, aby otrzymać zestaw (pytanie jawne o lekturę oraz pytanie niejawne o dołączony obraz).
+                </p>
+                <p>
+                  Przygotuj notatki na brudnopisie, a następnie wygłoś swoją mowę do mikrofonu (system sam zamieni Twój głos na tekst). Po wysłaniu, wirtualna komisja oceni Twoją mowę, przeanalizuje motywy na obrazie i wystawi przejrzysty protokół punktowy.
+                </p>
+                <p>
+                  <strong>Pytania od komisji:</strong> Na dole protokołu komisja zada Ci dwa trudne, precyzyjne pytania nawiązujące bezpośrednio do tego, o czym mówiłeś, pozwalając Ci przećwiczyć merytoryczną dyskusję.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* SEKCJA 4: SZYBKIE FISZKI */}
+          <div className="border border-stone-800/60 rounded-xl overflow-hidden bg-stone-950/20 shrink-0">
+            <button
+              onClick={() => toggleSection("flashcards")}
+              className="w-full p-3.5 flex items-center justify-between text-left hover:bg-stone-900/40 transition-all gap-2"
+            >
+              <span className="text-xs font-bold text-stone-100 font-serif flex items-center gap-2">
+                <span className="shrink-0">⚡</span> Szybkie Fiszki i Wyszukiwanie Lektur
+              </span>
+              <span className="text-stone-500 text-xs shrink-0">{activeSection === "flashcards" ? "▲" : "▼"}</span>
+            </button>
+            {activeSection === "flashcards" && (
+              <div className="p-4 pt-1 border-t border-stone-800/40 text-xs text-stone-400 leading-relaxed space-y-2 animate-slide-in">
+                <p>
+                  Szybka powtórka najważniejszych faktów, cech bohaterów i epok. Kliknij kartę, aby ją obrócić i poznać odpowiedź.
+                </p>
+                <p>
+                  <strong className="text-stone-100 font-semibold">Szybkie wyszukiwanie:</strong> Nie musisz przewijać setek kafelków [3]. Kliknij w pole wyszukiwania nad fiszką i wpisz np. „Lalka” lub „Antyk”, aby uczyć się wyłącznie zagadnień z wybranej lektury lub epoki [4].
+                </p>
+                <p>
+                  <strong className="text-stone-100 font-semibold">Statusy nauki:</strong> Oznaczaj karty jako opanowane, aby odłożyć je do osobnej zakładki i powtarzać tylko ten materiał, który wciąż sprawia Ci trudność.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* SEKCJA 5: ZŁOTE CYTATY */}
+          <div className="border border-stone-800/60 rounded-xl overflow-hidden bg-stone-950/20 shrink-0">
+            <button
+              onClick={() => toggleSection("quotes")}
+              className="w-full p-3.5 flex items-center justify-between text-left hover:bg-stone-900/40 transition-all gap-2"
+            >
+              <span className="text-xs font-bold text-stone-100 font-serif flex items-center gap-2">
+                <span className="shrink-0">⭐</span> Złote Cytaty (Funkcja Gwiazdki)
+              </span>
+              <span className="text-stone-500 text-xs shrink-0">{activeSection === "quotes" ? "▲" : "▼"}</span>
+            </button>
+            {activeSection === "quotes" && (
+              <div className="p-4 pt-1 border-t border-stone-800/40 text-xs text-stone-400 leading-relaxed space-y-2 animate-slide-in">
+                <p>
+                  Znalazłeś w notatkach ważny cytat, definicję lub pojęcie, które chcesz zapamiętać na dłużej?
+                </p>
+                <p>
+                  Zaznacz dany tekst myszką bezpośrednio w notatce, kliknij na złotą gwiazdkę (⭐), która się pojawi, a cytat natychmiast trafi do Twojego podręcznego notesu na stronie głównej, do którego masz dostęp w każdej chwili.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* SEKCJA 6: PREMIUM I TOKENY */}
+          <div className="border border-stone-800/60 rounded-xl overflow-hidden bg-stone-950/20 shrink-0">
+            <button
+              onClick={() => toggleSection("pricing")}
+              className="w-full p-3.5 flex items-center justify-between text-left hover:bg-stone-900/40 transition-all gap-2"
+            >
+              <span className="text-xs font-bold text-stone-100 font-serif flex items-center gap-2">
+                <span className="shrink-0">🪙</span> Kredyty, Pakiety i Opłaty
+              </span>
+              <span className="text-stone-500 text-xs shrink-0">{activeSection === "pricing" ? "▲" : "▼"}</span>
+            </button>
+            {activeSection === "pricing" && (
+              <div className="p-4 pt-1 border-t border-stone-800/40 text-xs text-stone-400 leading-relaxed space-y-3.5 animate-slide-in">
+                <p>
+                  Darmowe konto pozwala na czytanie części notatek. Kupując jeden z pakietów dostępowych (Mini, Medium lub roczny Premium), odblokowujesz całą bazę wiedzy, mapy myśli i otrzymujesz darmowe tokeny na start [1]. <strong className="text-stone-100 font-semibold">W dowolnym momencie możesz również osobno dokupić dodatkowe pakiety kredytów (tokenów)</strong>, jeśli zabraknie Ci ich na analizy lub symulacje egzaminów ustnych.
+                </p>
+                
+                {/* Wykaz zużycia kredytów */}
+                <div className="p-3.5 rounded-xl bg-stone-950/50 border border-stone-800 flex flex-col gap-1.5 text-stone-300 leading-relaxed font-sans">
+                  <span className="text-[10px] text-amber-500 font-bold uppercase tracking-wider block mb-1">
+                    📉 Jak zużywane są Twoje kredyty:
+                  </span>
+                  <div className="flex justify-between items-center border-b border-stone-900/60 pb-1.5 text-[11px] gap-3">
+                    <span className="text-stone-300">✍️ Ocena Twojego wypracowania przez AI:</span>
+                    <span className="font-semibold text-stone-200 shrink-0 whitespace-nowrap bg-stone-900 px-2.5 py-0.5 rounded-md border border-stone-800/60">1 kredyt</span>
+                  </div>
+                  <div className="flex justify-between items-center border-b border-stone-900/60 pb-1.5 text-[11px] gap-3">
+                    <span className="text-stone-300">📖 Napisanie przykładowej rozprawki przez AI:</span>
+                    <span className="font-semibold text-stone-200 shrink-0 whitespace-nowrap bg-stone-900 px-2.5 py-0.5 rounded-md border border-stone-800/60">1 kredyt</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[11px] gap-3">
+                    <span className="text-stone-300">🎙️ Pełny próbny egzamin ustny z komisją AI:</span>
+                    <span className="font-semibold text-stone-200 shrink-0 whitespace-nowrap bg-stone-900 px-2.5 py-0.5 rounded-md border border-stone-800/60">3 kredyty</span>
+                  </div>
+                </div>
+
+                <p>
+                  <strong className="text-stone-100 font-semibold">Zasada ważności:</strong> Twoje zakupione kredyty nigdy nie wygasają i możesz korzystać z nich w dowolnym tempie – tak długo, jak posiadasz aktywne konto.
+                </p>
+              </div>
+            )}
+          </div>
+
         </div>
 
-        {/* Footer */}
-        <div className="p-4 bg-stone-950/40 border-t border-stone-800/40 text-center text-[9px] uppercase tracking-widest text-stone-500 rounded-b-3xl">
+        {/* Footer modalu */}
+        <div className="p-4 border-t border-stone-800/60 text-center text-[10px] text-stone-500 font-serif uppercase tracking-wider shrink-0 select-none">
           Wiedza Szyta na Miarę • Matura 2026/2027 • Życzymy owocnej i spokojnej nauki!
         </div>
 
@@ -174,34 +230,3 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, currentTh
     </div>
   );
 };
-
-// Pomocnicza funkcja motywowa na wypadek renderowania bez bazy
-function getThemeClasses(theme: CozyTheme) {
-  switch (theme) {
-    case "rainy":
-      return {
-        cardBorder: "border-slate-800/60",
-        cardBg: "bg-[#151c24]/90",
-        glow: "shadow-sky-500/5",
-        btnBorder: "border-sky-500/30",
-        subText: "text-slate-400"
-      };
-    case "fireplace":
-      return {
-        cardBorder: "border-red-950/60",
-        cardBg: "bg-[#251515]/90",
-        glow: "shadow-amber-600/5",
-        btnBorder: "border-amber-600/30",
-        subText: "text-rose-300/70"
-      };
-    case "library":
-    default:
-      return {
-        cardBorder: "border-amber-950/40",
-        cardBg: "bg-[#1f1915]/90",
-        glow: "shadow-amber-700/5",
-        btnBorder: "border-[#c68a4c]/30",
-        subText: "text-stone-400"
-      };
-  }
-}

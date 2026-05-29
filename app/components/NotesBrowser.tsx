@@ -1,8 +1,10 @@
+// components/NotesBrowser.tsx
 "use client";
 
 import React, { useState } from "react";
 import { ThemeClasses } from "../lib/theme";
 import Link from "next/link";
+import { CozyGlowCard } from "./CozyGlowCard";
 
 const epochKeywords: Record<string, string[]> = {
   "Antyk": ["antyk", "starożytność", "mitologia", "homer", "sofokles", "biblia", "mit", "antygona", "król edyp", "iliada", "odyseja"],
@@ -147,7 +149,10 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
     const matchesSearch = textToSearch.includes(searchQuery.toLowerCase());
     
     let matchesSubject = true;
-    if (selectedSubject !== "Wszystkie") {
+    
+    if (selectedSubject === "Inne (Pomocniki)") {
+      matchesSubject = note.type !== "epoka" && note.type !== "lektura";
+    } else if (selectedSubject !== "Wszystkie") {
       const keywords = epochKeywords[selectedSubject] || [selectedSubject.toLowerCase()];
       matchesSubject = keywords.some(keyword => textToSearch.includes(keyword));
     }
@@ -160,7 +165,8 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
 
   return (
     <>
-      <div className={`p-4 rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} flex flex-col gap-3.5 transition-colors duration-500`}>
+      {/* SEKCJA WYSZUKIWARKI OPAKOWANA W COZYGLOWCARD DLA EFEKTU PODŚWIETLENIA */}
+      <CozyGlowCard currentTheme={currentTheme} className="p-4 flex flex-col gap-3.5">
         <div className="relative">
           <input
             type="text"
@@ -195,14 +201,15 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
             "Młoda Polska", 
             "Dwudziestolecie", 
             "Wojna i okupacja", 
-            "Współczesność"
+            "Współczesność",
+            "Inne (Pomocniki)"
           ].map((subject) => (
             <button
               key={subject}
               onClick={() => setSelectedSubject(subject)}
               className={`text-xs px-3 py-1.5 rounded-xl border transition-all ${
                 selectedSubject === subject
-                  ? `${currentTheme.accentBg} text-stone-950 font-bold border-transparent`
+                  ? `${currentTheme.accentBg || "bg-amber-500/20 text-amber-400"} font-bold border-transparent`
                   : "border-stone-800/60 bg-stone-950/40 text-stone-400 hover:border-stone-700 hover:text-stone-200"
               }`}
             >
@@ -210,7 +217,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
             </button>
           ))}
         </div>
-      </div>
+      </CozyGlowCard>
 
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between px-1">
@@ -230,7 +237,6 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
             ☕ Parzenie herbaty i pobieranie notatek z Supabase...
           </div>
         ) : filteredNotes.length > 0 ? (
-          /* OPAKOWANE PRZEZ DYNAMICZNY COZYGLOWLINKCARD */
           displayedNotes.map((note) => {
             const handleNoteClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
               if (!hasAccess && !note.is_free) {
@@ -252,18 +258,21 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
                 <div className="flex items-center justify-between text-[11px] font-semibold text-stone-400 w-full">
                   <div className="flex items-center gap-1.5">
                     <span className="text-base">📕</span>
-                    <span className="uppercase tracking-wider text-amber-500/80">{note.subject || "Język Polski"}</span>
+                    <span className="uppercase tracking-wider text-[#c68a4c]">{note.subject || "Język Polski"}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="flex items-center gap-1">
                       ⏱️ {note.read_time || note.readTime || (Math.max(2, Math.round((String(note.content || "")).split(/\s+/).length / 150)) + " min")}
                     </span>
-                   <span className={`px-2 py-0.5 rounded-md text-[10px] border uppercase ${
+                    
+                    <span className={`px-2 py-0.5 rounded-md text-[10px] border ${
                       note.type === "epoka" 
                         ? "bg-purple-950/40 border-purple-900/50 text-purple-400" 
-                        : "bg-amber-950/40 border-amber-900/50 text-amber-400"
+                        : note.type === "lektura"
+                          ? "bg-amber-950/40 border-amber-900/50 text-amber-400"
+                          : "bg-blue-950/40 border-blue-900/50 text-blue-300"
                     }`}>
-                      {note.type === "epoka" ? "Epoka" : "Lektura"}
+                      {note.type === "epoka" ? "Epoka" : note.type === "lektura" ? "Lektura" : "Pomocnik"}
                     </span>
                   </div>
                 </div>
@@ -278,7 +287,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
                 
                 <div className="border-t border-stone-800/40 mt-4 pt-3 flex items-center justify-between text-xs text-stone-500 w-full">
                   <span>Zaktualizowano niedawno</span>
-                  <span className={`text-amber-500/80 group-hover:text-amber-400 font-medium flex items-center gap-1 transition-colors`}>
+                  <span className={`text-[#c68a4c] group-hover:text-amber-400 font-medium flex items-center gap-1 transition-colors`}>
                     {hasAccess || note.is_free ? "Otwórz notatkę 📚" : "Odblokuj notatkę 🔒"}
                   </span>
                 </div>
@@ -287,7 +296,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
           })
         ) : (
           <div className={`rounded-2xl border border-dashed border-stone-800 p-8 text-center text-sm text-stone-500`}>
-            😴 Brak notatek spełniających wybrane kryteria. Spróbuj zmienić słowo kluczowe.
+            😴 Brak notatek spełniających wybrane kryteria. Spróbuj zmienić słowo kluczowe lub kategorię.
           </div>
         )}
       </div>
