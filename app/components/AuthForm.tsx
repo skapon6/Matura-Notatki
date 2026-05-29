@@ -1,9 +1,11 @@
+// app/components/AuthForm.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { translateAuthError } from "../lib/auth-utils";
 import { ThemeClasses } from "../lib/theme";
+import Link from "next/link"; // DODANE: import Link dla poprawnych i szybkich odnośników
 
 interface AuthFormProps {
   currentTheme: ThemeClasses;
@@ -19,6 +21,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
   const [isRegisterForm, setIsRegisterForm] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [isRecoveryMode, setIsRecoveryMode] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
   
   const [authFormLoading, setAuthFormLoading] = useState(false);
 
@@ -154,11 +157,32 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
               />
             </>
           )}
+
+          {/* DODANE: Obowiązkowy checkbox zgody RODO/UOKiK wyłącznie podczas rejestracji */}
+          {isRegisterForm && !isForgotPassword && !isRecoveryMode && (
+            <div className="flex items-start gap-2 px-1 text-left select-none my-1">
+              <input
+                type="checkbox"
+                id="uokikRegisterConsent"
+                checked={acceptTerms}
+                onChange={(e) => setAcceptTerms(e.target.checked)}
+                required
+                className="w-4 h-4 rounded border-stone-800 text-amber-500 focus:ring-amber-500 bg-stone-950 cursor-pointer accent-[#c68a4c] mt-0.5 shrink-0"
+              />
+              <label htmlFor="uokikRegisterConsent" className="text-[10px] sm:text-[11px] text-stone-400 cursor-pointer select-none leading-relaxed">
+                Oświadczam, że akceptuję{" "}
+                <Link href="/regulamin" target="_blank" className="text-amber-500 hover:underline">Regulamin Serwisu</Link>{" "}
+                oraz wyrażam zgodę na przetwarzanie danych osobowych zgodnie z{" "}
+                <Link href="/prywatnosc" target="_blank" className="text-amber-500 hover:underline">Polityką Prywatności</Link>.
+              </label>
+            </div>
+          )}
           
           <button
             type="submit"
-            disabled={authFormLoading}
-            className={`w-full mt-2 py-2.5 rounded-xl ${currentTheme.accentBg} text-stone-950 font-bold ${currentTheme.accentHover} transition-all disabled:bg-gray-500`}
+            // Blokada przycisku rejestracji, jeśli nie zaznaczono zgody
+            disabled={authFormLoading || (isRegisterForm && !acceptTerms)}
+            className={`w-full mt-2 py-2.5 rounded-xl ${currentTheme.accentBg} text-stone-950 font-bold ${currentTheme.accentHover} transition-all disabled:opacity-30 disabled:cursor-not-allowed`}
           >
             {authFormLoading 
               ? "Przetwarzanie..." 
