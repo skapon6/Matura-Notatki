@@ -101,7 +101,7 @@ export async function POST(request: Request) {
           } else if (tier === 'medium') {
             tokenIncrement = 10;
           } else if (tier === 'premium') {
-            tokenIncrement = 20; // Przyznanie 20 tokenów na start przy zakupie Premium (zamiast 10)
+            tokenIncrement = 15; // Przyznanie 20 tokenów na start przy zakupie Premium (zamiast 10)
           }
 
           const newCredits = currentCredits + tokenIncrement;
