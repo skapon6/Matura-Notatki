@@ -47,11 +47,24 @@ export const TokenRechargeModal: React.FC<TokenRechargeModalProps> = ({
     }
   };
 
-  const packages = [
-    { size: 5, price: "10 zł", desc: "Podstawowe wsparcie przy pisaniu wypracowań." },
-    { size: 10, price: "15 zł", desc: "Złoty środek dla systematycznych uczniów. Najpopularniejszy!", popular: true },
-    { size: 20, price: "25 zł", desc: "Pełny pakiet dla ambitnych. Najlepszy stosunek ceny do tokena." },
-  ];
+const packages = [
+  { 
+    size: 5, 
+    price: "10 zł", 
+    desc: "Szybki rozruch. Wystarczy na 5 ocen rozprawek lub pełną symulację ustnej z dopytywaniem komisji." 
+  },
+  { 
+    size: 10, 
+    price: "15 zł", 
+    desc: "Złoty środek dla systematycznych. Ćwicz pisanie i trenuj mowę na żywo przed wirtualną komisją bez stresu. Najpopularniejszy!", 
+    popular: true 
+  },
+  { 
+    size: 20, 
+    price: "25 zł", 
+    desc: "Maturalny pewniak. Generuj wzory, pisz rozprawki i symuluj egzaminy bez ograniczeń. Najlepszy stosunek ceny do wiedzy!" 
+  },
+];
 
   return (
     <div className="fixed inset-0 bg-stone-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-slide-in">

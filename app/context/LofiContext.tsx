@@ -25,6 +25,8 @@ export const lofiTracks: LofiTrack[] = [
   { name: "Cozy Lofi 2", src: "/audio/track2.mp3" },
   { name: "Cozy Lofi 3", src: "/audio/track3.mp3" },
   { name: "Cozy Lofi 4", src: "/audio/track4.mp3" },
+  { name: "Cozy Lofi 5", src: "/audio/track5.mp3" },
+  { name: "Cozy Lofi 6", src: "/audio/track6.mp3" },
 ];
 
 export const LofiProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

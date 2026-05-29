@@ -1,3 +1,4 @@
+// app/fiszki/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -7,21 +8,40 @@ import { playSound } from "../lib/sounds";
 import { useLofi } from "../context/LofiContext";
 import { getThemeClasses, CozyTheme } from "../lib/theme";
 
+// Pomocnicza funkcja do upiększania slugów notatek na czytelne tytuły lektur
+const prettifySlug = (slug: string) => {
+  if (!slug) return "";
+  const preMapped: Record<string, string> = {
+    "lalka": "Lalka",
+    "wesele": "Wesele",
+    "kordian": "Kordian",
+    "pan-tadeusz": "Pan Tadeusz",
+    "dziady-cz-iii": "Dziady cz. III",
+    "makbet": "Makbet",
+    "skapiec": "Skąpiec",
+    "dzuma": "Dżuma",
+    "rok-1984": "Rok 1984"
+  };
+  if (preMapped[slug.toLowerCase()]) return preMapped[slug.toLowerCase()];
+  return slug.split("-").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+};
+
 export default function FiszkiPage() {
   const router = useRouter();
-  // 1. Zostawiamy tylko jeden główny stan dla motywu
-    const [cozyTheme, setCozyTheme] = useState<CozyTheme>("library");
   
-    // 2. Wyliczamy klasy CSS dynamicznie (bez osobnego stanu!)
-    const currentTheme = getThemeClasses(cozyTheme);
+  // 1. Jeden główny stan dla motywu
+  const [cozyTheme, setCozyTheme] = useState<CozyTheme>("library");
   
-    // 3. Wczytujemy zapisany motyw z pamięci przy wejściu na stronę
-    useEffect(() => {
-      const savedTheme = localStorage.getItem("app_theme") as CozyTheme;
-      if (savedTheme) {
-        setCozyTheme(savedTheme);
-      }
-    }, []);
+  // 2. Wyliczamy klasy CSS dynamicznie (bez osobnego stanu!)
+  const currentTheme = getThemeClasses(cozyTheme);
+  
+  // 3. Wczytujemy zapisany motyw z pamięci przy wejściu na stronę
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("app_theme") as CozyTheme;
+    if (savedTheme) {
+      setCozyTheme(savedTheme);
+    }
+  }, []);
 
   // Globalny odtwarzacz Lo-Fi
   const {
@@ -44,9 +64,17 @@ export default function FiszkiPage() {
   // Stan przechowywania postępów z bazy danych
   const [progress, setProgress] = useState<Record<string, "mastered" | "learning">>({});
   
-  // Filtrowanie fiszek: 'all' (gra) | 'learning' (lista do nauki) | 'mastered' (lista opanowane)
+  // Filtrowanie fiszek po stanie nauki: 'all' (gra) | 'learning' (lista do nauki) | 'mastered' (lista opanowane)
   const [filter, setFilter] = useState<"all" | "learning" | "mastered">("all");
   
+  // Dynamiczne filtry kategorii (np. 'Wszystkie', 'Pozytywizm', 'Lalka')
+  const [selectedCategory, setSelectedCategory] = useState<string>("Wszystkie");
+  const [availableCategories, setAvailableCategories] = useState<string[]>(["Wszystkie"]);
+  
+  // Stany dla rozwijanego, szukanego dropdownu (Combobox)
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [categorySearchQuery, setCategorySearchQuery] = useState("");
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
 
@@ -62,7 +90,7 @@ export default function FiszkiPage() {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session?.user) {
-          router.push("/"); // Brak sesji -> natychmiastowy powrót na główną
+          router.push("/"); // Brak sesji -> powrót na główną
           return;
         }
 
@@ -74,7 +102,7 @@ export default function FiszkiPage() {
           .single();
 
         if (profileError || !profileData) {
-          router.push("/"); // Brak profilu -> powrót na główną
+          router.push("/");
           return;
         }
 
@@ -92,14 +120,13 @@ export default function FiszkiPage() {
 
         // 3. Sprawdzamy, czy użytkownik ma uprawnienia Premium
         if (!hasPremiumAccess) {
-          router.push("/"); // Jeśli konto darmowe -> natychmiastowy powrót na główną [1]
+          router.push("/"); // Brak premium -> powrót na główną [1]
           return;
         }
 
-        // Zapisujemy poprawnego użytkownika
         setUser(session.user);
 
-        // 4. Pobieramy same fiszki
+        // 4. Pobieramy fiszki
         const { data: cardsData, error: cardsError } = await supabase
           .from("flashcards")
           .select("*")
@@ -109,10 +136,19 @@ export default function FiszkiPage() {
           const mappedCards = cardsData.map((row) => ({
             id: row.id.toString(),
             category: row.era || "Inne",
+            note_slug: row.note_slug || null,
+            note_title: row.note_slug ? prettifySlug(row.note_slug) : null,
             question: row.front,
             answer: row.back,
           }));
           setFlashcards(mappedCards);
+
+          // Ekstrakcja unikalnych Epok (era) oraz Lektur (note_slug)
+          const eras = Array.from(new Set(mappedCards.map(c => c.category).filter(Boolean)));
+          const lectures = Array.from(new Set(mappedCards.map(c => c.note_title).filter(Boolean)));
+          
+          // Łączymy w jedną listę kategorii filtrów
+          setAvailableCategories(["Wszystkie", ...eras.sort(), ...lectures.sort()]);
         }
 
         // 5. Pobieramy postępy fiszek
@@ -121,13 +157,13 @@ export default function FiszkiPage() {
           .select("flashcard_id, status")
           .eq("user_id", session.user.id);
             
-          if (!progressError && progressData) {
-            const progressMap: Record<string, "mastered" | "learning"> = {};
-            progressData.forEach((row) => {
-              progressMap[row.flashcard_id] = row.status as "mastered" | "learning";
-            });
-            setProgress(progressMap);
-          }
+        if (!progressError && progressData) {
+          const progressMap: Record<string, "mastered" | "learning"> = {};
+          progressData.forEach((row) => {
+            progressMap[row.flashcard_id] = row.status as "mastered" | "learning";
+          });
+          setProgress(progressMap);
+        }
       } catch (err) {
         console.error("Błąd weryfikacji i pobierania danych:", err);
         router.push("/");
@@ -139,24 +175,30 @@ export default function FiszkiPage() {
     fetchData();
   }, [router]);
 
-  // Filtrowanie fiszek na podstawie wybranej zakładki
+  // Filtrowanie fiszek na podstawie wybranego statusu nauki ORAZ wybranej lektury/epoki
   const filteredCards = flashcards.filter((card) => {
+    // A. Filtrowanie po stanie nauki
     const cardStatus = progress[card.id];
-    if (filter === "mastered") return cardStatus === "mastered";
-    if (filter === "learning") {
-      return cardStatus === "learning" || !cardStatus;
+    if (filter === "mastered" && cardStatus !== "mastered") return false;
+    if (filter === "learning" && cardStatus === "mastered") return false;
+
+    // B. Filtrowanie po wybranej epoce lub lekturze
+    if (selectedCategory !== "Wszystkie") {
+      const matchesEra = card.category === selectedCategory;
+      const matchesLecture = card.note_title === selectedCategory;
+      if (!matchesEra && !matchesLecture) return false;
     }
+
     return true; 
   });
 
-  // Reset indeksu przy zmianie filtru
+  // Reset indeksu przy zmianie jakichkolwiek filtrów
   useEffect(() => {
     setCurrentIndex(0);
     setIsFlipped(false);
     setSwipeDirection(null);
-  }, [filter]);
+  }, [filter, selectedCategory]);
 
-  // Zabezpieczenie przed wyjściem indeksu poza zakres przefiltrowanej listy (Race Condition)
   const safeCurrentIndex = currentIndex >= filteredCards.length ? 0 : currentIndex;
   const activeCard = filteredCards[safeCurrentIndex];
 
@@ -178,22 +220,19 @@ export default function FiszkiPage() {
   const handleMarkStatusGame = async (cardId: string, status: "mastered" | "learning") => {
     if (!user || !cardId) return;
 
-    // Uruchomienie kierunku animacji i dedykowanych dźwięków
     if (status === "mastered") {
       setSwipeDirection("right");
-      playSound("success"); // Dźwięk sukcesu dla Znam!
+      playSound("success");
     } else {
       setSwipeDirection("left");
-      playSound("error"); // Dźwięk błędu dla Nie znam!
+      playSound("error");
     }
 
-    // Aktualizacja stanu lokalnego
     setProgress((prev) => ({
       ...prev,
       [cardId]: status,
     }));
 
-    // Zapis w bazie Supabase
     try {
       await supabase
         .from("flashcard_progress")
@@ -209,7 +248,6 @@ export default function FiszkiPage() {
       console.error("Błąd zapisu postępu:", err);
     }
 
-    // Płynne wsunięcie kolejnej karty
     setTimeout(() => {
       setIsFlipped(false);
       setSwipeDirection(null);
@@ -250,11 +288,15 @@ export default function FiszkiPage() {
     }
   };
 
-  // Liczenie statystyk wyłącznie na podstawie aktualnie pobranych fiszek z bazy
+  // Liczenie statystyk na podstawie wszystkich fiszek
   const masteredCount = flashcards.filter(card => progress[card.id] === "mastered").length;
   const learningCount = flashcards.length - masteredCount;
 
-  // Bezpieczny ekran ładowania podczas autoryzacji chroniący przed miganiem layoutu
+  // Filtrowanie kategorii na liście rozwijanej wyszukiwania
+  const filteredCategoriesList = availableCategories.filter((cat) =>
+    cat.toLowerCase().includes(categorySearchQuery.toLowerCase())
+  );
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#14100e] text-stone-200 flex flex-col items-center justify-center p-8">
@@ -274,6 +316,11 @@ export default function FiszkiPage() {
         .backface-hidden { backface-visibility: hidden; }
         .rotate-y-180 { transform: rotateY(180deg); }
       `}} />
+
+      {/* Tło do zamykania dropdownu po kliknięciu poza niego */}
+      {isDropdownOpen && (
+        <div className="fixed inset-0 z-30" onClick={() => setIsDropdownOpen(false)} />
+      )}
 
       {/* HEADER SECTION */}
       <header className={`border-b ${currentTheme.cardBorder} px-4 sm:px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 backdrop-blur-md sticky top-0 z-40 transition-colors duration-500`}>
@@ -346,7 +393,7 @@ export default function FiszkiPage() {
       <main className="max-w-2xl mx-auto w-full p-6 flex flex-col items-center justify-center flex-1">
         
         {/* PANEL FILTROWANIA I STATYSTYK */}
-        <div className="w-full flex items-center justify-between mb-6 bg-stone-900/40 border border-stone-800/60 p-2.5 rounded-2xl">
+        <div className="w-full flex items-center justify-between mb-4 bg-stone-900/40 border border-stone-800/60 p-2.5 rounded-2xl relative z-20">
           <div className="flex gap-1.5 flex-wrap">
             {(["all", "learning", "mastered"] as const).map((tab) => (
               <button
@@ -365,8 +412,81 @@ export default function FiszkiPage() {
             ))}
           </div>
 
-          <div className="text-[10px] text-stone-500 font-semibold uppercase tracking-wider pr-1">
+          <div className="text-[10px] text-stone-500 font-semibold uppercase tracking-wider pr-1 select-none">
             Matura 2026
+          </div>
+        </div>
+
+        {/* DYNAMICZNY FILTR EPOK I LEKTUR - ROZWIJANY COMBOBOX (WYSZUKIWARKA) */}
+        <div className="w-full flex flex-col gap-2 mb-6 bg-stone-900/40 border border-stone-800/60 p-4 rounded-2xl relative z-40">
+          <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider pl-1 select-none">
+            Filtruj po epoce lub lekturze:
+          </span>
+          
+          <div className="relative">
+            {/* Przycisk otwierający dropdown */}
+            <button
+              onClick={() => {
+                playSound("click");
+                setIsDropdownOpen(!isDropdownOpen);
+              }}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border border-stone-800 bg-stone-950/60 hover:bg-stone-900 text-stone-200 transition-all text-xs font-semibold`}
+            >
+              <span className="flex items-center gap-2">
+                <span>📖</span> {selectedCategory === "Wszystkie" ? "Wszystkie epoki i lektury" : selectedCategory}
+              </span>
+              <span className="text-stone-500 text-[10px] select-none">▼ Kliknij, aby zmienić</span>
+            </button>
+
+            {/* Rozwijany panel z wyszukiwarką */}
+            {isDropdownOpen && (
+              <div className="absolute top-full left-0 right-0 mt-2 p-2 bg-stone-900 border border-stone-800/90 rounded-xl shadow-2xl flex flex-col gap-2 max-h-60 overflow-hidden z-40 animate-slide-in">
+                
+                {/* Wyszukiwarka tekstowa */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Wpisz szukaną lekturę lub epokę (np. Lalka, Antyk)..."
+                    value={categorySearchQuery}
+                    onChange={(e) => setCategorySearchQuery(e.target.value)}
+                    className="w-full bg-stone-950 border border-stone-800 rounded-lg py-2.5 pl-8 pr-3 text-xs text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60 transition-all"
+                    autoFocus
+                  />
+                  <svg className="w-3.5 h-3.5 text-stone-500 absolute left-2.5 top-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+
+                {/* Lista przefiltrowanych kategorii */}
+                <div className="flex flex-col gap-1 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-stone-800">
+                  {filteredCategoriesList.length > 0 ? (
+                    filteredCategoriesList.map((cat) => (
+                      <button
+                        key={cat}
+                        onClick={() => {
+                          playSound("click");
+                          setSelectedCategory(cat);
+                          setCategorySearchQuery("");
+                          setIsDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
+                          selectedCategory === cat
+                            ? "bg-amber-500/20 text-amber-400 font-bold border border-amber-500/30"
+                            : "text-stone-400 hover:bg-stone-950 hover:text-stone-200 border border-transparent"
+                        }`}
+                      >
+                        {cat === "Wszystkie" ? "✨ Wszystkie epoki i lektury" : cat}
+                      </button>
+                    ))
+                  ) : (
+                    <div className="text-center py-4 text-xs text-stone-600">
+                      Brak wyników dla "{categorySearchQuery}"
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            )}
           </div>
         </div>
 
@@ -376,14 +496,14 @@ export default function FiszkiPage() {
             <p className="text-sm font-semibold">Brak fiszek w tej kategorii.</p>
             <p className="text-xs text-stone-600 mt-1 leading-relaxed">
               {filter === "mastered" 
-                ? "Nie oznaczyłeś jeszcze żadnej fiszki jako opanowanej. Kliknij 'Znam' podczas gry!"
-                : "Wspaniale! Opanowałeś już wszystkie dostępne fiszki!"}
+                ? "Nie oznaczyłeś jeszcze żadnej fiszki z tej grupy jako opanowanej. Kliknij 'Znam' podczas gry!"
+                : "Wspaniale! Opanowałeś już wszystkie dostępne fiszki w wybranej kategorii!"}
             </p>
           </div>
         ) : filter === "all" ? (
           
           /* TRYB GRY (DLA KATEGORII 'WSZYSTKIE') */
-          <div className="w-full flex flex-col gap-6 select-none animate-slide-in">
+          <div className="w-full flex flex-col gap-6 select-none animate-slide-in relative z-10">
             
             {/* GŁÓWNA KARTA FISZKI Z SZYBKĄ ANIMACJĄ (75ms) I BŁYSKIEM KOLORU */}
             <div 
@@ -413,7 +533,7 @@ export default function FiszkiPage() {
                 } bg-[#161210] p-8 flex flex-col justify-between backface-hidden shadow-xl`}>
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-amber-500 font-bold uppercase tracking-widest bg-amber-500/10 px-2.5 py-1 rounded border border-amber-500/20">
-                      📍 {activeCard?.category}
+                      📍 {activeCard?.category} {activeCard?.note_title ? `• ${activeCard.note_title}` : ""}
                     </span>
                     <span className="text-stone-500 font-semibold font-mono">
                       Fiszka {safeCurrentIndex + 1} z {filteredCards.length}
@@ -490,15 +610,16 @@ export default function FiszkiPage() {
               </button>
               
               {/* Kropki postępu na dole */}
-              <div className="flex gap-1">
-                {filteredCards.map((_, idx) => (
+              <div className="flex gap-1 max-w-[200px] overflow-hidden justify-center">
+                {filteredCards.slice(0, 15).map((_, idx) => (
                   <span 
                     key={idx}
-                    className={`w-1.5 h-1.5 rounded-full transition-all ${
+                    className={`w-1.5 h-1.5 rounded-full transition-all shrink-0 ${
                       idx === safeCurrentIndex ? "bg-amber-500 w-3" : "bg-stone-800"
                     }`}
                   />
                 ))}
+                {filteredCards.length > 15 && <span className="text-[8px] text-stone-600 font-bold">...</span>}
               </div>
 
               <button
@@ -513,7 +634,7 @@ export default function FiszkiPage() {
         ) : (
           
           /* TRYB WYGODNEJ, SZYBKIEJ LISTY */
-          <div className="w-full flex flex-col gap-4 animate-slide-in select-none">
+          <div className="w-full flex flex-col gap-4 animate-slide-in select-none relative z-10">
             {filteredCards.map((card) => (
               <div 
                 key={card.id}
@@ -521,7 +642,7 @@ export default function FiszkiPage() {
               >
                 <div className="flex items-center justify-between">
                   <span className="text-[9px] uppercase tracking-widest text-amber-500 font-extrabold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                    📍 {card.category}
+                    📍 {card.category} {card.note_title ? `• ${card.note_title}` : ""}
                   </span>
                   
                   {/* Szybka akcja bezpośrednio z poziomu wiersza na liście */}
