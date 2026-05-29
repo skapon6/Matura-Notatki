@@ -6,14 +6,26 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { playSound } from "../lib/sounds";
 import { useLofi } from "../context/LofiContext";
-import { getThemeClasses } from "../lib/theme";
-import { CozyNotification } from "../components/CozyNotification";
+import { getThemeClasses, CozyTheme } from "../lib/theme";import { CozyNotification } from "../components/CozyNotification";
 import { CozyGlowCard } from "../components/CozyGlowCard";
+
 
 export default function WszystkieNotatkiPage() {
   const router = useRouter();
-  const currentTheme = getThemeClasses("library");
 
+ // 1. Zostawiamy tylko jeden główny stan dla motywu
+  const [cozyTheme, setCozyTheme] = useState<CozyTheme>("library");
+
+  // 2. Wyliczamy klasy CSS dynamicznie (bez osobnego stanu!)
+  const currentTheme = getThemeClasses(cozyTheme);
+
+  // 3. Wczytujemy zapisany motyw z pamięci przy wejściu na stronę
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("app_theme") as CozyTheme;
+    if (savedTheme) {
+      setCozyTheme(savedTheme);
+    }
+  }, []);
   // Globalny odtwarzacz Lo-Fi (gra płynnie bez przerw przy nawigacji!)
   const {
     lofiActive,

@@ -200,7 +200,7 @@ export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
                 ].map((item) => (
                   <button
                     key={item.id}
-                    onClick={() => { playSound("click"); setCozyTheme(item.id as CozyTheme); }}
+                    onClick={() => { playSound("click"); setCozyTheme(item.id as CozyTheme);localStorage.setItem("app_theme", item.id); }}
                     className={`p-4 rounded-2xl border text-left flex items-start gap-4 transition-all ${
                       cozyTheme === item.id
                         ? "border-amber-500/40 bg-amber-500/5 shadow-md"

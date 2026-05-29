@@ -205,6 +205,14 @@ export default function Home() {
     }
   }, []);
 
+  // Na stronie głównej (tam gdzie masz stan cozyTheme):
+    useEffect(() => {
+      const savedTheme = localStorage.getItem("app_theme") as CozyTheme;
+      if (savedTheme) {
+        setCozyTheme(savedTheme);
+      }
+    }, []);
+
   // 7. GLOBALNY INTELIGENTNY NASŁUCHIWAĆ KLIKNIĘĆ (DLA DŹWIĘKU CLICK)
   useEffect(() => {
     const handleGlobalClick = (event: MouseEvent) => {

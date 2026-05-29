@@ -18,7 +18,7 @@ const epochKeywords: Record<string, string[]> = {
   "Współczesność": ["współczesność", "tango", "mrożek", "ocalenie", "szymborska", "różewicz", "herbert", "rok 1984", "orwell", "dżuma", "camus"]
 };
 
-// LOKALNY KOMPONENT POMOCNICZY DLA LINKÓW NOTATEK Z EFEKTEM PODĄŻANIA ROZŚWIETLENIA ZA MYSZKĄ
+// LOKALNY KOMPONENT POMOCNICZY DLA LINKÓW NOTATEK Z DYNAMICZNYM EFEKTEM ROZŚWIETLENIA (POPRAWIONY)
 const CozyGlowLinkCard = ({
   children,
   href,
@@ -40,6 +40,20 @@ const CozyGlowLinkCard = ({
   const [coords, setCoords] = React.useState({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = React.useState(false);
 
+  // Bezimportowe wykrywanie motywu na podstawie klas CSS w currentTheme
+  let glowColor = "rgba(245, 158, 11, 0.05)"; // Domyślny bursztynowy (library)
+  let hoverBorderClass = "hover:border-amber-500/20"; // Domyślna bursztynowa ramka (library)
+  
+  const cardBgClasses = currentTheme?.cardBg || "";
+  
+  if (cardBgClasses.includes("151c24") || cardBgClasses.includes("121820")) {
+    glowColor = "rgba(14, 165, 233, 0.07)"; // Niebiesko-cyjanowy dla deszczu (rainy)
+    hoverBorderClass = "hover:border-sky-500/30"; // Chłodna ramka dla deszczu (rainy)
+  } else if (cardBgClasses.includes("251515") || cardBgClasses.includes("211111")) {
+    glowColor = "rgba(239, 68, 68, 0.07)"; // Ciepły czerwono-burgundowy dla kominka (fireplace)
+    hoverBorderClass = "hover:border-red-500/30"; // Ciepła czerwona ramka dla kominka (fireplace)
+  }
+
   const handleMouseMove = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (!cardRef.current) return;
     const rect = cardRef.current.getBoundingClientRect();
@@ -59,14 +73,14 @@ const CozyGlowLinkCard = ({
       onMouseMove={handleMouseMove}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`relative overflow-hidden rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} transition-all duration-300 hover:border-amber-500/20 hover:shadow-lg ${className}`}
+      className={`relative overflow-hidden rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} transition-all duration-300 ${hoverBorderClass} hover:shadow-lg ${className}`}
     >
-      {/* Warstwa podświetlenia podążająca za myszką */}
+      {/* Warstwa podświetlenia podążająca za myszką (z dynamicznym kolorem glowColor) */}
       {isHovered && (
         <div
           className="pointer-events-none absolute -inset-px opacity-100 transition-opacity duration-300"
           style={{
-            background: `radial-gradient(280px circle at ${coords.x}px ${coords.y}px, rgba(245, 158, 11, 0.05), transparent 80%)`,
+            background: `radial-gradient(280px circle at ${coords.x}px ${coords.y}px, ${glowColor}, transparent 80%)`,
           }}
         />
       )}
@@ -216,7 +230,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
             ☕ Parzenie herbaty i pobieranie notatek z Supabase...
           </div>
         ) : filteredNotes.length > 0 ? (
-          /* OPAKOWANE PRZEZ COZYGLOWLINKCARD ZAMIAST ZWYKŁEGO <a> */
+          /* OPAKOWANE PRZEZ DYNAMICZNY COZYGLOWLINKCARD */
           displayedNotes.map((note) => {
             const handleNoteClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
               if (!hasAccess && !note.is_free) {

@@ -18,11 +18,22 @@ import { TokenRechargeModal } from "../components/TokenRechargeModal";
 import { HelpModal } from "../components/HelpModal";
 import { PersonalNotesModal } from "../components/PersonalNotesModal";
 
+
 export default function MapaMysliPage() {
   const router = useRouter();
 
   // Theme state
+// Theme state
   const [cozyTheme, setCozyTheme] = useState<CozyTheme>("library");
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("app_theme") as CozyTheme;
+    if (savedTheme) {
+      setCozyTheme(savedTheme);
+    }
+  }, []);
+  
+  
 
   // Stan profilu i sesji
   const [profile, setProfile] = useState<any>(null);

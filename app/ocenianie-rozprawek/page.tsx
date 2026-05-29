@@ -4,6 +4,9 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
+// Na samej górze komponentu strony:
+import { getThemeClasses, CozyTheme } from "../lib/theme"; // Twój poprawny import
+
 
 interface Match {
   start: number;
@@ -11,8 +14,19 @@ interface Match {
   annotation: any;
 }
 
+
+
 export default function OcenianieRozprawekPage() {
   const router = useRouter();
+
+    const [currentTheme, setCurrentTheme] = useState<any>(getThemeClasses("library"));
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("app_theme") as CozyTheme;
+    if (savedTheme) {
+      setCurrentTheme(getThemeClasses(savedTheme));
+    }
+  }, []);
 
   // Stany autoryzacji i profilu
   const [user, setUser] = useState<any>(null);
@@ -39,6 +53,8 @@ export default function OcenianieRozprawekPage() {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 5000);
   };
+
+  
 
   useEffect(() => {
     async function checkUserAndCredits() {
@@ -309,7 +325,7 @@ export default function OcenianieRozprawekPage() {
   const currentWordCount = essayText.split(/\s+/).filter(Boolean).length;
 
   return (
-    <div className="min-h-screen bg-[#14100e] text-stone-200 font-sans p-6 flex flex-col items-center">
+    <div className={`min-h-screen ${currentTheme.bg} text-stone-200 font-sans p-6 flex flex-col items-center transition-colors duration-500`}>
       
       {notification && (
         <div className={`fixed top-6 right-6 z-50 px-5 py-4 rounded-2xl border shadow-2xl backdrop-blur-md max-w-sm ${
@@ -319,7 +335,7 @@ export default function OcenianieRozprawekPage() {
         </div>
       )}
 
-      <div className="max-w-4xl w-full bg-[#1f1915]/90 border border-amber-950/40 rounded-3xl p-6 sm:p-8 shadow-xl mt-8 flex flex-col gap-6">
+      <div className={`max-w-4xl w-full ${currentTheme.cardBg} border ${currentTheme.cardBorder} rounded-3xl p-6 sm:p-8 shadow-xl mt-8 flex flex-col gap-6 transition-colors duration-500`}>
         
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-stone-800/60 pb-5 gap-4">
@@ -331,11 +347,11 @@ export default function OcenianieRozprawekPage() {
             </div>
           </div>
           <Link 
-            href="/" 
-            className="self-start sm:self-center text-xs px-3.5 py-1.5 rounded-xl border border-[#c68a4c]/30 bg-stone-900/60 text-stone-400 hover:text-stone-100 hover:border-amber-700 transition-all"
-          >
-            ← Wróć do kącika
-          </Link>
+                href="/" 
+                className={`self-start sm:self-center text-xs px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} bg-stone-900/60 text-stone-400 hover:text-stone-100 hover:scale-105 active:scale-95 transition-all`}
+              >
+                ← Wróć do kącika
+              </Link>
         </div>
 
         {/* Informacja o Kredytach */}
