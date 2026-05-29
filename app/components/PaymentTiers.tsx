@@ -42,7 +42,7 @@ export const PaymentTiers: React.FC<PaymentTiersProps> = ({
       name: "PREMIUM",
       period: "Na rok",
       price: "89 zł",
-      tokens: "20 tokenów do rozprawek i ustnej",
+      tokens: "15 tokenów do rozprawek i ustnej",
       days: "Dostęp na 365 dni",
       desc: "Kompleksowy zestaw roczny do nauki przed egzaminem.",
     },
