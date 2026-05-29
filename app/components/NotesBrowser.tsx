@@ -258,8 +258,12 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
                     <span className="flex items-center gap-1">
                       ⏱️ {note.read_time || note.readTime || (Math.max(2, Math.round((String(note.content || "")).split(/\s+/).length / 150)) + " min")}
                     </span>
-                    <span className={`px-2 py-0.5 rounded-md text-[10px] border bg-amber-950/40 border-amber-900/50 text-amber-400`}>
-                      Lektura
+                   <span className={`px-2 py-0.5 rounded-md text-[10px] border uppercase ${
+                      note.type === "epoka" 
+                        ? "bg-purple-950/40 border-purple-900/50 text-purple-400" 
+                        : "bg-amber-950/40 border-amber-900/50 text-amber-400"
+                    }`}>
+                      {note.type === "epoka" ? "Epoka" : "Lektura"}
                     </span>
                   </div>
                 </div>

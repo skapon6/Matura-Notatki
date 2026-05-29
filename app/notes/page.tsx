@@ -1,3 +1,4 @@
+// app/notes/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -6,14 +7,15 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { playSound } from "../lib/sounds";
 import { useLofi } from "../context/LofiContext";
-import { getThemeClasses, CozyTheme } from "../lib/theme";import { CozyNotification } from "../components/CozyNotification";
+import { getThemeClasses, CozyTheme } from "../lib/theme";
+import { CozyNotification } from "../components/CozyNotification";
 import { CozyGlowCard } from "../components/CozyGlowCard";
 
 
 export default function WszystkieNotatkiPage() {
   const router = useRouter();
 
- // 1. Zostawiamy tylko jeden główny stan dla motywu
+  // 1. Zostawiamy tylko jeden główny stan dla motywu
   const [cozyTheme, setCozyTheme] = useState<CozyTheme>("library");
 
   // 2. Wyliczamy klasy CSS dynamicznie (bez osobnego stanu!)
@@ -26,6 +28,7 @@ export default function WszystkieNotatkiPage() {
       setCozyTheme(savedTheme);
     }
   }, []);
+
   // Globalny odtwarzacz Lo-Fi (gra płynnie bez przerw przy nawigacji!)
   const {
     lofiActive,
@@ -44,9 +47,10 @@ export default function WszystkieNotatkiPage() {
   const [notes, setNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Stany wyszukiwania i filtrowania epok
+  // Stany wyszukiwania i filtrowania epok oraz typu (lektura/epoka)
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEra, setSelectedEra] = useState("Wszystkie");
+  const [selectedType, setSelectedType] = useState<"all" | "epoka" | "lektura">("all");
 
   // System przytulnych powiadomień
   const [cozyNotification, setCozyNotification] = useState<{
@@ -133,7 +137,7 @@ export default function WszystkieNotatkiPage() {
     fetchUserDataAndNotes();
   }, []);
 
-  // Filtrowanie notatek na podstawie wyszukiwarki i kafelków epok
+  // Filtrowanie notatek na podstawie wyszukiwarki, kafelków epok oraz typu (lektura/epoka)
   const filteredNotes = notes.filter((note) => {
     // 1. Filtrowanie po wybranej epoce
     if (selectedEra !== "Wszystkie") {
@@ -145,7 +149,12 @@ export default function WszystkieNotatkiPage() {
       if (!eraMatch && !specialMatch) return false;
     }
 
-    // 2. Filtrowanie po wpisanej frazie (tytuł, epoka, tagi)
+    // 2. Filtrowanie po rodzaju notatki (lektura vs epoka)
+    if (selectedType !== "all" && note.type !== selectedType) {
+      return false;
+    }
+
+    // 3. Filtrowanie po wpisanej frazie (tytuł, epoka, tagi)
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const titleMatch = note.title?.toLowerCase().includes(query);
@@ -174,7 +183,7 @@ export default function WszystkieNotatkiPage() {
           playSound("click");
         }
       } catch (err) {
-        // Ciche zignorowanie błędu, np. w przypadku nietypowych ikon SVG
+        // Ciche zignorowanie błędu
       }
     };
 
@@ -192,7 +201,6 @@ export default function WszystkieNotatkiPage() {
       return;
     }
     
-    // Jeśli notatka jest darmowa (is_free === true) lub użytkownik ma Premium (hasAccess === true)
     if (note.is_free || hasAccess) {
       playSound("success");
       router.push(`/notes/${note.slug}`);
@@ -219,7 +227,7 @@ export default function WszystkieNotatkiPage() {
         <div className="flex w-full md:w-auto items-center justify-between md:justify-start gap-4">
           <button
             onClick={() => {
-              playSound("click"); // WYMUSZONE ODTWORZENIE PRZED STRZAŁEM STRONY
+              playSound("click"); 
               router.push("/");
             }}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 transition-all text-xs font-medium ${currentTheme.subText} hover:text-stone-100`}
@@ -290,6 +298,35 @@ export default function WszystkieNotatkiPage() {
         {/* PANEL WYSZUKIWANIA I FILTROWANIA */}
         <div className={`p-6 rounded-3xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} shadow-md flex flex-col gap-4`}>
           
+          {/* Wybór typu: Wszystkie | Epoki | Lektury */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 border-b border-stone-800/40 pb-3 mb-1">
+            <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider pl-1 select-none">
+              Rodzaj notatek:
+            </span>
+            <div className="flex gap-1.5 flex-wrap">
+              {[
+                { id: "all" as const, label: "Wszystkie" },
+                { id: "epoka" as const, label: "🏛️ Same Epoki" },
+                { id: "lektura" as const, label: "📖 Same Lektury" },
+              ].map((typeItem) => (
+                <button
+                  key={typeItem.id}
+                  onClick={() => {
+                    playSound("click");
+                    setSelectedType(typeItem.id);
+                  }}
+                  className={`text-[10px] px-3.5 py-1.5 rounded-xl border font-bold uppercase transition-all ${
+                    selectedType === typeItem.id
+                      ? "bg-amber-500/20 text-amber-400 border-amber-500/40"
+                      : "bg-stone-950/20 text-stone-500 border-transparent hover:text-stone-300"
+                  }`}
+                >
+                  {typeItem.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Input Wyszukiwarki */}
           <div className="relative">
             <input 
@@ -330,7 +367,7 @@ export default function WszystkieNotatkiPage() {
           <div className="text-center py-20 border border-dashed border-stone-800 rounded-3xl text-stone-500">
             <span className="text-3xl block mb-2">📚</span>
             <p className="text-sm font-semibold">Nie znaleźliśmy notatek spełniających wybrane kryteria.</p>
-            <p className="text-xs text-stone-600 mt-1">Spróbuj zmienić wpisane słowo kluczowe lub wybraną epokę.</p>
+            <p className="text-xs text-stone-600 mt-1">Spróbuj zmienić wpisane słowo kluczowe, wybrany rodzaj lub epokę.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -344,16 +381,27 @@ export default function WszystkieNotatkiPage() {
                   className="p-6 flex flex-col justify-between gap-4 shadow-lg"
                 >
                   <div className="flex flex-col gap-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[9px] uppercase tracking-widest text-amber-500 font-extrabold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                        📍 {note.era}
-                      </span>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[9px] uppercase tracking-widest text-amber-500 font-extrabold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                          📍 {note.era}
+                        </span>
+                        
+                        {/* Dynamiczny badge typu merytorycznego z bazy danych */}
+                        <span className={`text-[9px] uppercase tracking-widest font-extrabold px-2 py-0.5 rounded border ${
+                          note.type === "epoka" 
+                            ? "bg-purple-950/40 border-purple-900/50 text-purple-400" 
+                            : "bg-amber-950/40 border-amber-900/50 text-amber-400"
+                        }`}>
+                          {note.type === "epoka" ? "🏛️ Epoka" : "📖 Lektura"}
+                        </span>
+                      </div>
                       
                       {/* Trudność notatki */}
                       <span className={`text-[9px] uppercase tracking-widest font-extrabold px-2 py-0.5 rounded border ${
                         note.difficulty === "Trudny" 
-                          ? "bg-red-950/50 border-red-900/40 text-red-400"
-                          : "bg-emerald-950/50 border-emerald-900/40 text-emerald-400"
+                          ? "bg-red-950/50 border-red-900/40 text-red-400 shrink-0"
+                          : "bg-emerald-950/50 border-emerald-900/40 text-emerald-400 shrink-0"
                       }`}>
                         {note.difficulty || "Średni"}
                       </span>
@@ -363,7 +411,7 @@ export default function WszystkieNotatkiPage() {
                       {note.title}
                     </h2>
 
-                    {/* Poprawiony, ładny opis pobierany bezpośrednio z bazy danych */}
+                    {/* Poprawiony opis pobierany bezpośrednio z bazy danych */}
                     <p className="text-xs text-stone-400 leading-relaxed font-sans line-clamp-3">
                       {note.content}
                     </p>
