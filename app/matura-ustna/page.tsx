@@ -1,3 +1,4 @@
+// app/matura-ustna/page.tsx
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
@@ -7,9 +8,12 @@ import { playSound } from "../lib/sounds";
 import { useLofi } from "../context/LofiContext";
 import { getThemeClasses, CozyTheme } from "../lib/theme";
 
+type ExamMode = "both" | "public_only" | "unseen_only";
+
 export default function MaturaUstnaPage() {
   const router = useRouter();
-  // 1. Zostawiamy tylko jeden główny stan dla motywu
+
+  // 1. Jeden główny stan dla motywu
   const [cozyTheme, setCozyTheme] = useState<CozyTheme>("library");
 
   // 2. Wyliczamy klasy CSS dynamicznie (bez osobnego stanu!)
@@ -48,6 +52,9 @@ export default function MaturaUstnaPage() {
     unseenQuestion: any;
   } | null>(null);
 
+  // Wybór zakresu treningu (Oba zadania / Tylko jawne / Tylko niejawne)
+  const [examMode, setExamMode] = useState<ExamMode>("both");
+
   // Stany egzaminu (Osobne brudnopisy dla zadań)
   const [draftTextPublic, setDraftTextPublic] = useState(""); 
   const [draftTextUnseen, setDraftTextUnseen] = useState(""); 
@@ -57,7 +64,7 @@ export default function MaturaUstnaPage() {
   const [prepTimeLeft, setPrepTimeLeft] = useState(15 * 60);
   const [isPrepTimerRunning, setIsPrepTimerRunning] = useState(false);
 
-  // Rezultat z wirtualnej komisji AI (zmieniony typ na any dla obiektu JSON)
+  // Rezultat z wirtualnej komisji AI
   const [evaluationResult, setEvaluationResult] = useState<any | null>(null);
   const [evaluating, setEvaluating] = useState(false);
 
@@ -122,7 +129,7 @@ export default function MaturaUstnaPage() {
     };
   }, [isPrepTimerRunning, prepTimeLeft]);
 
-  // LOSOWANIE PEŁNEGO ZESTAWU EGZAMINACYJNEGO (1 Jawne + 1 Niejawne)
+  // LOSOWANIE PEŁNEGO ZESTAWU EGZAMINACYJNEGO
   const handleDrawSet = () => {
     if (isRecording) stopSpeechRecognition();
 
@@ -233,19 +240,26 @@ export default function MaturaUstnaPage() {
   const handleSubmitExam = async () => {
     if (isRecording) stopSpeechRecognition();
 
-    if (!speechText.trim()) {
-      alert("Wpisz lub wypowiedz swoją odpowiedź przed wysłaniem!");
+    const wordCount = speechText.split(/\s+/).filter(Boolean).length;
+    if (wordCount < 50) {
+      alert("Wypowiedź jest za krótka! Wygłoś lub wpisz co najmniej 50 słów, aby wirtualna komisja mogła dokonać rzetelnej oceny.");
+      return;
+    }
+    if (wordCount > 2000) {
+      alert("Twoja wypowiedź przekracza bezpieczny limit 2000 słów. Skróć nieco tekst przed wysłaniem.");
       return;
     }
 
-    if (credits < 3) {
-      alert("Niewystarczająca liczba tokenów! Potrzebujesz min. 3 tokenów na próbny egzamin.");
+    const KOSZT_EGZAMINU = examMode === "both" ? 3 : 2; // Dynamiczny koszt
+    if (credits < KOSZT_EGZAMINU) {
+      alert(`Niewystarczająca liczba tokenów! Potrzebujesz min. ${KOSZT_EGZAMINU} tokenów na ten zakres egzaminu.`);
       return;
     }
 
     if (!selectedSet) return;
 
     setEvaluating(true);
+    setEvaluationResult(null);
     playSound("click");
     try {
       const response = await fetch("/api/matura-ustna/evaluate", {
@@ -254,10 +268,11 @@ export default function MaturaUstnaPage() {
         body: JSON.stringify({
           publicQuestion: selectedSet.publicQuestion,
           unseenQuestion: selectedSet.unseenQuestion,
-          draftPublic: draftTextPublic,
-          draftUnseen: draftTextUnseen,
+          draftPublic: examMode === "unseen_only" ? "" : draftTextPublic,
+          draftUnseen: examMode === "public_only" ? "" : draftTextUnseen,
           speech: speechText,
-          unseenImageUrl: selectedSet.unseenQuestion.image_url || null
+          unseenImageUrl: selectedSet.unseenQuestion.image_url || null,
+          examMode: examMode // Przesyłamy wybrany tryb do API
         })
       });
 
@@ -266,7 +281,7 @@ export default function MaturaUstnaPage() {
       if (response.ok && data.result) {
         setEvaluationResult(data.result);
         playSound("success");
-        setCredits((prev) => Math.max(0, prev - 3));
+        setCredits((prev) => Math.max(0, prev - KOSZT_EGZAMINU));
       } else {
         alert(data.error || "Wystąpił błąd podczas analizy egzaminu.");
       }
@@ -277,6 +292,9 @@ export default function MaturaUstnaPage() {
       setEvaluating(false);
     }
   };
+
+  const currentWordCount = speechText.split(/\s+/).filter(Boolean).length;
+  const KOSZT_EGZAMINU = examMode === "both" ? 3 : 2;
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-500 ${currentTheme.bg} text-stone-200 font-sans`}>
@@ -326,7 +344,7 @@ export default function MaturaUstnaPage() {
                 </svg>
               ) : (
                 <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 001.555-.832l3.197-2.132a1 1 0 000-1.664z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               )}
@@ -361,300 +379,343 @@ export default function MaturaUstnaPage() {
       {/* RENDEROWANIE ZAWARTOŚCI */}
       <main className="max-w-4xl mx-auto w-full p-6 flex flex-col gap-6 flex-1 select-none animate-slide-in">
         
-        {loading ? (
-          <div className="text-center py-12 text-stone-500 text-sm">Wczytywanie bazy pytań CKE...</div>
-        ) : !user ? (
-          <div className="text-center py-16 px-4 border border-dashed border-stone-800 rounded-3xl text-stone-500">
-            <span className="text-3xl block mb-2">🔑</span>
-            <p className="text-sm font-semibold">Zaloguj się na stronie głównej, aby korzystać z symulatora.</p>
+        {/* PANEL STATUSU TOKENÓW */}
+        <div className="w-full flex items-center justify-between bg-stone-900/40 border border-stone-800/60 p-4 rounded-2xl">
+          <div className="flex items-center gap-3">
+            <span className="text-lg">🪙</span>
+            <span className="text-sm font-bold text-stone-200">
+              Twoje kredyty: <span className="font-mono text-amber-500">{credits} tokenów</span>
+            </span>
           </div>
-        ) : (
-          <div className="flex flex-col gap-6">
-            
-            {/* PANEL STATUSU TOKENÓW */}
-            <div className="w-full flex items-center justify-between bg-stone-900/40 border border-stone-800/60 p-4 rounded-2xl">
-              <div className="flex items-center gap-3">
-                <span className="text-lg">🪙</span>
-                <span className="text-sm font-bold text-stone-200">
-                  Twoje kredyty: <span className="font-mono text-amber-500">{credits} tokenów</span>
-                </span>
+          <div className="text-[10px] text-stone-500 font-bold uppercase tracking-wider">
+            Próbny egzamin {examMode === "both" ? "pełny" : "jednostkowy"} (Koszt: {KOSZT_EGZAMINU} kredyty)
+          </div>
+        </div>
+
+        {/* KROK 1: LOSOWANIE PEŁNEGO ZESTAWU */}
+        <div className={`p-6 rounded-3xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-5 relative overflow-hidden transition-colors duration-500 flex flex-col gap-4 text-center`}>
+          
+          {/* Wybór zakresu treningu */}
+          <div className="flex flex-col gap-2 bg-stone-900/40 border border-stone-800/60 p-3 rounded-2xl max-w-lg mx-auto mb-2 w-full text-left">
+            <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider pl-1 select-none">
+              Wybierz zakres treningu:
+            </span>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: "both" as const, label: "👑 Oba zadania (3 Tokeny)", desc: "Pełny zestaw (30 pkt)" },
+                { id: "public_only" as const, label: "📖 Tylko jawne (2 Tokeny)", desc: "Lektura (15 pkt)" },
+                { id: "unseen_only" as const, label: "🖼️ Tylko niejawne (2 Tokeny)", desc: "Obraz (15 pkt)" },
+              ].map((modeItem) => (
+                <button
+                  key={modeItem.id}
+                  type="button"
+                  onClick={() => {
+                    playSound("click");
+                    setExamMode(modeItem.id);
+                    setEvaluationResult(null); 
+                  }}
+                  className={`text-[10px] px-2 py-2 rounded-xl border font-bold flex flex-col items-center justify-center gap-0.5 transition-all ${
+                    examMode === modeItem.id
+                      ? "bg-[#c68a4c]/20 text-amber-400 border-amber-500/40"
+                      : "bg-stone-950/20 text-stone-500 border-transparent hover:text-stone-300"
+                  }`}
+                >
+                  <span>{modeItem.label.split(" ")[0]} {modeItem.label.split(" ").slice(1).join(" ")}</span>
+                  <span className="text-[8px] opacity-60 font-normal">{modeItem.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-xs uppercase tracking-widest text-amber-500 font-extrabold">
+              Krok 1: Losowanie zestawu egzaminacyjnego
+            </h3>
+            <p className="text-xs text-stone-400 mt-1">
+              Zgodnie z wymogami CKE wylosujesz zestaw złożony z pytania jawnego oraz pytania niejawnego [1].
+            </p>
+          </div>
+
+          <button
+            onClick={handleDrawSet}
+            className="w-fit mx-auto px-6 py-3 bg-amber-500 text-stone-950 font-bold rounded-xl text-xs hover:bg-amber-400 transition-all shadow-md flex items-center justify-center gap-1.5"
+          >
+            <span>🎲</span> Wylosuj zestaw maturalny
+          </button>
+
+          {selectedSet && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4 text-left animate-slide-in">
+              
+              {/* ZADANIE 1: PYTANIE JAWNE (Wyświetlane w trybach "both" i "public_only") */}
+              {(examMode === "both" || examMode === "public_only") && (
+                <div className={`p-5 rounded-2xl bg-stone-950/80 border border-stone-900 flex flex-col gap-3 justify-between ${examMode !== "both" ? "md:col-span-2" : ""}`}>
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[9px] uppercase tracking-widest text-amber-500 font-bold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 w-fit">
+                      Zadanie 1: Pytanie Jawne ({selectedSet.publicQuestion.category})
+                    </span>
+                    <h4 className="text-sm sm:text-base font-bold text-stone-100 font-serif leading-snug">
+                      {selectedSet.publicQuestion.question}
+                    </h4>
+                  </div>
+                  <div className="mt-2 pt-2.5 border-t border-stone-900/60">
+                    <span className="text-[8px] uppercase tracking-widest text-stone-500 font-bold">Plan modelowej odpowiedzi:</span>
+                    <p className="text-[11px] text-stone-400 leading-relaxed font-sans italic mt-1 max-h-32 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-stone-800">
+                      {selectedSet.publicQuestion.modelOutline}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* ZADANIE 2: PYTANIE NIEJAWNE (Wyświetlane w trybach "both" i "unseen_only") */}
+              {(examMode === "both" || examMode === "unseen_only") && (
+                <div className={`p-5 rounded-2xl bg-stone-950/80 border border-stone-900 flex flex-col gap-3 justify-between ${examMode !== "both" ? "md:col-span-2" : ""}`}>
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[9px] uppercase tracking-widest text-purple-400 font-bold bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20 w-fit">
+                      Zadanie 2: Pytanie Niejawne ({selectedSet.unseenQuestion.category})
+                    </span>
+                    
+                    {/* Wyświetlanie obrazu */}
+                    {selectedSet.unseenQuestion.image_url && (
+                      <div className="w-full rounded-xl overflow-hidden border border-stone-900 bg-stone-950/50 shadow-md my-2 flex items-center justify-center max-h-64 sm:max-h-72">
+                        <img 
+                          src={selectedSet.unseenQuestion.image_url} 
+                          alt="Materiał bodźcowy CKE"
+                          className="max-w-full max-h-64 sm:max-h-72 object-contain select-none"
+                        />
+                      </div>
+                    )}
+
+                    <h4 className="text-sm sm:text-base font-bold text-stone-100 font-serif leading-snug">
+                      {selectedSet.unseenQuestion.question}
+                    </h4>
+                  </div>
+                  <div className="mt-2 pt-2.5 border-t border-stone-900/60">
+                    <span className="text-[8px] uppercase tracking-widest text-stone-500 font-bold">Plan interpretacji obrazu:</span>
+                    <p className="text-[11px] text-stone-400 leading-relaxed font-sans italic mt-1 max-h-32 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-stone-800">
+                      {selectedSet.unseenQuestion.modelOutline}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+            </div>
+          )}
+        </div>
+
+        {selectedSet && (
+          <>
+            {/* KROK 2: STOPER I BRUDNOPISY */}
+            <div className={`p-6 rounded-3xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} flex flex-col gap-5`}>
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-stone-850 pb-3">
+                <div>
+                  <h3 className="text-xs uppercase tracking-widest text-amber-500 font-bold">
+                    Krok 2: Przygotowanie konspektu (15 minut)
+                  </h3>
+                  <p className="text-xs text-stone-400 mt-1">
+                    Sporządź notatki i plany odpowiedzi dla zadań wybranego trybu treningu.
+                  </p>
+                </div>
+
+                {/* Stoper */}
+                <div className="flex items-center gap-3 bg-stone-950/80 border border-stone-900 px-4 py-2 rounded-xl">
+                  <span className="text-base font-bold font-mono text-stone-100">
+                    {formatPrepTime(prepTimeLeft)}
+                  </span>
+                  {isPrepTimerRunning ? (
+                    <button onClick={pausePrepTimer} className="text-xs text-stone-400 hover:text-stone-200">⏸️ Pauza</button>
+                  ) : (
+                    <button onClick={startPrepTimer} className="text-xs text-amber-500 hover:text-amber-400 font-bold">▶️ Start</button>
+                  )}
+                </div>
               </div>
-              <div className="text-[10px] text-stone-500 font-bold uppercase tracking-wider">
-                Losowy zestaw (1 Jawne + 1 Niejawne) = 3 tokeny
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Brudnopis Zadanie 1 (Tylko w trybach "both" i "public_only") */}
+                {(examMode === "both" || examMode === "public_only") && (
+                  <div className={`flex flex-col gap-1.5 ${examMode !== "both" ? "md:col-span-2" : ""}`}>
+                    <span className="text-[9px] uppercase tracking-widest text-stone-500 font-bold px-1">Brudnopis Zadanie 1 (Pytanie jawne):</span>
+                    <textarea
+                      placeholder="Zapisz tu tezy, argumenty i odwołania literackie do zadania 1..."
+                      value={draftTextPublic}
+                      onChange={(e) => setDraftTextPublic(e.target.value)}
+                      rows={6}
+                      className="w-full bg-stone-950/80 border border-stone-800/80 rounded-2xl p-4 text-xs text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-700/60 leading-relaxed font-sans"
+                    />
+                  </div>
+                )}
+
+                {/* Brudnopis Zadanie 2 (Tylko w trybach "both" i "unseen_only") */}
+                {(examMode === "both" || examMode === "unseen_only") && (
+                  <div className={`flex flex-col gap-1.5 ${examMode !== "both" ? "md:col-span-2" : ""}`}>
+                    <span className="text-[9px] uppercase tracking-widest text-stone-500 font-bold px-1">Brudnopis Zadanie 2 (Pytanie niejawne):</span>
+                    <textarea
+                      placeholder="Zapisz tu interpretację obrazu, wnioski i konteksty do zadania 2..."
+                      value={draftTextUnseen}
+                      onChange={(e) => setDraftTextUnseen(e.target.value)}
+                      rows={6}
+                      className="w-full bg-stone-950/80 border border-stone-800/80 rounded-2xl p-4 text-xs text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-700/60 leading-relaxed font-sans"
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* KROK 1: LOSOWANIE PEŁNEGO ZESTAWU */}
-            <div className={`p-6 rounded-3xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-5 relative overflow-hidden transition-colors duration-500 flex flex-col gap-4 text-center`}>
-              <div>
-                <h3 className="text-xs uppercase tracking-widest text-amber-500 font-extrabold">
-                  Krok 1: Losowanie zestawu egzaminacyjnego
-                </h3>
-                <p className="text-xs text-stone-400 mt-1">
-                  Zgodnie z wymogami CKE wylosujesz zestaw złożony z 1 pytania jawnego (lektura) oraz 1 niejawnego (ikoniczne) [1].
-                </p>
+            {/* KROK 3: WYGŁOSZENIE POŁĄCZONEJ MOWY */}
+            <div className={`p-6 rounded-3xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} flex flex-col gap-4`}>
+              <div className="flex items-center justify-between border-b border-stone-850 pb-3">
+                <div>
+                  <h3 className="text-xs uppercase tracking-widest text-amber-500 font-bold">
+                    Krok 3: Wygłoszenie wypowiedzi monologowej
+                  </h3>
+                  <p className="text-xs text-stone-400 mt-1">
+                    Użyj przycisku dyktowania lub wpisz swoją wypowiedź monologową.
+                  </p>
+                </div>
+
+                {/* INTERAKTYWNE DYKTOWANIE GŁOSOWE */}
+                {isRecording ? (
+                  <button
+                    onClick={stopSpeechRecognition}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-red-900/30 bg-red-950/40 text-red-400 hover:bg-red-900 hover:text-white font-bold text-xs transition-all animate-pulse"
+                  >
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                    </span>
+                    Zatrzymaj dyktowanie 🛑
+                  </button>
+                ) : (
+                  <button
+                    onClick={startSpeechRecognition}
+                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 text-stone-300 hover:text-stone-100 font-bold text-xs transition-all`}
+                  >
+                    Mów (Dyktuj) 🎙️
+                  </button>
+                )}
+              </div>
+
+              <textarea
+                placeholder="Wpisz lub kliknij 'Mów (Dyktuj)', aby nagrać swoją wypowiedź monologową dla wybranego zakresu pytań..."
+                value={speechText}
+                onChange={(e) => setSpeechText(e.target.value)}
+                rows={8}
+                className="w-full bg-[#161210] border border-stone-800 rounded-2xl p-4 text-xs sm:text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-700/60 leading-relaxed font-sans"
+              />
+
+              <div className="flex justify-between text-[11px] text-stone-500 mt-1">
+                <span>Liczba znaków: {speechText.length}</span>
+                <span className={currentWordCount > 2000 ? "text-red-400 font-semibold" : ""}>
+                  Orientacyjna liczba słów: {currentWordCount} / 2000
+                </span>
               </div>
 
               <button
-                onClick={handleDrawSet}
-                className="w-fit mx-auto px-6 py-3 bg-amber-500 text-stone-950 font-bold rounded-xl text-xs hover:bg-amber-400 transition-all shadow-md flex items-center justify-center gap-1.5"
+                onClick={handleSubmitExam}
+                disabled={evaluating || credits < KOSZT_EGZAMINU}
+                className="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs transition-all disabled:opacity-50"
               >
-                <span>🎲</span> Wylosuj zestaw maturalny
+                {evaluating ? "⏳ Wirtualna Komisja CKE analizuje Twój egzamin..." : `🎙️ Wyślij zestaw do weryfikacji AI (Koszt: ${KOSZT_EGZAMINU} Tokeny)`}
               </button>
 
-              {selectedSet && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4 text-left animate-slide-in">
-                  
-                  {/* ZADANIE 1: PYTANIE JAWNE */}
-                  <div className="p-5 rounded-2xl bg-stone-950/80 border border-stone-900 flex flex-col gap-3 justify-between">
-                    <div className="flex flex-col gap-2">
-                      <span className="text-[9px] uppercase tracking-widest text-amber-500 font-bold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 w-fit">
-                        Zadanie 1: Pytanie Jawne ({selectedSet.publicQuestion.category})
-                      </span>
-                      <h4 className="text-sm sm:text-base font-bold text-stone-100 font-serif leading-snug">
-                        {selectedSet.publicQuestion.question}
-                      </h4>
-                    </div>
-                    <div className="mt-2 pt-2.5 border-t border-stone-900/60">
-                      <span className="text-[8px] uppercase tracking-widest text-stone-500 font-bold">Plan modelowej odpowiedzi:</span>
-                      <p className="text-[11px] text-stone-400 leading-relaxed font-sans italic mt-1 max-h-32 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-stone-800">
-                        {selectedSet.publicQuestion.modelOutline}
-                      </p>
-                    </div>
+              {/* DYNAMICZNY OSTRZEGAWCZY BANER REASEKURACYJNY (WYMÓG UX) */}
+              {evaluating && (
+                <div className="p-4 rounded-2xl bg-purple-950/20 border border-purple-900/30 text-left text-[11px] text-purple-300/95 leading-relaxed font-sans mt-1 animate-pulse">
+                  ⚠️ <strong className="text-purple-400 font-bold">Wirtualna Komisja AI analizuje Twój egzamin. Prosimy o cierpliwość i nieodświeżanie tej strony.</strong> Weryfikacja monologu i analiza obrazu wymagają czasu. Twój pakiet tokenów jest bezpieczny – w przypadku wystąpienia jakiegokolwiek błędu połączenia sieciowego, tokeny zostaną automatycznie zwrócone na Twoje konto.
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* KROK 4: REZULTAT OCENY KOMISJI */}
+        {evaluationResult && (
+          <div className="p-6 sm:p-8 rounded-3xl border border-emerald-900/30 bg-[#121614] flex flex-col gap-6 shadow-xl animate-slide-in w-full text-left">
+            
+            {/* Nagłówek wyniku z dużym badgem punktacji */}
+            <div className="flex flex-col sm:flex-row items-center justify-between border-b border-stone-850 pb-5 gap-4">
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-stone-100 font-serif flex items-center gap-2">
+                  <span>🎓</span> Oficjalny Protokół Egzaminu Ustnego (Ocena Komisji AI)
+                </h3>
+                <p className="text-[10px] uppercase tracking-widest text-emerald-400 font-semibold mt-0.5">
+                  Przeanalizowano wybrane zadania pomyślnie na podstawie kryteriów CKE
+                </p>
+              </div>
+              <div className="flex flex-col items-center shrink-0">
+                <span className="text-2xl sm:text-3xl font-black text-emerald-400 font-mono tracking-tight bg-stone-950 px-5 py-2.5 rounded-2xl border border-stone-800 shadow-xl">
+                  {evaluationResult.score}
+                </span>
+                <span className={`text-[9px] uppercase font-bold tracking-wider mt-2 px-2.5 py-0.5 rounded-full ${
+                  evaluationResult.status === "ZDANE" 
+                    ? "bg-emerald-950/40 text-emerald-400 border border-emerald-900/30" 
+                    : "bg-red-950/40 text-red-400 border border-red-900/30"
+                }`}>
+                  {evaluationResult.status}
+                </span>
+              </div>
+            </div>
+
+            {/* Kryteria szczegółowe CKE w siatce dwukolumnowej */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {evaluationResult.details?.map((detail: any, idx: number) => (
+                <div key={idx} className="p-4 rounded-2xl bg-stone-950/60 border border-stone-900 hover:border-amber-500/20 transition-all flex flex-col justify-between">
+                  <div className="flex justify-between font-bold text-[10px] uppercase tracking-wider text-stone-200 mb-2">
+                    <span>{detail.criterion}</span>
+                    <span className="text-amber-500 font-mono">{detail.points}</span>
                   </div>
+                  <p className="text-[11.5px] text-stone-400 leading-relaxed font-sans">{detail.comment}</p>
+                </div>
+              ))}
+            </div>
 
-                  {/* ZADANIE 2: PYTANIE NIEJAWNE (Z OBRAZEM) */}
-                  <div className="p-5 rounded-2xl bg-stone-950/80 border border-stone-900 flex flex-col gap-3 justify-between">
-                    <div className="flex flex-col gap-2">
-                      <span className="text-[9px] uppercase tracking-widest text-purple-400 font-bold bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20 w-fit">
-                        Zadanie 2: Pytanie Niejawne ({selectedSet.unseenQuestion.category})
-                      </span>
-                      
-                      {/* Wyświetlanie dołączonego obrazu bodźcowego */}
-                      {selectedSet.unseenQuestion.image_url && (
-                        <div className="w-full rounded-xl overflow-hidden border border-stone-900 bg-stone-950/50 shadow-md my-2 flex items-center justify-center max-h-64 sm:max-h-72">
-                          <img 
-                            src={selectedSet.unseenQuestion.image_url} 
-                            alt="Materiał bodźcowy CKE"
-                            className="max-w-full max-h-64 sm:max-h-72 object-contain select-none pointer-events-none"
-                          />
-                        </div>
-                      )}
-
-                      <h4 className="text-sm sm:text-base font-bold text-stone-100 font-serif leading-snug">
-                        {selectedSet.unseenQuestion.question}
-                      </h4>
-                    </div>
-                    <div className="mt-2 pt-2.5 border-t border-stone-900/60">
-                      <span className="text-[8px] uppercase tracking-widest text-stone-500 font-bold">Plan interpretacji obrazu:</span>
-                      <p className="text-[11px] text-stone-400 leading-relaxed font-sans italic mt-1 max-h-32 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-stone-800">
-                        {selectedSet.unseenQuestion.modelOutline}
-                      </p>
-                    </div>
-                  </div>
-
+            {/* Analiza obrazu i Podsumowanie komisji */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {evaluationResult.imageAnalysis && (
+                <div className="p-4 rounded-2xl bg-stone-950/45 border border-stone-900/80">
+                  <h4 className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span>🖼</span> Ocena interpretacji obrazu w Zadaniu 2:
+                  </h4>
+                  <p className="text-[11.5px] text-stone-400 leading-relaxed font-sans">{evaluationResult.imageAnalysis}</p>
+                </div>
+              )}
+              {evaluationResult.summary && (
+                <div className="p-4 rounded-2xl bg-stone-950/45 border border-stone-900/80">
+                  <h4 className="text-[10px] font-bold text-[#c68a4c] uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span>💡</span> Podsumowanie komisji:
+                  </h4>
+                  <p className="text-[11.5px] text-stone-400 italic leading-relaxed font-sans">{evaluationResult.summary}</p>
                 </div>
               )}
             </div>
 
-            {selectedSet && (
-              <>
-                {/* KROK 2: STOPER I DWA OSOBNE BRUDNOPISY */}
-                <div className={`p-6 rounded-3xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} flex flex-col gap-5`}>
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-stone-850 pb-3">
-                    <div>
-                      <h3 className="text-xs uppercase tracking-widest text-amber-500 font-bold">
-                        Krok 2: Przygotowanie konspektu (15 minut)
-                      </h3>
-                      <p className="text-xs text-stone-400 mt-1">
-                        Sporządź niezależne notatki i plany odpowiedzi dla obu zadań.
-                      </p>
-                    </div>
-
-                    {/* Stoper */}
-                    <div className="flex items-center gap-3 bg-stone-950/80 border border-stone-900 px-4 py-2 rounded-xl">
-                      <span className="text-base font-bold font-mono text-stone-100">
-                        {formatPrepTime(prepTimeLeft)}
-                      </span>
-                      {isPrepTimerRunning ? (
-                        <button onClick={pausePrepTimer} className="text-xs text-stone-400 hover:text-stone-200">⏸️ Pauza</button>
-                      ) : (
-                        <button onClick={startPrepTimer} className="text-xs text-amber-500 hover:text-amber-400 font-bold">▶️ Start</button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Brudnopis Zadanie 1 */}
-                    <div className="flex flex-col gap-1.5">
-                      <span className="text-[9px] uppercase tracking-widest text-stone-500 font-bold px-1">Brudnopis Zadanie 1 (Pytanie jawne):</span>
-                      <textarea
-                        placeholder="Zapisz tu tezy, argumenty i odwołania literackie do zadania 1..."
-                        value={draftTextPublic}
-                        onChange={(e) => setDraftTextPublic(e.target.value)}
-                        rows={6}
-                        className="w-full bg-stone-950/80 border border-stone-800/80 rounded-2xl p-4 text-xs text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-700/60 leading-relaxed font-sans"
-                      />
-                    </div>
-
-                    {/* Brudnopis Zadanie 2 */}
-                    <div className="flex flex-col gap-1.5">
-                      <span className="text-[9px] uppercase tracking-widest text-stone-500 font-bold px-1">Brudnopis Zadanie 2 (Pytanie niejawne):</span>
-                      <textarea
-                        placeholder="Zapisz tu interpretację obrazu, wnioski i konteksty do zadania 2..."
-                        value={draftTextUnseen}
-                        onChange={(e) => setDraftTextUnseen(e.target.value)}
-                        rows={6}
-                        className="w-full bg-stone-950/80 border border-stone-800/80 rounded-2xl p-4 text-xs text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-700/60 leading-relaxed font-sans"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* KROK 3: WYGŁOSZENIE POŁĄCZONEJ MOWY */}
-                <div className={`p-6 rounded-3xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} flex flex-col gap-4`}>
-                  <div className="flex items-center justify-between border-b border-stone-850 pb-3">
-                    <div>
-                      <h3 className="text-xs uppercase tracking-widest text-amber-500 font-bold">
-                        Krok 3: Wygłoszenie wypowiedzi monologowej
-                      </h3>
-                      <p className="text-xs text-stone-400 mt-1">
-                        Użyj przycisku dyktowania lub wpisz swoją wypowiedź monologową (najpierw zadanie 1, potem zadanie 2).
-                      </p>
-                    </div>
-
-                    {/* INTERAKTYWNE DYKTOWANIE GŁOSOWE */}
-                    {isRecording ? (
-                      <button
-                        onClick={stopSpeechRecognition}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-red-900/30 bg-red-950/40 text-red-400 hover:bg-red-900 hover:text-white font-bold text-xs transition-all animate-pulse"
-                      >
-                        <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                        </span>
-                        Zatrzymaj dyktowanie 🛑
-                      </button>
-                    ) : (
-                      <button
-                        onClick={startSpeechRecognition}
-                        className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 text-stone-300 hover:text-stone-100 font-bold text-xs transition-all`}
-                      >
-                        Mów (Dyktuj) 🎙️
-                      </button>
-                    )}
-                  </div>
-
-                  <textarea
-                    placeholder="Wpisz lub kliknij 'Mów (Dyktuj)', aby nagrać swoją pełną, połączoną wypowiedź monologową na oba pytania z zestawu..."
-                    value={speechText}
-                    onChange={(e) => setSpeechText(e.target.value)}
-                    rows={8}
-                    className="w-full bg-stone-900/80 border border-stone-800/80 rounded-2xl p-4 text-xs sm:text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-700/60 leading-relaxed font-sans"
-                  />
-
-                  <button
-                    onClick={handleSubmitExam}
-                    disabled={evaluating || credits < 3}
-                    className="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs transition-all disabled:opacity-50"
-                  >
-                    {evaluating ? "⏳ Wirtualna Komisja CKE analizuje Twój egzamin..." : "🎙️ Wyślij zestaw do weryfikacji AI (Koszt: 3 Tokeny)"}
-                  </button>
-                </div>
-              </>
-            )}
-
-            {/* KROK 4: REZULTAT OCENY KOMISJI */}
-            {evaluationResult && (
-              <div className="p-6 sm:p-8 rounded-3xl border border-emerald-900/30 bg-[#121614] flex flex-col gap-6 shadow-xl animate-slide-in w-full text-left">
-                
-                {/* Nagłówek wyniku z dużym badgem punktacji */}
-                <div className="flex flex-col sm:flex-row items-center justify-between border-b border-stone-800 pb-5 gap-4">
-                  <div>
-                    <h3 className="text-sm sm:text-base font-bold text-stone-100 font-serif flex items-center gap-2">
-                      <span>🎓</span> Oficjalny Protokół Egzaminu Ustnego (Ocena Komisji AI)
-                    </h3>
-                    <p className="text-[10px] uppercase tracking-widest text-emerald-400 font-semibold mt-0.5">
-                      Przeanalizowano oba zadania pomyślnie na podstawie kryteriów CKE
-                    </p>
-                  </div>
-                  <div className="flex flex-col items-center shrink-0">
-                    <span className="text-2xl sm:text-3xl font-black text-emerald-400 font-mono tracking-tight bg-stone-950 px-5 py-2.5 rounded-2xl border border-stone-800 shadow-xl">
-                      {evaluationResult.score}
-                    </span>
-                    <span className={`text-[9px] uppercase font-bold tracking-wider mt-2 px-2.5 py-0.5 rounded-full ${
-                      evaluationResult.status === "ZDANE" 
-                        ? "bg-emerald-950/40 text-emerald-400 border border-emerald-900/30" 
-                        : "bg-red-950/40 text-red-400 border border-red-900/30"
-                    }`}>
-                      {evaluationResult.status}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Kryteria szczegółowe CKE w siatce dwukolumnowej */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {evaluationResult.details?.map((detail: any, idx: number) => (
-                    <div key={idx} className="p-4 rounded-2xl bg-stone-950/60 border border-stone-900 hover:border-amber-500/20 transition-all flex flex-col justify-between">
-                      <div className="flex justify-between font-bold text-[10px] uppercase tracking-wider text-stone-200 mb-2">
-                        <span>{detail.criterion}</span>
-                        <span className="text-amber-500 font-mono">{detail.points}</span>
-                      </div>
-                      <p className="text-[11.5px] text-stone-400 leading-relaxed font-sans">{detail.comment}</p>
+            {/* Pytania dopytujące od Komisji (Follow-up) w wyróżnionej ramce */}
+            {evaluationResult.followUpQuestions && evaluationResult.followUpQuestions.length > 0 && (
+              <div className="p-5 rounded-2xl bg-stone-950/60 border border-stone-900 flex flex-col gap-3">
+                <h4 className="text-[10px] font-bold text-stone-200 uppercase tracking-widest flex items-center gap-2">
+                  <span>💬</span> Pytania dopytujące od Komisji (Follow-up):
+                </h4>
+                <p className="text-[9px] text-stone-500 mb-1 leading-normal">
+                  Wzorując się na prawdziwym egzaminie ustnym, komisja zadaje Ci pytania bezpośrednio nawiązujące do Twojego monologu:
+                </p>
+                <div className="grid grid-cols-1 gap-3">
+                  {evaluationResult.followUpQuestions.map((question: string, qIdx: number) => (
+                    <div key={qIdx} className="p-3.5 rounded-xl bg-stone-900/40 border border-stone-850 text-[11.5px] text-stone-300 leading-relaxed font-serif flex gap-3">
+                      <span className="text-amber-500 font-bold shrink-0">{qIdx + 1}.</span>
+                      <p className="italic">{question}</p>
                     </div>
                   ))}
                 </div>
-
-                {/* Analiza obrazu i Podsumowanie komisji */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {evaluationResult.imageAnalysis && (
-                    <div className="p-4 rounded-2xl bg-stone-950/45 border border-stone-900/80">
-                      <h4 className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                        <span>🖼</span> Ocena interpretacji obrazu w Zadaniu 2:
-                      </h4>
-                      <p className="text-[11.5px] text-stone-400 leading-relaxed font-sans">{evaluationResult.imageAnalysis}</p>
-                    </div>
-                  )}
-                  {evaluationResult.summary && (
-                    <div className="p-4 rounded-2xl bg-stone-950/45 border border-stone-900/80">
-                      <h4 className="text-[10px] font-bold text-[#c68a4c] uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                        <span>💡</span> Podsumowanie komisji:
-                      </h4>
-                      <p className="text-[11.5px] text-stone-400 italic leading-relaxed font-sans">{evaluationResult.summary}</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Pytania dopytujące od Komisji (Follow-up) w wyróżnionej ramce */}
-                {evaluationResult.followUpQuestions && evaluationResult.followUpQuestions.length > 0 && (
-                  <div className="p-5 rounded-2xl bg-stone-950/60 border border-stone-900 flex flex-col gap-3">
-                    <h4 className="text-[10px] font-bold text-stone-200 uppercase tracking-widest flex items-center gap-2">
-                      <span>💬</span> Pytania dopytujące od Komisji (Follow-up):
-                    </h4>
-                    <p className="text-[9px] text-stone-500 mb-1 leading-normal">
-                      Wzorując się na prawdziwym egzaminie ustnym, komisja zadaje Ci dwa pytania bezpośrednio nawiązujące do Twojego monologu:
-                    </p>
-                    <div className="grid grid-cols-1 gap-3">
-                      {evaluationResult.followUpQuestions.map((question: string, qIdx: number) => (
-                        <div key={qIdx} className="p-3.5 rounded-xl bg-stone-900/40 border border-stone-850 text-[11.5px] text-stone-300 leading-relaxed font-serif flex gap-3">
-                          <span className="text-amber-500 font-bold shrink-0">{qIdx + 1}.</span>
-                          <p className="italic">{question}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Informacja małym drukiem */}
-                <div className="text-[9px] text-stone-500 leading-relaxed font-sans px-1 mt-1 border-t border-stone-900/60 pt-3">
-                  * Uwaga: Symulator AI ocenia odpowiedź bardzo rygorystycznie i dosłownie na podstawie kryteriów CKE dla Formuły 2023. Rzeczywista ocena ludzkiej komisji na prawdziwym egzaminie państwowym może różnić się na korzyść zdającego z uwagi na bardziej holistyczną ocenę i dynamiczną reakcję podczas rozmowy.
-                </div>
-
               </div>
             )}
 
+            {/* Informacja małym drukiem */}
+            <div className="text-[9px] text-stone-500 leading-relaxed font-sans px-1 mt-1 border-t border-stone-900/60 pt-3">
+              * Uwaga: Symulator AI ocenia odpowiedź bardzo rygorystycznie i dosłownie na podstawie kryteriów CKE dla Formuły 2023. Rzeczywista ocena ludzkiej komisji na prawdziwym egzaminie państwowym może różnić się na korzyść zdającego z uwagi na bardziej elastyczną i dynamiczną reakcję podczas rozmowy.
+            </div>
+
           </div>
         )}
+
       </main>
     </div>
   );

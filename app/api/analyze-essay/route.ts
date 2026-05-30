@@ -257,12 +257,19 @@ Zwróć WYŁĄCZNIE obiekt JSON. Bez znaczników markdown, bez \`\`\`json.
           error?.message?.includes("RESOURCE_EXHAUSTED") || 
           error?.message?.includes("UNAVAILABLE");
 
-        if (isRetryable && i < textRetries - 1) {
-          console.warn(`[LIMIT/PRZECIĄŻENIE GENERATORA 503/429] Model zablokowany. Automatyczny retry za ${textDelay / 1000}s...`);
-          await new Promise((resolve) => setTimeout(resolve, textDelay));
-          textDelay *= 1.5;
-          continue;
-        }
+       if (isRetryable && i < textRetries - 1) {
+                // Generujemy losowy jitter w milisekundach (od 1000ms do 3000ms)
+                const jitter = Math.floor(Math.random() * 2000) + 1000;
+                const finalDelay = textDelay + jitter; // Sumaryczny czas czekania
+
+                console.warn(`[LIMIT/PRZECIĄŻENIE 503/429] Automatyczny retry za ${(finalDelay / 1000).toFixed(2)}s (czas bazowy: ${textDelay / 1000}s + losowy jitter: ${(jitter / 1000).toFixed(2)}s)...`);
+                
+                // Odczekujemy spersonalizowany, losowy czas dla tego konkretnego użytkownika
+                await new Promise((resolve) => setTimeout(resolve, finalDelay));
+                
+                textDelay *= 1.5; // Zwiększamy bazowy czas na wypadek kolejnego błędu
+                continue;
+              }
         throw error;
       }
     }

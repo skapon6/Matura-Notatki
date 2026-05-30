@@ -1,12 +1,11 @@
+// app/ocenianie-rozprawek/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
-// Na samej górze komponentu strony:
-import { getThemeClasses, CozyTheme } from "../lib/theme"; // Twój poprawny import
-
+import { getThemeClasses, CozyTheme } from "../lib/theme";
 
 interface Match {
   start: number;
@@ -14,12 +13,11 @@ interface Match {
   annotation: any;
 }
 
-
-
 export default function OcenianieRozprawekPage() {
   const router = useRouter();
 
-    const [currentTheme, setCurrentTheme] = useState<any>(getThemeClasses("library"));
+  // Dynamiczny stan i efekt ładowania motywu
+  const [currentTheme, setCurrentTheme] = useState<any>(getThemeClasses("library"));
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("app_theme") as CozyTheme;
@@ -53,8 +51,6 @@ export default function OcenianieRozprawekPage() {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 5000);
   };
-
-  
 
   useEffect(() => {
     async function checkUserAndCredits() {
@@ -90,7 +86,6 @@ export default function OcenianieRozprawekPage() {
     }
   }
 
-  // Pobranie historii zapisanych ocen użytkownika
   async function fetchUserHistory(userId: string) {
     const { data, error } = await supabase
       .from("essay_evaluations")
@@ -203,7 +198,7 @@ export default function OcenianieRozprawekPage() {
       if (data.alternativeContexts) {
         setGeneratedContexts(data.alternativeContexts);
       }
-      setIsGenerationMode(false); // Wyłączamy tryb generowania po sukcesie, by użytkownik mógł edytować/analizować tekst
+      setIsGenerationMode(false);
       setActiveTab("write");
       triggerAlert("Przykładowa rozprawka została wygenerowana! Pobrano 1 kredyt.", "success");
 
@@ -321,11 +316,10 @@ export default function OcenianieRozprawekPage() {
   }
 
   const creditsRemaining = profile?.essay_credits ?? 0;
-  const isPremiumUser = profile?.subscription_status === "paid" || profile?.subscription_status === "admin";
   const currentWordCount = essayText.split(/\s+/).filter(Boolean).length;
 
   return (
-    <div className={`min-h-screen ${currentTheme.bg} text-stone-200 font-sans p-6 flex flex-col items-center transition-colors duration-500`}>
+    <div className={`min-h-screen flex flex-col transition-colors duration-500 ${currentTheme.bg} text-stone-200 font-sans p-6 items-center`}>
       
       {notification && (
         <div className={`fixed top-6 right-6 z-50 px-5 py-4 rounded-2xl border shadow-2xl backdrop-blur-md max-w-sm ${
@@ -347,11 +341,11 @@ export default function OcenianieRozprawekPage() {
             </div>
           </div>
           <Link 
-                href="/" 
-                className={`self-start sm:self-center text-xs px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} bg-stone-900/60 text-stone-400 hover:text-stone-100 hover:scale-105 active:scale-95 transition-all`}
-              >
-                ← Wróć do kącika
-              </Link>
+            href="/" 
+            className={`self-start sm:self-center text-xs px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} bg-stone-900/60 text-stone-400 hover:text-stone-100 hover:scale-105 active:scale-95 transition-all`}
+          >
+            ← Wróć do kącika
+          </Link>
         </div>
 
         {/* Informacja o Kredytach */}
@@ -360,11 +354,7 @@ export default function OcenianieRozprawekPage() {
             <span className="text-2xl">📊</span>
             <div>
               <p className="text-xs font-bold text-stone-300">Stan Twojego konta:</p>
-              <p className="text-[11px] text-stone-500">
-                {isPremiumUser 
-                  ? "Posiadasz nielimitowane notatki oraz pakiet 10 ocen wypracowań." 
-                  : "Używasz darmowego konta testowego z limitem 1 bezpłatnej oceny."}
-              </p>
+              <p className="text-[11px] text-stone-500">Używasz bezpiecznego systemu tokenów edukacyjnych.</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -404,7 +394,7 @@ export default function OcenianieRozprawekPage() {
                 onChange={(e) => {
                   setIsGenerationMode(e.target.checked);
                   if (e.target.checked) {
-                    setEssayText(""); // Czyścimy tekst, by nie wprowadzać w błąd podczas generowania nowej rozprawki
+                    setEssayText(""); 
                     setGeneratedContexts([]);
                     setAnalysisResult(null);
                   }
@@ -457,7 +447,7 @@ export default function OcenianieRozprawekPage() {
                   value={essayText}
                   onChange={(e) => setEssayText(e.target.value)}
                   disabled={isAnalyzing || isGenerating || isGenerationMode}
-                  className="w-full bg-stone-900/80 border border-stone-800 rounded-2xl p-4 text-xs sm:text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-700/60 font-sans leading-relaxed disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-stone-900/80 border border-stone-800 rounded-2xl p-4 text-xs sm:text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-700/60 leading-relaxed font-sans disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <div className="flex justify-between text-[11px] text-stone-500 mt-1">
                   <span>Liczba znaków: {essayText.length}</span>
@@ -477,7 +467,7 @@ export default function OcenianieRozprawekPage() {
             )}
 
             {creditsRemaining > 0 ? (
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex flex-col gap-2 w-full">
                 {isGenerationMode ? (
                   <button
                     onClick={handleGenerateEssay}
@@ -495,10 +485,17 @@ export default function OcenianieRozprawekPage() {
                     {isAnalyzing ? "🤖 Trwa analiza tekstu..." : "Przeanalizuj rozprawkę (1 kredyt)"}
                   </button>
                 )}
+
+                {/* DYNAMICZNY OSTRZEGAWCZY BANER REASEKURACYJNY (WYMÓG UX) */}
+                {(isAnalyzing || isGenerating) && (
+                  <div className="p-4 rounded-2xl bg-amber-950/20 border border-amber-900/30 text-left text-[11px] text-amber-400/95 leading-relaxed font-sans mt-1 animate-pulse">
+                    ⚠️ <strong className="text-amber-300 font-bold">Trwa analiza przez sztuczną inteligencję. Prosimy o cierpliwość i nieodświeżanie tej strony.</strong> Zamknięcie lub przeładowanie karty w tym momencie uniemożliwi wyświetlenie wyników. Twój kredyt jest bezpieczny – w przypadku wystąpienia jakiegokolwiek błędu połączenia sieciowego, pobrany token zostanie automatycznie zwrócony na Twoje konto.
+                  </div>
+                )}
               </div>
             ) : (
               <div className="text-center p-3.5 bg-red-950/20 border border-red-950/40 rounded-xl text-xs text-red-400">
-                Wykorzystałeś wszystkie darmowe oceny wypracowań. Kup pakiet Premium, aby natychmiast otrzymać kolejne próby! 🚀
+                Wykorzystałeś wszystkie darmowe oceny wypracowań. Kup pakiet Premium, aby natychmiant otrzymać kolejne próby! 🚀
               </div>
             )}
 

@@ -108,7 +108,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, currentTh
               className="w-full p-3.5 flex items-center justify-between text-left hover:bg-stone-900/40 transition-all gap-2"
             >
               <span className="text-xs font-bold text-stone-100 font-serif flex items-center gap-2">
-                <span className="shrink-0">🎙️</span> Symulator Matury Ustnej (Koszt: 3 Tokeny)
+                <span className="shrink-0">🎙️</span> Symulator Matury Ustnej (Koszt: 2-3 Kredyty)
               </span>
               <span className="text-stone-500 text-xs shrink-0">{activeSection === "oral" ? "▲" : "▼"}</span>
             </button>
@@ -118,10 +118,13 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, currentTh
                   Przećwicz stresujący egzamin ustny w bezpiecznym domu. Kliknij losowanie, aby otrzymać zestaw (pytanie jawne o lekturę oraz pytanie niejawne o dołączony obraz).
                 </p>
                 <p>
+                  <strong>Zakres treningu:</strong> Możesz wybrać, czy chcesz ćwiczyć cały zestaw (oba zadania – koszt 3 tokeny), czy skupić się wyłącznie na jednym wybranym pytaniu (tylko jawne o lekturę lub tylko niejawne o plakat/obraz – koszt 2 tokeny) [1].
+                </p>
+                <p>
                   Przygotuj notatki na brudnopisie, a następnie wygłoś swoją mowę do mikrofonu (system sam zamieni Twój głos na tekst). Po wysłaniu, wirtualna komisja oceni Twoją mowę, przeanalizuje motywy na obrazie i wystawi przejrzysty protokół punktowy.
                 </p>
                 <p>
-                  <strong>Pytania od komisji:</strong> Na dole protokołu komisja zada Ci dwa trudne, precyzyjne pytania nawiązujące bezpośrednio do tego, o czym mówiłeś, pozwalając Ci przećwiczyć merytoryczną dyskusję.
+                  <strong>Pytania od komisji:</strong> Na dole protokołu komisja zada Ci pytania dopytujące bezpośrednio nawiązujące do Twojej wygłoszonej wypowiedzi, pozwalając Ci przećwiczyć merytoryczną dyskusję.
                 </p>
               </div>
             )}
@@ -183,7 +186,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, currentTh
               className="w-full p-3.5 flex items-center justify-between text-left hover:bg-stone-900/40 transition-all gap-2"
             >
               <span className="text-xs font-bold text-stone-100 font-serif flex items-center gap-2">
-                <span className="shrink-0">🪙</span> Kredyty, Pakiety i Opłaty
+                <span>🪙</span> Kredyty, Pakiety i Opłaty
               </span>
               <span className="text-stone-500 text-xs shrink-0">{activeSection === "pricing" ? "▲" : "▼"}</span>
             </button>
@@ -193,7 +196,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, currentTh
                   Darmowe konto pozwala na czytanie części notatek. Kupując jeden z pakietów dostępowych (Mini, Medium lub roczny Premium), odblokowujesz całą bazę wiedzy, mapy myśli i otrzymujesz darmowe tokeny na start [1]. <strong className="text-stone-100 font-semibold">W dowolnym momencie możesz również osobno dokupić dodatkowe pakiety kredytów (tokenów)</strong>, jeśli zabraknie Ci ich na analizy lub symulacje egzaminów ustnych.
                 </p>
                 
-                {/* Wykaz zużycia kredytów */}
+                {/* Wykaz zużycia kredytów - zaktualizowany o koszt 2 i 3 tokenów */}
                 <div className="p-3.5 rounded-xl bg-stone-950/50 border border-stone-800 flex flex-col gap-1.5 text-stone-300 leading-relaxed font-sans">
                   <span className="text-[10px] text-amber-500 font-bold uppercase tracking-wider block mb-1">
                     📉 Jak zużywane są Twoje kredyty:
@@ -206,8 +209,12 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, currentTh
                     <span className="text-stone-300">📖 Napisanie przykładowej rozprawki przez AI:</span>
                     <span className="font-semibold text-stone-200 shrink-0 whitespace-nowrap bg-stone-900 px-2.5 py-0.5 rounded-md border border-stone-800/60">1 kredyt</span>
                   </div>
+                  <div className="flex justify-between items-center border-b border-stone-900/60 pb-1.5 text-[11px] gap-3">
+                    <span className="text-stone-300">🎙️ Próbny egzamin ustny (tylko 1 wybrane zadanie):</span>
+                    <span className="font-semibold text-stone-200 shrink-0 whitespace-nowrap bg-stone-900 px-2.5 py-0.5 rounded-md border border-stone-800/60">2 kredyty</span>
+                  </div>
                   <div className="flex justify-between items-center text-[11px] gap-3">
-                    <span className="text-stone-300">🎙️ Pełny próbny egzamin ustny z komisją AI:</span>
+                    <span className="text-stone-300">👑 Pełny próbny egzamin ustny (oba zadania):</span>
                     <span className="font-semibold text-stone-200 shrink-0 whitespace-nowrap bg-stone-900 px-2.5 py-0.5 rounded-md border border-stone-800/60">3 kredyty</span>
                   </div>
                 </div>
@@ -218,6 +225,9 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, currentTh
               </div>
             )}
           </div>
+
+          {/* FIZYCZNY SPACER BEZPIECZEŃSTWA (WYSPYCHACZ) */}
+          <div className="h-14 shrink-0" />
 
         </div>
 

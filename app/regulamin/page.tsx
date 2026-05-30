@@ -91,7 +91,8 @@ export default function RegulaminPage() {
             <ul className="list-disc pl-5 space-y-1">
               <li><strong>Ocenianie rozprawki AI:</strong> pobiera dokładnie <strong>1 kredyt</strong> z konta użytkownika.</li>
               <li><strong>Generowanie przykładowej rozprawki AI:</strong> pobiera dokładnie <strong>1 kredyt</strong> z konta użytkownika.</li>
-              <li><strong>Symulacja pełnego egzaminu ustnego AI:</strong> pobiera dokładnie <strong>3 kredyty</strong> z konta użytkownika.</li>
+              <li><strong>Symulacja pełnego egzaminu ustnego AI (oba zadania):</strong> pobiera dokładnie <strong>3 kredyty</strong> z konta użytkownika [1].</li>
+              <li><strong>Symulacja pojedynczego zadania ustnego AI (tylko jawne lub tylko niejawne):</strong> pobiera dokładnie <strong>2 kredyty</strong> z konta użytkownika [1].</li>
             </ul>
             <p>
               Użytkownik może w każdej chwili doładować stan swoich kredytów, kupując pakiety tokenów za pośrednictwem bezpiecznego operatora płatności <strong>Stripe</strong>. Ceny pakietów są widoczne w panelu użytkownika. Kredyty są przypisane wyłącznie do jednego konta, nie podlegają wymianie na gotówkę, nie są transferowalne na inne konta i nie posiadają daty ważności — są aktywne tak długo, jak aktywne jest konto użytkownika.
@@ -196,7 +197,7 @@ export default function RegulaminPage() {
               Wszelkie reklamacje dotyczące działania platformy (np. błędy przy doładowaniu płatności Stripe, awaria API, nieprawidłowe pobranie kredytów) należy zgłaszać na adres e-mail: <strong className="text-stone-100">[Twój Adres E-mail]</strong>. Reklamacja powinna zawierać: opis problemu, datę i godzinę zdarzenia oraz adres e-mail konta. Administrator rozpatrzy reklamację w terminie do <strong>14 dni roboczych</strong>.
             </p>
             <p>
-              W sprawach nieuregulowanych niniejszym regulaminem zastosowanie mają przepisy Kodeksu Cywilnego, ustawy o świadczeniu usług drogą elektroniczną oraz prawa polskiego. Sądem właściwym do rozstrzygania sporów jest sąd miejscowo właściwy dla siedziby administratora, chyba że przepisy bezwzględnie obowiązujące stanomit inaczej.
+              W sprawach nieuregulowanych niniejszym regulaminem zastosowanie mają przepisy Kodeksu Cywilnego, ustawy o świadczeniu usług drogą elektroniczną oraz prawa polskiego. Sądem właściwym do rozstrzygania sporów jest sąd miejscowo właściwy dla siedziby administratora, chyba że przepisy bezwzględnie obowiązujące stanowią inaczej.
             </p>
             <p>
               Konsument ma prawo skorzystać z pozasądowych metod rozwiązywania sporów, w tym z platformy ODR dostępnej pod adresem: <strong className="text-stone-100">https://ec.europa.eu/consumers/odr</strong>.
