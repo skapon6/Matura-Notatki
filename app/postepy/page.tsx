@@ -1,3 +1,4 @@
+// app/postepy/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -6,25 +7,27 @@ import { useRouter } from "next/navigation";
 import { playSound } from "../lib/sounds";
 import { useLofi } from "../context/LofiContext";
 import { getThemeClasses, CozyTheme } from "../lib/theme";
+import { CozyGlowCard } from "../components/CozyGlowCard";
+import Link from "next/link";
 
-
-export default function PostepyPage() {
+export default function MojePostepyPage() {
   const router = useRouter();
-  // 1. Zostawiamy tylko jeden główny stan dla motywu
-    const [cozyTheme, setCozyTheme] = useState<CozyTheme>("library");
-  
-    // 2. Wyliczamy klasy CSS dynamicznie (bez osobnego stanu!)
-    const currentTheme = getThemeClasses(cozyTheme);
-  
-    // 3. Wczytujemy zapisany motyw z pamięci przy wejściu na stronę
-    useEffect(() => {
-      const savedTheme = localStorage.getItem("app_theme") as CozyTheme;
-      if (savedTheme) {
-        setCozyTheme(savedTheme);
-      }
-    }, []);
 
-  // Globalny odtwarzacz Lo-Fi (gra płynnie bez przerw przy nawigacji!)
+  // 1. Zostawiamy tylko jeden główny stan dla motywu
+  const [cozyTheme, setCozyTheme] = useState<CozyTheme>("library");
+
+  // 2. Wyliczamy klasy CSS dynamicznie (bez osobnego stanu!)
+  const currentTheme = getThemeClasses(cozyTheme);
+
+  // 3. Wczytujemy zapisany motyw z pamięci przy wejściu na stronę
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("app_theme") as CozyTheme;
+    if (savedTheme) {
+      setCozyTheme(savedTheme);
+    }
+  }, []);
+
+  // Globalny odtwarzacz Lo-Fi
   const {
     lofiActive,
     currentTrackIndex,
@@ -39,157 +42,142 @@ export default function PostepyPage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // PRAWDZIWE STANY STATYSTYK Z BAZY
-  const [essayCount, setEssayCount] = useState(0);
-  const [savedQuotesCount, setSavedQuotesCount] = useState(0);
-  const [essayCredits, setEssayCredits] = useState(0);
+  // Stany dla statystyk pobieranych z bazy danych
+  const [quotesCount, setQuotesCount] = useState(0);
+  const [credits, setCredits] = useState(0);
+  const [essaysCount, setEssaysCount] = useState(0);
+  const [studyTime, setStudyTime] = useState(0);
 
-  // Łączny czas nauki (pobierany z localStorage)
-  const [totalStudyMinutes, setTotalStudyMinutes] = useState<number>(0);
-
-  // STANY DLA DYNAMICZNEGO POSTĘPU EPOK (Porównanie tabel flashcards i flashcard_progress)
+  // Stany dla dynamicznego wyliczania postępu fiszek
   const [flashcards, setFlashcards] = useState<any[]>([]);
-  const [progress, setProgress] = useState<Record<string, "mastered" | "learning">>({});
+  const [progress, setProgress] = useState<Record<string, string>>({});
 
+  // Monitorowanie sesji i ładowanie wszystkich statystyk z Supabase
   useEffect(() => {
-    async function fetchProgressData() {
+    async function fetchStats() {
       setLoading(true);
       try {
-        // 1. Sprawdź zalogowanego użytkownika
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) {
-          router.push("/"); // Brak sesji -> powrót na główną [1]
-          return;
-        }
-
-        // 2. Pobierz profil z bazy, aby sprawdzić status premium
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("subscription_status, expires_at, essay_credits")
-          .eq("id", session.user.id)
-          .single();
-
-        if (profileError || !profileData) {
-          router.push("/"); // Błąd pobierania profilu -> powrót na główną
-          return;
-        }
-
-        const activeStatuses = ['mini', 'medium', 'premium', 'admin', 'paid'];
-        const isStatusActive = activeStatuses.includes(profileData.subscription_status);
         
-        let isExpired = false;
-        if (profileData.expires_at) {
-          const expirationTime = new Date(profileData.expires_at).getTime();
-          const currentTime = new Date().getTime();
-          isExpired = currentTime > expirationTime;
-        }
-
-        const hasPremiumAccess = isStatusActive && !isExpired;
-
-        // 3. Route Guard: wyrzucenie darmowego użytkownika z powrotem na główną [1]
-        if (!hasPremiumAccess) {
-          router.push("/");
+        if (!session?.user) {
+          router.push("/"); // Brak sesji -> powrót na główną
           return;
         }
-
-        // Zapisanie zalogowanego użytkownika i jego tokenów z bazy
         setUser(session.user);
-        setEssayCredits(profileData.essay_credits);
         const userId = session.user.id;
 
-        // 4. Pobierz liczbę ocenionych rozprawek użytkownika z tabeli essay_evaluations
-        const { count: essays, error: essayError } = await supabase
-          .from("essay_evaluations")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", userId);
-        if (!essayError && essays !== null) {
-          setEssayCount(essays);
+        // Pobieramy dane równolegle (Promise.all) dla maksymalnej szybkości ładowania
+        const [
+          profileRes,
+          quotesRes,
+          essaysRes,
+          flashcardsRes,
+          progressRes
+        ] = await Promise.all([
+          supabase.from("profiles").select("essay_credits").eq("id", userId).single(),
+          supabase.from("personal_notes").select("id", { count: "exact" }),
+          supabase.from("essay_evaluations").select("score").eq("user_id", userId),
+          supabase.from("flashcards").select("id, era, note_slug, front, back"),
+          supabase.from("flashcard_progress").select("flashcard_id, status").eq("user_id", userId)
+        ]);
+
+        // A. Tokeny
+        if (profileRes.data) {
+          setCredits(profileRes.data.essay_credits || 0);
         }
 
-        // 5. Pobierz liczbę zapisanych cytatów użytkownika z tabeli personal_notes
-        const { count: quotes, error: quotesError } = await supabase
-          .from("personal_notes")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", userId);
-        if (!quotesError && quotes !== null) {
-          setSavedQuotesCount(quotes);
+        // B. Cytaty
+        if (quotesRes.count !== null) {
+          setQuotesCount(quotesRes.count);
         }
 
-        // 6. Pobierz informacje o wszystkich fiszkach w systemie (ich id oraz epoki)
-        const { data: cardsData, error: cardsError } = await supabase
-          .from("flashcards")
-          .select("id, era");
-        if (!cardsError && cardsData) {
-          setFlashcards(cardsData);
+        // C. Rozprawki
+        if (essaysRes.data) {
+          setEssaysCount(essaysRes.data.length);
         }
 
-        // 7. Pobierz postępy fiszek dla danego użytkownika z tabeli flashcard_progress
-        const { data: progressData, error: progressError } = await supabase
-          .from("flashcard_progress")
-          .select("flashcard_id, status")
-          .eq("user_id", userId);
-        if (!progressError && progressData) {
-          const progressMap: Record<string, "mastered" | "learning"> = {};
-          progressData.forEach((row) => {
-            progressMap[row.flashcard_id] = row.status as "mastered" | "learning";
+        // D. Fiszki i ich postęp
+        if (flashcardsRes.data) {
+          setFlashcards(flashcardsRes.data);
+        }
+        if (progressRes.data) {
+          const progressMap: Record<string, string> = {};
+          progressRes.data.forEach((row) => {
+            progressMap[row.flashcard_id] = row.status;
           });
           setProgress(progressMap);
         }
 
-        // 8. Wczytaj łączny czas nauki z localStorage
+        // E. Czas nauki wczytywany z pamięci lokalnej
         if (typeof window !== "undefined") {
-          const savedTotal = localStorage.getItem("cozy_total_study_minutes");
-          if (savedTotal) {
-            setTotalStudyMinutes(parseFloat(savedTotal));
-          }
+          const savedTime = localStorage.getItem("cozy_study_time_total") || "0";
+          setStudyTime(Math.round(parseInt(savedTime) / 60)); // Przeliczamy sekundy na minuty
         }
 
       } catch (err) {
-        console.error("Błąd podczas wczytywania statystyk:", err);
-        router.push("/");
+        console.error("Błąd ładowania statystyk:", err);
       } finally {
         setLoading(false);
       }
     }
 
-    fetchProgressData();
+    fetchStats();
   }, [router]);
 
-  // Funkcja obliczająca rzeczywisty, dynamiczny procent opanowania danej grupy epok
-  const getEpochProgressPercent = (eras: string[]) => {
-    if (flashcards.length === 0) return 0;
+  // Pomocnicza funkcja do upiększania slugów notatek na kafelkach fiszek
+  const prettifySlug = (slug: string) => {
+    if (!slug) return "";
+    const preMapped: Record<string, string> = {
+      "lalka": "Lalka",
+      "wesele": "Wesele",
+      "kordian": "Kordian",
+      "pan-tadeusz": "Pan Tadeusz",
+      "dziady-cz-iii": "Dziady cz. III",
+      "makbet": "Makbet",
+      "skapiec": "Skąpiec",
+      "dzuma": "Dżuma",
+      "rok-1984": "Rok 1984"
+    };
+    if (preMapped[slug.toLowerCase()]) return preMapped[slug.toLowerCase()];
+    return slug.split("-").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+  };
 
-    const eraCards = flashcards.filter((card) =>
-      eras.some((era) => card.era?.toLowerCase() === era.toLowerCase())
+  // MATEMATYCZNE WYPROWADZENIE DYNAMICZNYCH PROCENTÓW OPANOWANIA EPOK NA PODSTAWIE BAZY FISZEK [1]
+  const calculateGroupProgress = (erasInGroup: string[]) => {
+    const cardsInGroup = flashcards.filter((c) =>
+      erasInGroup.some((era) => c.era?.toLowerCase() === era.toLowerCase())
+    );
+    if (cardsInGroup.length === 0) return 0;
+
+    const masteredInGroup = cardsInGroup.filter(
+      (c) => progress[c.id] === "mastered"
     );
 
-    if (eraCards.length === 0) return 0;
-
-    const masteredCardsCount = eraCards.filter(
-      (card) => progress[card.id] === "mastered"
-    ).length;
-
-    return Math.round((masteredCardsCount / eraCards.length) * 100);
+    return Math.round((masteredInGroup.length / cardsInGroup.length) * 100);
   };
 
-  // Piękne formatowanie łącznego czasu nauki (minuty -> godziny i minuty)
-  const formatStudyTime = (minutes: number) => {
-    if (minutes < 1) return "0 min";
-    if (minutes < 60) {
-      return `${Math.floor(minutes)} min`;
-    }
-    const hours = Math.floor(minutes / 60);
-    const mins = Math.floor(minutes % 60);
-    return mins > 0 ? `${hours} godz. ${mins} min` : `${hours} godz.`;
-  };
+  const starozytnoscProgress = calculateGroupProgress(["antyk", "starożytność", "średniowiecze", "lament swietokrzyski", "pieśń o rolandzie", "rozmowa mistrza polikarpa"]);
+  const renesansProgress = calculateGroupProgress(["renesans", "barok", "oświecenie"]);
+  const romantyzmProgress = calculateGroupProgress(["romantyzm", "pozytywizm"]);
+  const wspolczesnoscProgress = calculateGroupProgress(["dwudziestolecie", "wojna i okupacja", "współczesność"]);
 
-  // Czysty i bezpieczny ekran ładowania podczas autoryzacji
+  // Ekstrakcja wszystkich opanowanych fiszek z bazy danych
+  const masteredFlashcards = flashcards
+    .filter((c) => progress[c.id] === "mastered")
+    .map((c) => ({
+      ...c,
+      category: c.era || "Inne",
+      note_title: c.note_slug ? prettifySlug(c.note_slug) : null,
+      question: c.front,
+      answer: c.back,
+    }));
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#14100e] text-stone-200 flex flex-col items-center justify-center p-8">
-        <div className="text-4xl animate-bounce mb-4">☕</div>
+        <div className="text-4xl animate-bounce mb-4">📈</div>
         <p className="text-sm tracking-widest font-semibold text-stone-400">
-          Weryfikacja dostępu do dziennika postępów...
+          Analizowanie Twoich postępów nauki...
         </p>
       </div>
     );
@@ -197,19 +185,15 @@ export default function PostepyPage() {
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-500 ${currentTheme.bg} text-stone-200 font-sans`}>
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes slideIn {
-          0% { transform: translateY(30px) scale(0.95); opacity: 0; }
-          100% { transform: translateY(0) scale(1); opacity: 1; }
-        }
-        .animate-slide-in { animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-      `}} />
-
+      
       {/* HEADER SECTION */}
       <header className={`border-b ${currentTheme.cardBorder} px-4 sm:px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 backdrop-blur-md sticky top-0 z-40 transition-colors duration-500`}>
         <div className="flex w-full md:w-auto items-center justify-between md:justify-start gap-4">
           <button
-            onClick={() => router.push("/")}
+            onClick={() => {
+              playSound("click");
+              router.push("/");
+            }}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 transition-all text-xs font-medium ${currentTheme.subText} hover:text-stone-100`}
           >
             ← Wróć do kącika
@@ -240,7 +224,7 @@ export default function PostepyPage() {
                 </svg>
               ) : (
                 <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 001.555-.832l3.197-2.132a1 1 0 000-1.664z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               )}
@@ -273,146 +257,153 @@ export default function PostepyPage() {
       </header>
 
       {/* RENDEROWANIE ZAWARTOŚCI */}
-      <main className="max-w-4xl mx-auto w-full p-6 flex flex-col justify-center flex-1 select-none animate-slide-in">
+      <main className="max-w-4xl mx-auto w-full p-6 flex flex-col gap-6 flex-1 select-none animate-slide-in">
         
-        <div className="w-full flex flex-col gap-6">
+        {/* CZTERY DYNAMICZNE KAFELKI STATYSTYK (COZYGLOWCARD - POPRAWIONE NA WARSTWY BLOCK) */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
           
-          {/* PANEL DYNAMICZNYCH STATYSTYK */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            
-            {/* KAFELEK 1: ZAPISANE CYTATY */}
-            <div className={`p-5 rounded-2xl border ${currentTheme.cardBorder} bg-[#161210] flex flex-col items-center justify-center text-center shadow-md`}>
-              <span className="text-2xl mb-1">⭐</span>
-              <span className="text-2xl font-bold font-mono text-stone-100">{savedQuotesCount}</span>
-              <span className="text-[10px] uppercase tracking-widest text-stone-500 font-bold mt-1">
-                Zapisane Cytaty
-              </span>
-            </div>
+          <CozyGlowCard currentTheme={currentTheme} className="p-5 flex flex-col items-center justify-center text-center gap-2">
+            <div className="text-xl sm:text-2xl">⭐</div>
+            <div className="text-xl sm:text-2xl font-black font-mono text-stone-100 leading-normal">{quotesCount}</div>
+            <div className="text-[10px] uppercase tracking-wider text-stone-500 font-extrabold leading-normal">Zapisane cytaty</div>
+          </CozyGlowCard>
 
-            {/* KAFELEK 2: POZOSTAŁE TOKENY */}
-            <div className={`p-5 rounded-2xl border ${currentTheme.cardBorder} bg-[#161210] flex flex-col items-center justify-center text-center shadow-md`}>
-              <span className="text-2xl mb-1">🪙</span>
-              <span className="text-2xl font-bold font-mono text-amber-500">{essayCredits}</span>
-              <span className="text-[10px] uppercase tracking-widest text-stone-500 font-bold mt-1">
-                Pozostałe Tokeny AI
-              </span>
-            </div>
+          <CozyGlowCard currentTheme={currentTheme} className="p-5 flex flex-col items-center justify-center text-center gap-2">
+            <div className="text-xl sm:text-2xl">🪙</div>
+            <div className="text-xl sm:text-2xl font-black font-mono text-stone-100 leading-normal">{credits}</div>
+            <div className="text-[10px] uppercase tracking-wider text-stone-500 font-extrabold leading-normal">Kredyty AI</div>
+          </CozyGlowCard>
 
-            {/* KAFELEK 3: OCENIONE ROZPRAWKI */}
-            <div className={`p-5 rounded-2xl border ${currentTheme.cardBorder} bg-[#161210] flex flex-col items-center justify-center text-center shadow-md`}>
-              <span className="text-2xl mb-1">✍️</span>
-              <span className="text-2xl font-bold font-mono text-stone-100">{essayCount}</span>
-              <span className="text-[10px] uppercase tracking-widest text-stone-500 font-bold mt-1">
-                Ocenione Rozprawki
-              </span>
-            </div>
+          <CozyGlowCard currentTheme={currentTheme} className="p-5 flex flex-col items-center justify-center text-center gap-2">
+            <div className="text-xl sm:text-2xl">✍️</div>
+            <div className="text-xl sm:text-2xl font-black font-mono text-stone-100 leading-normal">{essaysCount}</div>
+            <div className="text-[10px] uppercase tracking-wider text-stone-500 font-extrabold leading-normal">Ocenione rozprawki</div>
+          </CozyGlowCard>
 
-            {/* KAFELEK 4: ŁĄCZNY CZAS NAUKI */}
-            <div className={`p-5 rounded-2xl border ${currentTheme.cardBorder} bg-[#161210] flex flex-col items-center justify-center text-center shadow-md`}>
-              <span className="text-2xl mb-1">⏱️</span>
-              <span className="text-xl font-bold font-mono text-stone-100 whitespace-nowrap">
-                {formatStudyTime(totalStudyMinutes)}
-              </span>
-              <span className="text-[10px] uppercase tracking-widest text-stone-500 font-bold mt-1">
-                Łączny Czas Nauki
-              </span>
-            </div>
-
-          </div>
-
-          {/* PANEL DYNAMICZNEGO POSTĘPU OPANOWANIA EPOK */}
-          <div className={`p-6 sm:p-8 rounded-3xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} shadow-lg flex flex-col gap-6`}>
-            <div>
-              <h3 className="text-xs uppercase tracking-widest text-amber-500 font-bold">
-                Postęp Opanowania Epok (Na Podstawie Fiszek)
-              </h3>
-              <p className="text-[11px] text-stone-500 mt-1 leading-relaxed">
-                Procenty wyliczają się automatycznie na podstawie fiszek, które oznaczyłeś jako „Opanowane” w strefie nauki.
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-5">
-              
-              {/* Epoka 1: Starożytność i Średniowiecze */}
-              {(() => {
-                const percent = getEpochProgressPercent(["Antyk", "Średniowiecze"]);
-                return (
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex justify-between text-xs font-semibold">
-                      <span className="text-stone-300 font-serif">Starożytność i Średniowiecze</span>
-                      <span className="font-mono text-stone-400">{percent}%</span>
-                    </div>
-                    <div className="w-full h-2 bg-stone-950/60 rounded-full overflow-hidden border border-stone-900">
-                      <div 
-                        className="h-full bg-emerald-500 rounded-full transition-all duration-1000" 
-                        style={{ width: `${percent}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* Epoka 2: Renesans, Barok i Oświecenie */}
-              {(() => {
-                const percent = getEpochProgressPercent(["Renesans", "Barok", "Oświecenie"]);
-                return (
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex justify-between text-xs font-semibold">
-                      <span className="text-stone-300 font-serif">Renesans, Barok i Oświecenie</span>
-                      <span className="font-mono text-stone-400">{percent}%</span>
-                    </div>
-                    <div className="w-full h-2 bg-stone-950/60 rounded-full overflow-hidden border border-stone-900">
-                      <div 
-                        className="h-full bg-amber-500 rounded-full transition-all duration-1000" 
-                        style={{ width: `${percent}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* Epoka 3: Romantyzm i Pozytywizm */}
-              {(() => {
-                const percent = getEpochProgressPercent(["Romantyzm", "Pozytywizm"]);
-                return (
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex justify-between text-xs font-semibold">
-                      <span className="text-stone-300 font-serif">Romantyzm i Pozytywizm (Lektury kluczowe)</span>
-                      <span className="font-mono text-stone-400">{percent}%</span>
-                    </div>
-                    <div className="w-full h-2 bg-stone-950/60 rounded-full overflow-hidden border border-stone-900">
-                      <div 
-                        className="h-full bg-amber-600 rounded-full transition-all duration-1000" 
-                        style={{ width: `${percent}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* Epoka 4: Współczesność i Dwudziestolecie */}
-              {(() => {
-                const percent = getEpochProgressPercent(["Współczesność", "XX Międzywojenne"]);
-                return (
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex justify-between text-xs font-semibold">
-                      <span className="text-stone-300 font-serif">Współczesność i Międzywojenne</span>
-                      <span className="font-mono text-stone-400">{percent}%</span>
-                    </div>
-                    <div className="w-full h-2 bg-stone-950/60 rounded-full overflow-hidden border border-stone-900">
-                      <div 
-                        className="h-full bg-stone-700 rounded-full transition-all duration-1000" 
-                        style={{ width: `${percent}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })()}
-
-            </div>
-          </div>
+          <CozyGlowCard currentTheme={currentTheme} className="p-5 flex flex-col items-center justify-center text-center gap-2">
+            <div className="text-xl sm:text-2xl">⏱️</div>
+            <div className="text-xl sm:text-2xl font-black font-mono text-stone-100 leading-normal">{studyTime} min</div>
+            <div className="text-[10px] uppercase tracking-wider text-stone-500 font-extrabold leading-normal">Łączny czas nauki</div>
+          </CozyGlowCard>
 
         </div>
+
+        {/* CENTRALNY PANEL POSTĘPU OPANOWANIA EPOK */}
+        <CozyGlowCard currentTheme={currentTheme} className="p-6 sm:p-8 flex flex-col gap-6">
+          <div>
+            <h3 className="text-xs uppercase tracking-widest text-amber-500 font-bold">
+              Postęp Opanowania Epok (Na podstawie fiszek)
+            </h3>
+            <p className="text-xs text-stone-400 mt-1 leading-relaxed">
+              Procenty wyliczają się automatycznie na podstawie fiszek, które oznaczyłeś jako „Opanowane” w strefie nauki.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-4.5">
+            
+            {/* Grupa 1 */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex justify-between text-xs font-semibold text-stone-300">
+                <span>Starożytność i Średniowiecze</span>
+                <span className="font-mono text-amber-500">{starozytnoscProgress}%</span>
+              </div>
+              <div className="w-full h-2.5 rounded-full bg-stone-950 overflow-hidden border border-stone-900">
+                <div 
+                  className="h-full bg-gradient-to-r from-amber-500 to-orange-400 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(245,158,11,0.2)]"
+                  style={{ width: `${starozytnoscProgress}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Grupa 2 */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex justify-between text-xs font-semibold text-stone-300">
+                <span>Renesans, Barok i Oświecenie</span>
+                <span className="font-mono text-amber-500">{renesansProgress}%</span>
+              </div>
+              <div className="w-full h-2.5 rounded-full bg-stone-950 overflow-hidden border border-stone-900">
+                <div 
+                  className="h-full bg-gradient-to-r from-amber-500 to-orange-400 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(245,158,11,0.2)]"
+                  style={{ width: `${renesansProgress}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Grupa 3 */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex justify-between text-xs font-semibold text-stone-300">
+                <span>Romantyzm i Pozytywizm (Lektury kluczowe)</span>
+                <span className="font-mono text-amber-500">{romantyzmProgress}%</span>
+              </div>
+              <div className="w-full h-2.5 rounded-full bg-stone-950 overflow-hidden border border-stone-900">
+                <div 
+                  className="h-full bg-gradient-to-r from-amber-500 to-orange-400 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(245,158,11,0.2)]"
+                  style={{ width: `${romantyzmProgress}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Grupa 4 */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex justify-between text-xs font-semibold text-stone-300">
+                <span>Współczesność i Międzywojenne</span>
+                <span className="font-mono text-amber-500">{wspolczesnoscProgress}%</span>
+              </div>
+              <div className="w-full h-2.5 rounded-full bg-stone-950 overflow-hidden border border-stone-900">
+                <div 
+                  className="h-full bg-gradient-to-r from-amber-500 to-orange-400 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(245,158,11,0.2)]"
+                  style={{ width: `${wspolczesnoscProgress}%` }}
+                />
+              </div>
+            </div>
+
+          </div>
+        </CozyGlowCard>
+
+        {/* NOWY, DOLNY PANEL: OSTATNIO OPANOWANE FISZKI (WYELIMINOWANO KAFELEK OPIEKUNA AI) */}
+        <CozyGlowCard currentTheme={currentTheme} className="p-6 sm:p-8 flex flex-col gap-4">
+          <div>
+            <h3 className="text-xs uppercase tracking-widest text-emerald-400 font-bold flex items-center gap-2 select-none">
+              <span>🏆</span> Ostatnio Opanowane Fiszki ({masteredFlashcards.length})
+            </h3>
+            <p className="text-xs text-stone-400 mt-1 leading-relaxed">
+              Oto lista pojęć i zagadnień maturalnych, które pomyślnie opanowałeś w strefie szybkich fiszek:
+            </p>
+          </div>
+
+          {masteredFlashcards.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-slide-in">
+              {masteredFlashcards.slice(-4).reverse().map((card) => (
+                <div 
+                  key={card.id}
+                  className="p-4 rounded-xl bg-stone-950/50 border border-stone-900/60 text-left flex flex-col gap-2 transition-all hover:border-emerald-500/20"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] uppercase tracking-widest text-emerald-400 font-extrabold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-950/20">
+                      📍 {card.category} {card.note_title ? `• ${card.note_title}` : ""}
+                    </span>
+                    <span className="text-[9px] text-stone-500 font-bold uppercase">Opanowane ✅</span>
+                  </div>
+                  <h4 className="text-xs sm:text-sm font-bold text-stone-200 font-serif leading-snug">
+                    {card.question}
+                  </h4>
+                  <p className="text-[11px] text-stone-400 italic leading-relaxed border-l border-stone-800 pl-2.5 font-serif select-text">
+                    {card.answer}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 border border-dashed border-stone-850 rounded-2xl text-stone-500 select-none animate-slide-in">
+              <span className="text-3xl block mb-2">⭐</span>
+              <p className="text-xs font-semibold">Nie opanowałeś jeszcze żadnej fiszki w tym kąciku.</p>
+              <p className="text-[11px] text-stone-600 mt-1 leading-relaxed max-w-[280px] mx-auto">
+                Przejdź do zakładki <Link href="/fiszki" className="text-amber-500 hover:underline">Szybkie Fiszki</Link>, rozpocznij powtórkę i kliknij „Opanowałem!”, aby zobaczyć tu swoje sukcesy!
+              </p>
+            </div>
+          )}
+        </CozyGlowCard>
+
       </main>
     </div>
   );

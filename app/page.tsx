@@ -473,21 +473,21 @@ export default function Home() {
                 <h3 className="text-base font-bold text-stone-100 mt-4 font-serif">Strefa Nauka AI 🤖</h3>
                 <p className="text-xs text-stone-400 mt-2 leading-relaxed">Wirtualni asystenci pomogą sprawdzić Twoje wypracowanie lub przeprowadzić próbny egzamin ustny na żywo według kryteriów CKE!</p>
                 <div className="flex flex-col gap-2.5 mt-4">
-                  {/* Pierwszy przycisk - Fioletowy Gradient */}
-                  <button 
-                    onClick={() => handlePremiumNavigation("/ocenianie-rozprawek")} 
-                    className="w-full py-2.5 bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20"
-                  >
-                    ✍️ Edytor Rozprawek AI (1 Token)
-                  </button>
+            {/* Pierwszy przycisk - Nasycony Fioletowy Gradient */}
+              <button 
+                onClick={() => handlePremiumNavigation("/ocenianie-rozprawek")} 
+                className="w-full py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-extrabold rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-violet-500/20 active:scale-[0.98]"
+              >
+                ✍️ Edytor Rozprawek AI (1 Token)
+              </button>
 
-                  {/* Drugi przycisk - Niebieski Gradient */}
-                  <button 
-                    onClick={() => handlePremiumNavigation("/matura-ustna")} 
-                    className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
-                  >
-                    🎙️ Matura Ustna AI (3 Tokeny)
-                  </button>
+            {/* Drugi przycisk - Fioletowy z efektem "Glassmorphism" (wyraźny i aktywny) */}
+              <button 
+                onClick={() => handlePremiumNavigation("/matura-ustna")} 
+                className="w-full py-2.5 bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 hover:text-violet-200 font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2 border border-violet-500 hover:border-violet-400 shadow-lg shadow-violet-500/10 active:scale-[0.98]"
+              >
+                🎙️ Matura Ustna AI (3 Tokeny)
+              </button>
                 </div>
                 {user && (
                   <div className="mt-4 pt-4 border-t border-stone-800/60 flex flex-col gap-3">

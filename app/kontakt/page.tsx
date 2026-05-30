@@ -29,22 +29,39 @@ export default function KontaktPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSending(true);
+    setSuccess(false);
     playSound("click");
 
-    // Symulacja wysyłania wiadomości (trwa 1.5 sekundy dla realizmu i świetnego UX)
-    setTimeout(() => {
+    try {
+      // Wywołujemy prawdziwe API wysyłania wiadomości
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, subject, message }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setSuccess(true);
+        playSound("success");
+        
+        // Czyścimy pola formularza po udanym wysłaniu
+        setEmail("");
+        setSubject("");
+        setMessage("");
+        
+        // Ukrywamy zielony komunikat o sukcesie po 6 sekundach
+        setTimeout(() => setSuccess(false), 6000);
+      } else {
+        alert(data.error || "Nie udało się wysłać wiadomości. Spróbuj ponownie za chwilę.");
+      }
+    } catch (err) {
+      console.error("Błąd sieciowy podczas wysyłania:", err);
+      alert("Błąd połączenia z serwerem pocztowym.");
+    } finally {
       setSending(false);
-      setSuccess(true);
-      playSound("success");
-
-      // Resetowanie pól formularza
-      setEmail("");
-      setSubject("");
-      setMessage("");
-
-      // Ukrycie komunikatu sukcesu po 5 sekundach
-      setTimeout(() => setSuccess(false), 5000);
-    }, 1500);
+    }
   };
 
   return (
@@ -77,7 +94,7 @@ export default function KontaktPage() {
 
             {success && (
               <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-900/30 text-emerald-400 text-xs leading-relaxed animate-slide-in">
-                🎉 <strong>Wiadomość wysłana!</strong> Dziękujemy za kontakt. Odpowiemy na Twój e-mail najszybciej jak to możliwe (zazwyczaj w ciągu 24 godzin).
+                🎉 <strong>Wiadomość wysłana!</strong> Dziękujemy za kontakt. Wiadomość została dostarczona na skrzynkę wiedzaszytanamiare@gmail.com. Odpowiemy najszybciej jak to możliwe!
               </div>
             )}
 
@@ -159,7 +176,7 @@ export default function KontaktPage() {
               <div className="flex flex-col gap-3">
                 {/* TikTok */}
                 <a
-                  href="https://www.tiktok.com/@wiedzaszytanamiare" 
+                  href="https://www.tiktok.com/@wiedza_szyta_na_miare" 
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => playSound("click")}
@@ -168,13 +185,13 @@ export default function KontaktPage() {
                   <span className="text-2xl">📱</span>
                   <div className="flex flex-col text-left">
                     <span className="text-xs font-bold text-stone-200 group-hover:text-amber-400 transition-colors">TikTok</span>
-                    <span className="text-[10px] text-stone-500">@wiedzaszytanamiare</span>
+                    <span className="text-[10px] text-stone-500">@wiedza_szyta_na_miare</span>
                   </div>
                 </a>
 
                 {/* Instagram */}
                 <a
-                  href="https://www.instagram.com/wiedzaszytanamiare" 
+                  href="https://www.instagram.com/wiedza_szyta_na_miare" 
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => playSound("click")}
@@ -183,7 +200,7 @@ export default function KontaktPage() {
                   <span className="text-2xl">📸</span>
                   <div className="flex flex-col text-left">
                     <span className="text-xs font-bold text-stone-200 group-hover:text-amber-400 transition-colors">Instagram</span>
-                    <span className="text-[10px] text-stone-500">@wiedzaszytanamiare</span>
+                    <span className="text-[10px] text-stone-500">@wiedza_szyta_na_miare</span>
                   </div>
                 </a>
               </div>
