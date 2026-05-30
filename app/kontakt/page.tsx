@@ -5,9 +5,10 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { getThemeClasses, CozyTheme } from "../lib/theme"; // 2 poziomy w górę do lib
 import { playSound } from "../lib/sounds"; // 2 poziomy w górę do lib
+import { CozyNotification } from "../components/CozyNotification"; // Importujemy Twoje ładne powiadomienie
 
 export default function KontaktPage() {
-  // 1. Lokalne zarządzanie motywem (bezinwazyjne, wczytywane na starcie)
+  // 1. Lokalne zarządzanie motywem
   const [cozyTheme, setCozyTheme] = useState<CozyTheme>("library");
 
   useEffect(() => {
@@ -25,6 +26,21 @@ export default function KontaktPage() {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  // System przytulnych powiadomień
+  const [cozyNotification, setCozyNotification] = useState<{
+    message: string;
+    type: "success" | "error" | "info";
+  } | null>(null);
+
+  const triggerNotification = (message: string, type: "success" | "error" | "info" = "info") => {
+    setCozyNotification({ message, type });
+    if (type === "success") playSound("success");
+    else if (type === "error") playSound("error");
+    else playSound("click");
+
+    setTimeout(() => setCozyNotification(null), 6000); // Wyświetlanie przez 6 sekund
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,21 +60,19 @@ export default function KontaktPage() {
 
       if (response.ok && data.success) {
         setSuccess(true);
-        playSound("success");
+        triggerNotification("Wiadomość została dostarczona na Twoją skrzynkę e-mail! ✉️", "success");
         
         // Czyścimy pola formularza po udanym wysłaniu
         setEmail("");
         setSubject("");
         setMessage("");
-        
-        // Ukrywamy zielony komunikat o sukcesie po 6 sekundach
-        setTimeout(() => setSuccess(false), 6000);
       } else {
-        alert(data.error || "Nie udało się wysłać wiadomości. Spróbuj ponownie za chwilę.");
+        // Zastąpiono brzydki alert() ładnym powiadomieniem systemowym CozyNotification [11.1]
+        triggerNotification(data.error || "Nie udało się wysłać wiadomości. Spróbuj ponownie.", "error");
       }
     } catch (err) {
       console.error("Błąd sieciowy podczas wysyłania:", err);
-      alert("Błąd połączenia z serwerem pocztowym.");
+      triggerNotification("Błąd połączenia z serwerem pocztowym.", "error");
     } finally {
       setSending(false);
     }
@@ -94,7 +108,7 @@ export default function KontaktPage() {
 
             {success && (
               <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-900/30 text-emerald-400 text-xs leading-relaxed animate-slide-in">
-                🎉 <strong>Wiadomość wysłana!</strong> Dziękujemy za kontakt. Wiadomość została dostarczona na skrzynkę wiedzaszytanamiare@gmail.com. Odpowiemy najszybciej jak to możliwe!
+                🎉 <strong>Wiadomość wysłana!</strong> Dziękujemy za kontakt. Wiadomość została dostarczona. Odpowiemy najszybciej jak to możliwe!
               </div>
             )}
 
@@ -216,6 +230,12 @@ export default function KontaktPage() {
         </div>
 
       </div>
+
+      {/* SYSTEM POWIADOMIEŃ SYSTEMOWYCH */}
+      <CozyNotification 
+        notification={cozyNotification} 
+        onClose={() => setCozyNotification(null)} 
+      />
     </div>
   );
 }
