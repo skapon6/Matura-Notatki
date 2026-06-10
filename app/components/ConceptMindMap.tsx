@@ -86,9 +86,9 @@ export function ConceptMindMap({ currentTheme, triggerNotification }: ConceptMin
   const nodeKeys = Object.keys(mindMapData);
   const totalNodes = nodeKeys.length;
 
-  // Promień okręgu rozmieszczenia węzłów wokół środka (w procentach)
-  const radiusX = 35; // Szerokość rozpiętości
-  const radiusY = 32; // Wysokość rozpiętości
+  // Promień bazowy okręgu (w procentach)
+  const radiusX = 36; 
+  const radiusY = 35;
 
   if (dbLoading) {
     return (
@@ -118,23 +118,24 @@ export function ConceptMindMap({ currentTheme, triggerNotification }: ConceptMin
             Kącik Naukowy (Dane z Chmury)
           </span>
           <h3 className="text-xl font-bold text-stone-100 mt-2 font-serif">Kompaktowa Mapa Myśli 🧠</h3>
-          <p className="text-xs text-stone-400 mt-1">Interaktywne kompendium pobrane prosto z bazy danych Supabase.</p>
         </div>
       </div>
 
       {/* Główny układ: Mapa i Szczegóły */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         
-        {/* LEWA KOLUMNA: Interaktywna Mapa (DYSPOZYCJA DYNAMICZNA) */}
-        <div className="lg:col-span-6 flex flex-col items-center justify-center relative min-h-[340px] bg-stone-950/20 rounded-2xl border border-stone-800/40 p-4 overflow-hidden">
+        {/* LEWA KOLUMNA: Interaktywna Mapa (UKŁAD NAPRZEMIENNY) */}
+        <div className="lg:col-span-6 flex flex-col items-center justify-center relative min-h-[480px] bg-stone-950/20 rounded-2xl border border-stone-800/40 p-4 overflow-hidden select-none">
           
-          {/* DYNAMICZNE LINIE SVG */}
-          <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-40" xmlns="http://www.w3.org/2000/svg">
+          {/* DYNAMICZNE LINIE SVG DOSTOSOWANE DO PROMIENIA */}
+          <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-30" xmlns="http://www.w3.org/2000/svg">
             {nodeKeys.map((key, idx) => {
-              // Obliczanie kąta podziału dla równego rozłożenia wokół środka
-              const angle = (idx * (2 * Math.PI)) / totalNodes - Math.PI / 2 + Math.PI / totalNodes;
-              const x = 50 + radiusX * Math.cos(angle);
-              const y = 50 + radiusY * Math.sin(angle);
+              const angle = (idx * (2 * Math.PI)) / totalNodes - Math.PI / 2;
+              
+              // Co drugi element jest bliżej środka (naprzemienny promień)
+              const factor = idx % 2 === 0 ? 1.15 : 0.72;
+              const x = 50 + (radiusX * factor) * Math.cos(angle);
+              const y = 50 + (radiusY * factor) * Math.sin(angle);
 
               return (
                 <line 
@@ -144,7 +145,7 @@ export function ConceptMindMap({ currentTheme, triggerNotification }: ConceptMin
                   x2={`${x}%`} 
                   y2={`${y}%`} 
                   stroke="#d97706" 
-                  strokeWidth="2" 
+                  strokeWidth="1.5" 
                   strokeDasharray="4 4" 
                 />
               );
@@ -152,20 +153,25 @@ export function ConceptMindMap({ currentTheme, triggerNotification }: ConceptMin
           </svg>
 
           {/* Centralny punkt */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 w-24 h-24 rounded-full bg-stone-900 border-2 border-amber-500 flex flex-col items-center justify-center text-center p-2 shadow-xl select-none">
-            <span className="text-xl">📚</span>
-            <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wider mt-1 leading-none">Matura</span>
-            <span className="text-[9px] text-stone-400">J. Polski</span>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 w-22 h-22 rounded-full bg-stone-900 border-2 border-amber-500 flex flex-col items-center justify-center text-center p-2 shadow-2xl select-none">
+            <span className="text-lg">📚</span>
+            <span className="text-[9px] font-bold text-amber-500 uppercase tracking-wider mt-1 leading-none">Matura</span>
+            <span className="text-[8px] text-stone-400">J. Polski</span>
           </div>
 
           {/* DYNAMICZNE ROZMIESZCZANIE PRZYCISKÓW */}
           {nodeKeys.map((key, idx) => {
             const node = mindMapData[key];
+            const angle = (idx * (2 * Math.PI)) / totalNodes - Math.PI / 2;
             
-            // Kąt w radianach dla każdego elementu z lekkim przesunięciem estetycznym
-            const angle = (idx * (2 * Math.PI)) / totalNodes - Math.PI / 2 + Math.PI / totalNodes;
-            const x = 50 + radiusX * Math.cos(angle);
-            const y = 50 + radiusY * Math.sin(angle);
+            // Współczynnik odległości (naprzemienny)
+            const factor = idx % 2 === 0 ? 1.15 : 0.72;
+            const x = 50 + (radiusX * factor) * Math.cos(angle);
+            const y = 50 + (radiusY * factor) * Math.sin(angle);
+
+            // Programowe oczyszczanie etykiety ze zbędnego słowa "Motyw"
+            let displayLabel = node.label.replace(/Motyw\s+/i, "");
+            displayLabel = displayLabel.charAt(0).toUpperCase() + displayLabel.slice(1);
 
             return (
               <div
@@ -175,14 +181,14 @@ export function ConceptMindMap({ currentTheme, triggerNotification }: ConceptMin
               >
                 <button
                   onClick={() => handleNodeClick(node.id)}
-                  className={`p-3 rounded-xl border transition-all duration-300 flex flex-col items-center gap-1 shadow-md hover:scale-105 active:scale-95 ${
+                  className={`px-2.5 py-1.5 rounded-xl border transition-all duration-300 flex items-center gap-1.5 shadow-lg hover:scale-105 active:scale-95 ${
                     activeNode === node.id
-                      ? "bg-amber-500/20 border-amber-500 text-stone-100"
-                      : "bg-stone-900/80 border-stone-800 text-stone-300 hover:border-stone-700"
+                      ? "bg-amber-500/20 border-amber-500 text-stone-100 ring-2 ring-amber-500/20"
+                      : "bg-stone-900/90 border-stone-800 text-stone-300 hover:border-stone-700"
                   }`}
                 >
-                  <span className="text-lg">{node.icon}</span>
-                  <span className="text-xs font-semibold whitespace-nowrap">{node.label}</span>
+                  <span className="text-sm shrink-0">{node.icon}</span>
+                  <span className="text-[10px] font-medium tracking-wide whitespace-nowrap">{displayLabel}</span>
                 </button>
               </div>
             );
@@ -200,7 +206,7 @@ export function ConceptMindMap({ currentTheme, triggerNotification }: ConceptMin
               {selectedNodeData.description}
             </p>
 
-            <div className="space-y-3">
+            <div className="space-y-3 max-h-[340px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-stone-800">
               {selectedNodeData.subConcepts?.map((item, idx) => (
                 <div key={idx} className="p-3 rounded-xl bg-stone-950/30 border border-stone-800/50 hover:bg-stone-950/50 transition-colors">
                   <span className="text-xs font-bold text-amber-400 block mb-1">{item.term}</span>

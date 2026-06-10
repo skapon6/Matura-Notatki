@@ -1,4 +1,3 @@
-// app/fiszki/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -120,7 +119,7 @@ export default function FiszkiPage() {
 
         // 3. Sprawdzamy, czy użytkownik ma uprawnienia Premium
         if (!hasPremiumAccess) {
-          router.push("/"); // Brak premium -> powrót na główną [1]
+          router.push("/"); // Brak premium -> powrót na główną
           return;
         }
 
@@ -297,6 +296,14 @@ export default function FiszkiPage() {
     cat.toLowerCase().includes(categorySearchQuery.toLowerCase())
   );
 
+  // --- ZMODYFIKOWANA LOGIKA KROPEK (PAGINACJA PRZEDZIAŁOWA) ---
+  const totalDots = 7; // Wyświetlamy maksymalnie 7 kropek w jednym widoku
+  const currentChunk = Math.floor(safeCurrentIndex / totalDots);
+  const startIdx = currentChunk * totalDots;
+  const endIdx = Math.min(filteredCards.length, startIdx + totalDots);
+  
+  const visibleDots = filteredCards.slice(startIdx, endIdx);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#14100e] text-stone-200 flex flex-col items-center justify-center p-8">
@@ -357,7 +364,7 @@ export default function FiszkiPage() {
                 </svg>
               ) : (
                 <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 001.555-.832l3.197-2.132a1 1 0 000-1.664z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               )}
@@ -390,7 +397,7 @@ export default function FiszkiPage() {
       </header>
 
       {/* RENDEROWANIE ZAWARTOŚCI */}
-      <main className="max-w-2xl mx-auto w-full p-6 flex flex-col items-center justify-center flex-1">
+      <main className="max-w-2xl mx-auto w-full p-6 flex flex-col items-center justify-center flex-1 animate-slide-in">
         
         {/* PANEL FILTROWANIA I STATYSTYK */}
         <div className="w-full flex items-center justify-between mb-4 bg-stone-900/40 border border-stone-800/60 p-2.5 rounded-2xl relative z-20">
@@ -609,17 +616,28 @@ export default function FiszkiPage() {
                 ← Poprzednia
               </button>
               
-              {/* Kropki postępu na dole */}
-              <div className="flex gap-1 max-w-[200px] overflow-hidden justify-center">
-                {filteredCards.slice(0, 15).map((_, idx) => (
-                  <span 
-                    key={idx}
-                    className={`w-1.5 h-1.5 rounded-full transition-all shrink-0 ${
-                      idx === safeCurrentIndex ? "bg-amber-500 w-3" : "bg-stone-800"
-                    }`}
-                  />
-                ))}
-                {filteredCards.length > 15 && <span className="text-[8px] text-stone-600 font-bold">...</span>}
+              {/* --- ZAKTUALIZOWANA LOGIKA KROPEK PRZYJAZNA DLA OKA --- */}
+              <div className="flex gap-1.5 max-w-[220px] items-center justify-center overflow-hidden">
+                {/* Wielokropek z lewej strony, jeśli jesteśmy w dalszych przedziałach */}
+                {startIdx > 0 && <span className="text-[10px] text-stone-600 font-bold select-none mr-0.5">...</span>}
+                
+                {visibleDots.map((_, idx) => {
+                  const actualIdx = startIdx + idx; // Globalny, rzeczywisty indeks aktualnej kropki
+                  const isActive = actualIdx === safeCurrentIndex;
+                  return (
+                    <span 
+                      key={actualIdx}
+                      className={`w-1.5 h-1.5 rounded-full transition-all duration-300 shrink-0 ${
+                        isActive 
+                          ? "bg-amber-500 w-3 shadow-[0_0_8px_rgba(245,158,11,0.6)]" 
+                          : "bg-stone-800 hover:bg-stone-700"
+                      }`}
+                    />
+                  );
+                })}
+
+                {/* Wielokropek z prawej strony, jeśli przed nami są jeszcze kolejne przedziały */}
+                {endIdx < filteredCards.length && <span className="text-[10px] text-stone-600 font-bold select-none ml-0.5">...</span>}
               </div>
 
               <button
