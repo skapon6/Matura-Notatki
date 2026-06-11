@@ -20,13 +20,13 @@ export async function POST(req: NextRequest) {
   let userId = "";
 
   try {
-    // 1. Autoryzacja
+    // 1. Bezpieczna autoryzacja za pomocą getUser() (Zabezpieczenie przed ostrzeżeniem w konsoli)
     const supabase = await getSupabaseServer();
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError || !session?.user) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
       return NextResponse.json({ error: "Brak autoryzacji." }, { status: 401 });
     }
-    userId = session.user.id;
+    userId = user.id;
 
     // 2. Dane wejściowe
     const { topic, essayText } = await req.json();
@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
           console.error("!!! Błąd wywołania RPC match_essays:", rpcError);
         } else if (similar && similar.length > 0) {
           similarEssaysContext = `\n\n=== REPREZENTATYWNE PRZYKŁADY Z BAZY WIEDZY (WZORCE OCENIANIA) ===
-Poniżej znajdują się podobne rozprawki, które zostały już wcześniej ocenione i zatwierdzone przez administratora lub starszego egzaminatora. Twoja aktualna ocena musi być w pełni spójna z poniższymi wzorcami pod względem surowości i kryteriów. Naśladuj ich styl oceniania i zachowaj konsekwencję punktacji:\n`;
+Poniżej znajdują się podobne rozprawki, które zostały już wcześniej ocenione i zatwierdzone przez administratora lub starszego egzaminatora. Twoja aktualna ocena musi być w pełni spójna z poniższymi wzorcami pod względem surowości i kryteriów. Naśladuj ich stil oceniania i zachowaj konsekwencję punktacji:\n`;
 
           similar.forEach((item: any, index: number) => {
             similarEssaysContext += `
@@ -164,6 +164,13 @@ KROK 2 – SFWP (0–1 pkt):
 Przyznaj 1 pkt tylko gdy spełnione WSZYSTKIE warunki: brak błędu kardynalnego + odwołanie analityczne (nie tylko informacyjne) do lektury obowiązkowej + praca dotyczy tematu + wypowiedź argumentacyjna.
 
 KROK 3 – KLiK (0–16 pkt):
+=== BEZWZGLĘDNE ZASADY KWALIFIKACJI UTWORÓW W TABELI KLiK ===
+1. Do kategorii "UTWORY" (Utwór 1 i Utwór 2) w tabeli KLiK możesz zaliczyć WYŁĄCZNIE UTWORY LITERACKIE (książki, dramaty, wiersze, opowiadania, eposy).
+2. Film (np. "Snajper", "Elvis"), obraz, piosenka, komiks, manga, gra lub biografia to wyłącznie KONTEKSTY. Nigdy nie wolno traktować ich jako "Drugiego utworu" w tabeli KLiK!
+3. Jeśli uczeń napisał świetną pracę, ale odwołał się tylko do JEDNEJ książki/lektury (Utwór 1), a cała reszta jego argumentacji opiera się na filmie lub kontekstach biograficznych, to praca automatycznie kwalifikuje się do wiersza:
+   [JEDEN W PEŁNI + DRUGI NIEFUNKCJONALNY] (maksymalnie 8 punktów bazowych za KLiK!).
+
+   4. Nie wolno zaliczać tego samego dzieła (np. filmu "Snajper") jednocześnie jako drugiego utworu w KLiK oraz jako kontekstu.
 a) Zidentyfikuj KAŻDY przywołany utwór i oceń jego funkcjonalność:
    - W PEŁNI FUNKCJONALNY: zdający omówił OBA elementy tematu za pomocą tego utworu + wyszedł poza streszczenie
    - CZĘŚCIOWO FUNKCJONALNY: omówił tylko JEDEN element tematu LUB przywołał pobieżnie
@@ -180,6 +187,11 @@ b) Spójność (0–3): Policz zaburzenia logiczne/spójnościowe → zastosuj p
 c) Styl (0–1): Stosowny lub niestosowny (potoczny w odmianie mówionej)
 
 KROK 5 – JW: Język (0–11 pkt):
+=== BEZWZGLĘDNE ZASADY UNIKANIA HALUCYNACJI BŁĘDÓW (STOP FALSE POSITIVES) ===
+1. Zanim dodasz jakikolwiek błąd do tablicy "annotations" (szczególnie o typie "interpunkcyjny" lub "ortograficzny"), sprawdź LITERA PO LITRZE oryginalny tekst ucznia.
+2. NIGDY nie zgłaszaj błędu o braku przecinka (np. przed "czy", "że", "który", "ponieważ", "ale"), jeśli ten przecinek FIZYCZNIE ZNAJDUJE SIĘ w oryginalnym tekście ucznia!
+3. Jeśli uczeń postawił poprawny znak interpunkcyjny, nie modyfikuj go i nie zgłaszaj fałszywego błędu. Analizuj tekst rzetelnie, a nie nadgorliwie.
+
 a) Zakres językowy (szeroki/zadowalający/wąski) → policz błędy → odczytaj punkty z tabeli 4a
 b) Policz błędy ortograficzne → tabela 4b
 c) Policz błędy interpunkcyjne → tabela 4c
@@ -226,52 +238,76 @@ Zwróć WYŁĄCZNIE obiekt JSON. Bez znaczników markdown, bez \`\`\`json.
 
     const userMessage = `Temat: "${topic}"\n\nWypracowanie:\n${essayText}`;
 
-    // 8. Wywołanie modelu oceniającego z wbudowaną pętlą retry (RAG + CKE)
-    const model = genAI.getGenerativeModel({
-      model: "gemini-3.5-flash",
-      systemInstruction: systemPrompt,
-    });
+    // 8. --- PODWÓJNY SYSTEM ZABEZPIECZEŃ (FALLBACK MODELI GEMINI) ---
+    // Definiujemy modele w kolejności od preferowanego do zapasowego
+    const MODELS_TO_TRY = ["gemini-3.5-flash", "gemini-2.5-flash"];
+    let result: any = null;
+    let finalModelUsed = "";
+    let lastError: any = null;
 
-    let result: any;
-    let textRetries = 3;
-    let textDelay = 5000; // Czekamy 5 sekund w razie przeciążenia
+    for (const currentModelName of MODELS_TO_TRY) {
+      console.log(`-> Próba uruchomienia analizy na modelu: ${currentModelName}`);
+      
+      const model = genAI.getGenerativeModel({
+        model: currentModelName,
+        systemInstruction: systemPrompt,
+      });
 
-    for (let i = 0; i < textRetries; i++) {
-      try {
-        console.log(`-> Wywołanie Gemini 2.5 Flash - Analiza (Próba ${i + 1}/${textRetries})...`);
-        result = await model.generateContent({
-          contents: [{ role: "user", parts: [{ text: userMessage }] }],
-          generationConfig: {
-            responseMimeType: "application/json",
-            temperature: 0.1,
-          },
-        });
-        break;
-      } catch (error: any) {
-        // Dodana obsługa błędu 429 i limitu RESOURCE_EXHAUSTED
-        const isRetryable = 
-          error?.status === 429 || 
-          error?.status === 503 || 
-          error?.message?.includes("429") || 
-          error?.message?.includes("503") || 
-          error?.message?.includes("RESOURCE_EXHAUSTED") || 
-          error?.message?.includes("UNAVAILABLE");
+      let textRetries = 3;
+      let textDelay = 5000; // Czas bazowy ponowienia
+      let modelSuccess = false;
 
-       if (isRetryable && i < textRetries - 1) {
-                // Generujemy losowy jitter w milisekundach (od 1000ms do 3000ms)
-                const jitter = Math.floor(Math.random() * 2000) + 1000;
-                const finalDelay = textDelay + jitter; // Sumaryczny czas czekania
+      for (let i = 0; i < textRetries; i++) {
+        try {
+          console.log(`  -> Wywołanie ${currentModelName} - Analiza (Próba ${i + 1}/${textRetries})...`);
+          result = await model.generateContent({
+            contents: [{ role: "user", parts: [{ text: userMessage }] }],
+            generationConfig: {
+              responseMimeType: "application/json",
+              temperature: 0.1,
+            },
+          });
+          
+          modelSuccess = true;
+          finalModelUsed = currentModelName;
+          break; // Powiodło się! Przerywamy próby dla tego modelu
+        } catch (error: any) {
+          lastError = error;
+          
+          // Sprawdzamy, czy błąd nadaje się do ponowienia (limit 429 lub przeciążenie serwera 503)
+          const isRetryable = 
+            error?.status === 429 || 
+            error?.status === 503 || 
+            error?.message?.includes("429") || 
+            error?.message?.includes("503") || 
+            error?.message?.includes("RESOURCE_EXHAUSTED") || 
+            error?.message?.includes("UNAVAILABLE");
 
-                console.warn(`[LIMIT/PRZECIĄŻENIE 503/429] Automatyczny retry za ${(finalDelay / 1000).toFixed(2)}s (czas bazowy: ${textDelay / 1000}s + losowy jitter: ${(jitter / 1000).toFixed(2)}s)...`);
-                
-                // Odczekujemy spersonalizowany, losowy czas dla tego konkretnego użytkownika
-                await new Promise((resolve) => setTimeout(resolve, finalDelay));
-                
-                textDelay *= 1.5; // Zwiększamy bazowy czas na wypadek kolejnego błędu
-                continue;
-              }
-        throw error;
+          if (isRetryable && i < textRetries - 1) {
+            const jitter = Math.floor(Math.random() * 2000) + 1000;
+            const finalDelay = textDelay + jitter;
+
+            console.warn(`  [PRZECIĄŻENIE ${currentModelName}] Automatyczny retry za ${(finalDelay / 1000).toFixed(2)}s...`);
+            await new Promise((resolve) => setTimeout(resolve, finalDelay));
+            textDelay *= 1.5;
+            continue;
+          }
+          
+          // Jeśli błąd nie jest do ponowienia lub wyczerpaliśmy próby na tym modelu, przerywamy pętlę prób
+          break;
+        }
       }
+
+      if (modelSuccess && result) {
+        console.log(`-> Sukces! Analiza ukończona pomyślnie za pomocą modelu: ${finalModelUsed}`);
+        break; // Przerywamy pętlę główną - mamy wynik!
+      }
+    }
+
+    // Jeśli po przejściu całej ścieżki MODELS_TO_TRY nie udało się uzyskać rezultatu
+    if (!result) {
+      console.error("!!! Wszystkie próby na wszystkich modelach zakończą się niepowodzeniem.");
+      throw new Error("SERVERS_OVERLOADED");
     }
 
     const responseText = result.response.text();
@@ -308,10 +344,10 @@ Zwróć WYŁĄCZNIE obiekt JSON. Bez znaczników markdown, bez \`\`\`json.
       analysisResult: parsedResult,
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Błąd analizy:", error);
 
-    // Rollback kredytu
+    // Rollback kredytu (Zwrócenie kredytu na konto użytkownika)
     if (creditDeducted && userId) {
       try {
         await supabaseAdmin
@@ -323,8 +359,14 @@ Zwróć WYŁĄCZNIE obiekt JSON. Bez znaczników markdown, bez \`\`\`json.
       }
     }
 
+    // Sprawdzamy czy powodem błędu było całkowite przeciążenie serwerów
+    const isOverload = error?.message === "SERVERS_OVERLOADED" || error?.status === 503;
+    const errorMessage = isOverload
+      ? "Bardzo przepraszamy, ale serwery Google AI są obecnie przeciążone z powodu ogromnego zainteresowania. Twój kredyt został pomyślnie zwrócony na konto. Spróbuj wysłać wypracowanie ponownie za chwilę!"
+      : "Wystąpił nieoczekiwany błąd podczas analizy AI. Twój kredyt został pomyślnie zwrócony.";
+
     return NextResponse.json(
-      { error: "Wystąpił błąd podczas analizy AI. Twój kredyt został zwrócony." },
+      { error: errorMessage },
       { status: 500 }
     );
   }

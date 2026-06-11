@@ -525,13 +525,9 @@ export default function OcenianieRozprawekPage() {
           {/* Prawa kolumna: Miejsce na wyniki (Raport AI) */}
           <div className="lg:col-span-4 flex flex-col gap-4">
             
-            {isAnalyzing ? (
+            {isAnalyzing || isGenerating ? (
               <div className="rounded-2xl border border-amber-950/40 bg-stone-950/20 p-5 flex flex-col justify-center items-center text-center min-h-[300px]">
-                <div className="text-4xl animate-spin mb-3">🔮</div>
-                <h3 className="text-sm font-bold text-stone-200 font-serif">Algorytm pracuje...</h3>
-                <p className="text-[11px] text-stone-500 mt-2 max-w-[200px] leading-relaxed">
-                  Trwa weryfikacja poprawności stylistycznej, kompozycji oraz kryteriów rzeczowych CKE.
-                </p>
+                <AtmosphericEssayLoader mode={isGenerating ? "generate" : "analyze"} />
               </div>
             ) : analysisResult ? (
               <div className="rounded-2xl border border-stone-800 bg-stone-900/60 p-5 flex flex-col gap-3.5 animate-fade-in max-h-[500px] overflow-y-auto">
@@ -627,6 +623,108 @@ export default function OcenianieRozprawekPage() {
           </div>
         )}
 
+      </div>
+    </div>
+  );
+}
+
+// ==========================================================================
+// DOJEBANY ATMOSFERYCZNY KOMPONENT ŁADOWANIA (SUB-COMPONENT)
+// ==========================================================================
+function AtmosphericEssayLoader({ mode }: { mode: "analyze" | "generate" }) {
+  const [step, setStep] = useState(0);
+
+  // Dynamiczne, klimatyczne statusy w zależności od akcji
+  const analyzeSteps = [
+    "Zaparzanie świeżej herbaty i rozgrzewanie maszyn AI...",
+    "Egzaminator CKE zakłada okulary i otwiera Twoje wypracowanie...",
+    "Analizowanie bogactwa leksykalnego i struktur składniowych...",
+    "Weryfikacja tekstu pod kątem błędów rzeczowych i kardynalnych...",
+    "Przeszukiwanie bazy RAG w poszukiwaniu wzorców oceniania...",
+    "Konstruowanie sprawiedliwej i pomocnej informacji zwrotnej..."
+  ];
+
+  const generateSteps = [
+    "Zaparzanie świeżej herbaty i rozgrzewanie maszyn AI...",
+    "Dobieranie optymalnych lektur i motywów literackich...",
+    "Formułowanie dojrzałej, uniwersalnej tezy do tematu...",
+    "Konstruowanie wieloaspektowych argumentów merytorycznych...",
+    "Dobieranie i płynne wstrzykiwanie funkcjonalnych kontekstów CKE...",
+    "Kończenie generowania przykładowego wypracowania..."
+  ];
+
+  const loadingSteps = mode === "generate" ? generateSteps : analyzeSteps;
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setStep((prev) => (prev + 1) % loadingSteps.length);
+    }, 4500);
+    return () => clearInterval(interval);
+  }, [loadingSteps.length]);
+
+  return (
+    <div className="flex flex-col items-center justify-center p-6 text-center select-none w-full">
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes float {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-8px) rotate(1deg); }
+        }
+        @keyframes pulse-glow {
+          0%, 100% { opacity: 0.15; transform: scale(1); }
+          50% { opacity: 0.35; transform: scale(1.1); }
+        }
+        @keyframes spin-slow {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes spin-reverse-slow {
+          0% { transform: rotate(360deg); }
+          100% { transform: rotate(0deg); }
+        }
+        @keyframes particle-rise {
+          0% { transform: translateY(20px) scale(0.8); opacity: 0; }
+          20% { opacity: 0.8; }
+          80% { opacity: 0.4; }
+          100% { transform: translateY(-70px) scale(0.4); opacity: 0; }
+        }
+        .animate-float { animation: float 4s ease-in-out infinite; }
+        .animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
+        .animate-spin-slow { animation: spin-slow 20s linear infinite; }
+        .animate-spin-reverse-slow { animation: spin-reverse-slow 25s linear infinite; }
+      `}} />
+
+      {/* Środkowy element graficzny */}
+      <div className="relative w-36 h-36 flex items-center justify-center mb-6">
+        <div className="absolute inset-4 bg-amber-500/10 rounded-full blur-2xl animate-pulse-glow" />
+        <div className="absolute inset-0 rounded-full border-2 border-dashed border-amber-500/10 animate-spin-slow" />
+        <div className="absolute inset-2 rounded-full border border-dotted border-orange-500/20 animate-spin-reverse-slow" />
+
+        {/* Pływające pióro i otwarta księga (SVG) */}
+        <div className="absolute z-10 animate-float flex items-center justify-center text-amber-500/80">
+          <svg className="w-16 h-20 drop-shadow-[0_0_15px_rgba(245,158,11,0.3)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.967 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+            <path strokeLinecap="round" d="M5 8h4M5 11h3M5 14h4M15 8h4M16 11h3M15 14h3" strokeWidth="1" strokeOpacity="0.5" />
+          </svg>
+        </div>
+
+        {/* Unoszące się iskrzące drobiny */}
+        <div className="absolute inset-0 pointer-events-none">
+          <span className="absolute w-1 h-1 rounded-full bg-amber-400" style={{ animation: 'particle-rise 4s ease-in-out infinite', left: '25%', bottom: '20px', animationDelay: '0.2s' }} />
+          <span className="absolute w-1.5 h-1.5 rounded-full bg-orange-400" style={{ animation: 'particle-rise 5s ease-in-out infinite', left: '45%', bottom: '20px', animationDelay: '1.8s' }} />
+          <span className="absolute w-1 h-1 rounded-full bg-amber-500" style={{ animation: 'particle-rise 3.5s ease-in-out infinite', left: '65%', bottom: '20px', animationDelay: '0.9s' }} />
+          <span className="absolute w-2 h-2 rounded-full bg-amber-300" style={{ animation: 'particle-rise 6s ease-in-out infinite', left: '35%', bottom: '20px', animationDelay: '2.5s' }} />
+          <span className="absolute w-1 h-1 rounded-full bg-orange-500" style={{ animation: 'particle-rise 4.2s ease-in-out infinite', left: '55%', bottom: '20px', animationDelay: '1.1s' }} />
+        </div>
+      </div>
+
+      {/* Podpisy statusu */}
+      <div className="max-w-xs">
+        <p className="text-xs uppercase tracking-widest text-amber-500 font-bold mb-1.5 animate-pulse">
+          {mode === "generate" ? "Trwa generowanie rozprawki..." : "Trwa analiza wypracowania..."}
+        </p>
+        <p className="text-[11px] text-stone-400 min-h-[32px] leading-relaxed transition-all duration-500">
+          {loadingSteps[step]}
+        </p>
       </div>
     </div>
   );
