@@ -43,16 +43,16 @@ const CozyGlowLinkCard = ({
   const [isHovered, setIsHovered] = React.useState(false);
 
   // Bezimportowe wykrywanie motywu na podstawie klas CSS w currentTheme
-  let glowColor = "rgba(245, 158, 11, 0.05)"; // Domyślny bursztynowy (library)
+  let glowColor = "rgba(245, 158, 11, 0.22)"; // Domyślny bursztynowy (library) - podbite do 22%
   let hoverBorderClass = "hover:border-amber-500/20"; // Domyślna bursztynowa ramka (library)
   
   const cardBgClasses = currentTheme?.cardBg || "";
   
   if (cardBgClasses.includes("151c24") || cardBgClasses.includes("121820")) {
-    glowColor = "rgba(14, 165, 233, 0.07)"; // Niebiesko-cyjanowy dla deszczu (rainy)
+    glowColor = "rgba(14, 165, 233, 0.25)"; // Niebiesko-cyjanowy dla deszczu (rainy) - podbite do 25%
     hoverBorderClass = "hover:border-sky-500/30"; // Chłodna ramka dla deszczu (rainy)
   } else if (cardBgClasses.includes("251515") || cardBgClasses.includes("211111")) {
-    glowColor = "rgba(239, 68, 68, 0.07)"; // Ciepły czerwono-burgundowy dla kominka (fireplace)
+    glowColor = "rgba(239, 68, 68, 0.25)"; // Ciepły czerwono-burgundowy dla kominka (fireplace) - podbite do 25%
     hoverBorderClass = "hover:border-red-500/30"; // Ciepła czerwona ramka dla kominka (fireplace)
   }
 
@@ -77,16 +77,22 @@ const CozyGlowLinkCard = ({
       onMouseLeave={() => setIsHovered(false)}
       className={`relative overflow-hidden rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} transition-all duration-300 ${hoverBorderClass} hover:shadow-lg ${className}`}
     >
-      {/* Warstwa podświetlenia podążająca za myszką (z dynamicznym kolorem glowColor) */}
+      {/* Treść (z-10 pod poświatą) */}
+      <div className="relative z-10 w-full h-full flex flex-col justify-between">{children}</div>
+
+      {/* 
+        Warstwa podświetlenia podążająca za myszką. 
+        Powiększona do 320px dla długich kart notatek.
+      */}
       {isHovered && (
         <div
-          className="pointer-events-none absolute -inset-px opacity-100 transition-opacity duration-300"
+          className="pointer-events-none absolute -inset-px opacity-100 transition-opacity duration-300 z-20"
           style={{
-            background: `radial-gradient(280px circle at ${coords.x}px ${coords.y}px, ${glowColor}, transparent 80%)`,
+            background: `radial-gradient(320px circle at ${coords.x}px ${coords.y}px, ${glowColor}, transparent 80%)`,
+            mixBlendMode: "screen"
           }}
         />
       )}
-      <div className="relative z-10 w-full h-full flex flex-col justify-between">{children}</div>
     </a>
   );
 };
@@ -133,6 +139,36 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
       } catch (_) {}
     }
     return note.era ? `Epoka: ${note.era}` : '';
+  };
+
+  // Inteligentne wyliczanie metadanych na dole po lewej stronie karty
+  const getBottomLeftMetadata = (note: any) => {
+    // 1. Jeśli z bazy danych idzie prawdziwa data, sformatuj ją ładnie
+    if (note.updated_at || note.created_at) {
+      try {
+        const date = new Date(note.updated_at || note.created_at);
+        return `Aktualizacja: ${date.toLocaleDateString("pl-PL", {
+          day: "numeric",
+          month: "short",
+          year: "numeric"
+        })}`;
+      } catch (_) {}
+    }
+
+    // 2. Jeśli brak daty, wygenerujmy dynamiczną, angażującą wskazówkę
+    const titleLower = (note.title || "").toLowerCase();
+    
+    if (note.type === "lektura") {
+      const pewniaki = ["lalka", "wesele", "dziady", "kordian", "potop", "przedwiośnie", "treny", "makbet", "skąpiec", "granica"];
+      const isPewniak = pewniaki.some(p => titleLower.includes(p));
+      return isPewniak ? "🎯 Pewniak maturalny" : "📖 Lektura obowiązkowa";
+    }
+    
+    if (note.type === "epoka") {
+      return "⏳ Kontekst epoki";
+    }
+    
+    return "💡 Pomocnik naukowy";
   };
 
   // 1. Najpierw filtrujemy całą bazę notatek przekazaną z góry
@@ -286,7 +322,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
                 </p>
                 
                 <div className="border-t border-stone-800/40 mt-4 pt-3 flex items-center justify-between text-xs text-stone-500 w-full">
-                  <span>Zaktualizowano niedawno</span>
+                  <span>{getBottomLeftMetadata(note)}</span>
                   <span className={`text-[#c68a4c] group-hover:text-amber-400 font-medium flex items-center gap-1 transition-colors`}>
                     {hasAccess || note.is_free ? "Otwórz notatkę 📚" : "Odblokuj notatkę 🔒"}
                   </span>

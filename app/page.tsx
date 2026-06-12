@@ -54,8 +54,9 @@ export default function Home() {
   // Stan otwarcia modalu doładowań tokenów
   const [isTokenModalOpen, setIsTokenModalOpen] = useState(false);
 
-  // AUTH & STRIPE STATES
+  // AUTH, PROFILE LOADING & STRIPE STATES
   const [user, setUser] = useState<any>(null);
+  const [profileLoading, setProfileLoading] = useState(true); // <--- DODANY STAN ŁADOWANIA PROFILU
   const [hasAccess, setHasAccess] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [paymentLoading, setPaymentLoading] = useState(false);
@@ -100,10 +101,11 @@ export default function Home() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // 2. Pobieranie danych profilu
+  // 2. Pobieranie danych profilu (zabezpieczone stanem ładowania)
   useEffect(() => {
     async function fetchUserProfile() {
       if (user) {
+        setProfileLoading(true); // <--- ROZPOCZYNAMY POBIERANIE PROFILU
         const { data: profileData } = await supabase
           .from('profiles')
           .select('subscription_status, essay_credits, expires_at')
@@ -127,9 +129,11 @@ export default function Home() {
           setProfile(null);
           setHasAccess(false);
         }
+        setProfileLoading(false); // <--- ZAKOŃCZYLIŚMY POBIERANIE PROFILU
       } else {
         setProfile(null);
         setHasAccess(false);
+        setProfileLoading(false); // <--- ZAKOŃCZYLIŚMY ŁADOWANIE (brak usera)
       }
     }
     fetchUserProfile();
@@ -343,13 +347,20 @@ export default function Home() {
                 </span>
               </div>
 
-              {/* LEWA KOLUMNA (Z TREŚCIĄ) */}
-              <div className="max-w-xl text-center md:text-left relative z-10">
+              {/* LEWA KOLUMNA (Z TREŚCIĄ - CHRONIONA STANEM ŁADOWANIA) */}
+              <div className="max-w-xl text-center md:text-left relative z-10 w-full">
                 <span className="text-xs font-semibold uppercase tracking-widest text-amber-500 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
-                  {hasAccess ? "Dostęp Aktywny 🎉" : "Matura 2026 🔑"}
+                  {profileLoading ? "Weryfikacja..." : hasAccess ? "Dostęp Aktywny 🎉" : "Matura 2026 🔑"}
                 </span>
                 
-                {hasAccess ? (
+                {profileLoading ? (
+                  /* Delikatny, pulsujący szkielet blokujący migotanie */
+                  <div className="animate-pulse space-y-3.5 mt-4">
+                    <div className="h-8 bg-stone-800/60 rounded-xl w-3/4"></div>
+                    <div className="h-4 bg-stone-800/40 rounded-lg w-5/6"></div>
+                    <div className="h-4 bg-stone-800/40 rounded-lg w-2/3"></div>
+                  </div>
+                ) : hasAccess ? (
                   <>
                     <h2 className="text-3xl sm:text-4xl font-bold text-stone-100 mt-3 leading-tight font-serif tracking-tight">
                       Witaj w pakiecie {profile?.subscription_status ? (profile.subscription_status.charAt(0).toUpperCase() + profile.subscription_status.slice(1)) : "Premium"}! 🚀
@@ -375,24 +386,34 @@ export default function Home() {
                 )}
               </div>
 
-              {/* PRAWA KOLUMNA (Z PLANEM) */}
-              <div className="flex flex-col items-center md:items-end justify-center text-center md:text-right border-t md:border-t-0 md:border-l border-stone-800/80 pt-4 md:pt-0 md:pl-8 relative z-10">
-                <span className="text-3xl font-extrabold bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent uppercase">
-                  {!hasAccess && "FREE"}
-                  {hasAccess && (profile?.subscription_status || "PREMIUM")}
-                </span>
-                <span className="text-xs font-medium uppercase tracking-widest text-stone-400 mt-1">Twój Plan</span>
-                <div className="flex gap-1 mt-2 text-amber-500 text-xs">
-                  {profile?.subscription_status === 'mini' && <><span>★</span><span>★</span><span>★</span></>}
-                  {profile?.subscription_status === 'medium' && <><span>★</span><span>★</span><span>★</span><span>★</span></>}
-                  {(profile?.subscription_status === 'premium' || !hasAccess || !['mini', 'medium'].includes(profile?.subscription_status)) && (
-                    <><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></>
-                  )}
-                </div>
-                <span className="text-[11px] text-stone-500 mt-1">
-                  {!hasAccess && "Zyskaj pełną moc nauki"}
-                  {hasAccess && (profile?.subscription_status === 'premium' || !['mini', 'medium'].includes(profile?.subscription_status)) && "Dostęp na 365 dni"}
-                </span>
+              {/* PRAWA KOLUMNA (Z PLANEM - CHRONIONA STANEM ŁADOWANIA) */}
+              <div className="flex flex-col items-center md:items-end justify-center text-center md:text-right border-t md:border-t-0 md:border-l border-stone-800/80 pt-4 md:pt-0 md:pl-8 relative z-10 shrink-0">
+                {profileLoading ? (
+                  <div className="animate-pulse flex flex-col items-center md:items-end gap-2.5">
+                    <div className="h-8 bg-stone-800/60 rounded-lg w-20"></div>
+                    <div className="h-3 bg-stone-800/40 rounded w-16"></div>
+                    <div className="h-3 bg-stone-800/40 rounded w-24"></div>
+                  </div>
+                ) : (
+                  <>
+                    <span className="text-3xl font-extrabold bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent uppercase">
+                      {!hasAccess && "FREE"}
+                      {hasAccess && (profile?.subscription_status || "PREMIUM")}
+                    </span>
+                    <span className="text-xs font-medium uppercase tracking-widest text-stone-400 mt-1">Twój Plan</span>
+                    <div className="flex gap-1 mt-2 text-amber-500 text-xs">
+                      {profile?.subscription_status === 'mini' && <><span>★</span><span>★</span><span>★</span></>}
+                      {profile?.subscription_status === 'medium' && <><span>★</span><span>★</span><span>★</span><span>★</span></>}
+                      {(profile?.subscription_status === 'premium' || !hasAccess || !['mini', 'medium'].includes(profile?.subscription_status)) && (
+                        <><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-stone-500 mt-1">
+                      {!hasAccess && "Zyskaj pełną moc nauki"}
+                      {hasAccess && (profile?.subscription_status === 'premium' || !['mini', 'medium'].includes(profile?.subscription_status)) && "Dostęp na 365 dni"}
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           </div>

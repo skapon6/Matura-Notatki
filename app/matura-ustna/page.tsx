@@ -72,6 +72,11 @@ export default function MaturaUstnaPage() {
   const [isRecording, setIsRecording] = useState(false);
   const recognitionRef = useRef<any>(null);
 
+  // Stany nowego przytulnego okna modalnego dla modelowych odpowiedzi
+  const [isOutlineModalOpen, setIsOutlineModalOpen] = useState(false);
+  const [outlineModalTitle, setOutlineModalTitle] = useState("");
+  const [outlineModalContent, setOutlineModalContent] = useState("");
+
   // Monitorowanie sesji, tokenów i wczytywanie bazy pytań
   useEffect(() => {
     async function fetchInitialData() {
@@ -236,6 +241,16 @@ export default function MaturaUstnaPage() {
     }
   };
 
+  // Otwieranie nowego modalu z pełną odpowiedzią wzorcową CKE (Generowaną przez AI)
+  const handleOpenOutlineModal = (title: string, content: string) => {
+    try {
+      playSound("click");
+    } catch (_) {}
+    setOutlineModalTitle(title);
+    setOutlineModalContent(content);
+    setIsOutlineModalOpen(true);
+  };
+
   // Wysyłanie do wirtualnej komisji AI
   const handleSubmitExam = async () => {
     if (isRecording) stopSpeechRecognition();
@@ -272,7 +287,7 @@ export default function MaturaUstnaPage() {
           draftUnseen: examMode === "public_only" ? "" : draftTextUnseen,
           speech: speechText,
           unseenImageUrl: selectedSet.unseenQuestion.image_url || null,
-          examMode: examMode // Przesyłamy wybrany tryb do API
+          examMode: examMode 
         })
       });
 
@@ -295,6 +310,91 @@ export default function MaturaUstnaPage() {
 
   const currentWordCount = speechText.split(/\s+/).filter(Boolean).length;
   const KOSZT_EGZAMINU = examMode === "both" ? 3 : 2;
+
+  // Funkcja oczyszczająca prosty podgląd tekstowy na stronie przed kliknięciem
+  const cleanPreviewText = (text: string) => {
+    if (!text) return "";
+    return text.replace(/\*\*/g, "").replace(/\*\s+/g, "• ");
+  };
+
+  // DYNAMICZNY PARSER FORMATEK MARKDOWN DO STYLOWEGO WIDOKU MODALA
+  const formatOutlineContent = (text: string) => {
+    if (!text) return null;
+    
+    // Oczyszczamy linie z potworków typu "* **" na starcie
+    let cleanText = text
+      .replace(/\*\s+\*\*/g, "**") 
+      .replace(/\*\s+/g, "• ");   
+
+    const lines = cleanText.split("\n");
+    
+    return lines.map((line, idx) => {
+      const trimmed = line.trim();
+      if (!trimmed) return <div key={idx} className="h-3" />; // pusta przestrzeń dla oddechu
+
+      // Filtrujemy nagłówki główne (np. TEZA, ROZWINIĘCIE, KONTEKST)
+      const isHeader = 
+        trimmed.toUpperCase().startsWith("**TEZA") || 
+        trimmed.toUpperCase().startsWith("**ROZWINIĘCIE") || 
+        trimmed.toUpperCase().startsWith("**KONTEKST") ||
+        trimmed.toUpperCase().startsWith("TEZA:") ||
+        trimmed.toUpperCase().startsWith("ROZWINIĘCIE:") ||
+        trimmed.toUpperCase().startsWith("KONTEKST:");
+
+      if (isHeader) {
+        const headerText = trimmed.replace(/\*\*/g, "").replace(/:/g, "");
+        return (
+          <h4 
+            key={idx} 
+            className="text-xs uppercase tracking-widest text-[#c68a4c] font-extrabold mt-6 mb-2 border-b border-stone-800/80 pb-1.5 w-fit"
+          >
+            {headerText}
+          </h4>
+        );
+      }
+
+      // Filtrujemy elementy listy ze śródtytułami, np. "• **Śródtytuł:** Opis"
+      if (trimmed.startsWith("•") || trimmed.startsWith("-")) {
+        let bulletContent = trimmed.substring(1).trim();
+        
+        if (bulletContent.startsWith("**")) {
+          const endBoldIdx = bulletContent.indexOf("**", 2);
+          if (endBoldIdx !== -1) {
+            const boldText = bulletContent.substring(2, endBoldIdx).replace(/:/g, "");
+            const restText = bulletContent.substring(endBoldIdx + 2).trim();
+            return (
+              <div key={idx} className="flex gap-2.5 items-start text-xs sm:text-sm text-stone-300 leading-relaxed font-sans pl-1 mb-2">
+                <span className="text-amber-500 font-extrabold select-none">▪</span>
+                <p>
+                  <strong className="text-[#c68a4c] font-semibold">{boldText}: </strong>
+                  {restText}
+                </p>
+              </div>
+            );
+          }
+        }
+
+        const cleanedBullet = bulletContent.replace(/\*\*/g, "");
+        return (
+          <div key={idx} className="flex gap-2.5 items-start text-xs sm:text-sm text-stone-300 leading-relaxed font-sans pl-1 mb-2">
+            <span className="text-amber-500 font-extrabold select-none">▪</span>
+            <p>{cleanedBullet}</p>
+          </div>
+        );
+      }
+
+      // Klasyczny akapit tekstu (np. samej tezy) pisany pięknym krojem szeryfowym
+      const cleanParagraph = trimmed.replace(/\*\*/g, "");
+      return (
+        <p 
+          key={idx} 
+          className="text-xs sm:text-sm text-stone-300 leading-relaxed font-serif italic pl-1 mb-4 select-text"
+        >
+          {cleanParagraph}
+        </p>
+      );
+    });
+  };
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-500 ${currentTheme.bg} text-stone-200 font-sans`}>
@@ -416,7 +516,7 @@ export default function MaturaUstnaPage() {
                   }}
                   className={`text-[10px] px-2 py-2 rounded-xl border font-bold flex flex-col items-center justify-center gap-0.5 transition-all ${
                     examMode === modeItem.id
-                      ? "bg-[#c68a4c]/20 text-amber-400 border-amber-500/40"
+                      ? "bg-amber-500/20 text-amber-400 border-amber-500/40"
                       : "bg-stone-950/20 text-stone-500 border-transparent hover:text-stone-300"
                   }`}
                 >
@@ -432,7 +532,7 @@ export default function MaturaUstnaPage() {
               Krok 1: Losowanie zestawu egzaminacyjnego
             </h3>
             <p className="text-xs text-stone-400 mt-1">
-              Zgodnie z wymogami CKE wylosujesz zestaw złożony z pytania jawnego oraz pytania niejawnego [1].
+              Zgodnie z wymogami CKE wylosujesz zestaw złożony z pytania jawnego oraz pytania niejawnego.
             </p>
           </div>
 
@@ -457,12 +557,6 @@ export default function MaturaUstnaPage() {
                       {selectedSet.publicQuestion.question}
                     </h4>
                   </div>
-                  <div className="mt-2 pt-2.5 border-t border-stone-900/60">
-                    <span className="text-[8px] uppercase tracking-widest text-stone-500 font-bold">Plan modelowej odpowiedzi:</span>
-                    <p className="text-[11px] text-stone-400 leading-relaxed font-sans italic mt-1 max-h-32 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-stone-800">
-                      {selectedSet.publicQuestion.modelOutline}
-                    </p>
-                  </div>
                 </div>
               )}
 
@@ -474,7 +568,7 @@ export default function MaturaUstnaPage() {
                       Zadanie 2: Pytanie Niejawne ({selectedSet.unseenQuestion.category})
                     </span>
                     
-                    {/* Wyświetlanie obrazu */}
+                    {/* Wyświetlanie obrazu (jeśli istnieje) */}
                     {selectedSet.unseenQuestion.image_url && (
                       <div className="w-full rounded-xl overflow-hidden border border-stone-900 bg-stone-950/50 shadow-md my-2 flex items-center justify-center max-h-64 sm:max-h-72">
                         <img 
@@ -485,15 +579,21 @@ export default function MaturaUstnaPage() {
                       </div>
                     )}
 
+                    {/* Wyświetlanie tekstu źródłowego (jeśli istnieje) */}
+                    {selectedSet.unseenQuestion.stimulus_text && (
+                      <div className="w-full rounded-xl p-4 sm:p-5 border border-stone-800 bg-stone-900/40 shadow-inner my-2 max-h-64 sm:max-h-72 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-stone-800 text-left">
+                        <span className="text-[8px] uppercase tracking-widest text-stone-500 font-bold block mb-2 select-none">
+                          Tekst źródłowy CKE (materiał bodźcowy):
+                        </span>
+                        <p className="text-xs sm:text-sm text-stone-300 leading-relaxed font-serif italic whitespace-pre-line select-text">
+                          {selectedSet.unseenQuestion.stimulus_text}
+                        </p>
+                      </div>
+                    )}
+
                     <h4 className="text-sm sm:text-base font-bold text-stone-100 font-serif leading-snug">
                       {selectedSet.unseenQuestion.question}
                     </h4>
-                  </div>
-                  <div className="mt-2 pt-2.5 border-t border-stone-900/60">
-                    <span className="text-[8px] uppercase tracking-widest text-stone-500 font-bold">Plan interpretacji obrazu:</span>
-                    <p className="text-[11px] text-stone-400 leading-relaxed font-sans italic mt-1 max-h-32 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-stone-800">
-                      {selectedSet.unseenQuestion.modelOutline}
-                    </p>
                   </div>
                 </div>
               )}
@@ -668,12 +768,12 @@ export default function MaturaUstnaPage() {
               ))}
             </div>
 
-            {/* Analiza obrazu i Podsumowanie komisji */}
+            {/* Analiza materiału bodźcowego i Podsumowanie komisji */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {evaluationResult.imageAnalysis && (
                 <div className="p-4 rounded-2xl bg-stone-950/45 border border-stone-900/80">
                   <h4 className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                    <span>🖼</span> Ocena interpretacji obrazu w Zadaniu 2:
+                    <span>🔍</span> Ocena interpretacji materiału (Zadanie 2):
                   </h4>
                   <p className="text-[11.5px] text-stone-400 leading-relaxed font-sans">{evaluationResult.imageAnalysis}</p>
                 </div>
@@ -708,6 +808,54 @@ export default function MaturaUstnaPage() {
               </div>
             )}
 
+            {/* Wskazówki merytoryczne (Modelowe plany odpowiedzi) wyświetlane PO egzaminie */}
+            {selectedSet && (
+              <div className="p-5 rounded-2xl bg-stone-950/60 border border-stone-900 flex flex-col gap-4 mt-2">
+                <h4 className="text-[10px] font-bold text-amber-500 uppercase tracking-widest flex items-center gap-2">
+                  <span>📖</span> Modelowe plany odpowiedzi (Wzorzec CKE):
+                </h4>
+                <p className="text-[9px] text-stone-500 mb-1 leading-normal">
+                  Porównaj swoją wypowiedź z oficjalnym schematem odpowiedzi przygotowanym przez egzaminatorów:
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {(examMode === "both" || examMode === "public_only") && (
+                    <div 
+                      onClick={() => handleOpenOutlineModal(
+                        "Zadanie 1 (Pytanie jawne)", 
+                        evaluationResult?.modelOutlines?.public || selectedSet?.publicQuestion?.model_outline || "Brak opracowania."
+                      )}
+                      className="p-4 rounded-xl bg-stone-900/40 border border-stone-850 text-xs text-stone-400 leading-relaxed cursor-pointer hover:border-amber-500/30 hover:bg-stone-900/80 hover:scale-[1.01] active:scale-[0.99] transition-all duration-300 flex flex-col gap-1.5"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-stone-200">Zadanie 1 (Pytanie jawne):</span>
+                        <span className="text-[9px] uppercase tracking-wider font-extrabold text-amber-500 opacity-60">Kliknij, aby otworzyć 🔍</span>
+                      </div>
+                      <p className="italic font-serif line-clamp-3 mt-1">
+                        {cleanPreviewText(evaluationResult?.modelOutlines?.public || selectedSet?.publicQuestion?.model_outline)}
+                      </p>
+                    </div>
+                  )}
+                  {(examMode === "both" || examMode === "unseen_only") && (
+                    <div 
+                      onClick={() => handleOpenOutlineModal(
+                        "Zadanie 2 (Pytanie niejawne)", 
+                        evaluationResult?.modelOutlines?.unseen || selectedSet?.unseenQuestion?.model_outline || "Brak opracowania."
+                      )}
+                      className="p-4 rounded-xl bg-stone-900/40 border border-stone-850 text-xs text-stone-400 leading-relaxed cursor-pointer hover:border-amber-500/30 hover:bg-stone-900/80 hover:scale-[1.01] active:scale-[0.99] transition-all duration-300 flex flex-col gap-1.5"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-stone-200">Zadanie 2 (Pytanie niejawne):</span>
+                        <span className="text-[9px] uppercase tracking-wider font-extrabold text-amber-500 opacity-60">Kliknij, aby otworzyć 🔍</span>
+                      </div>
+                      <p className="italic font-serif line-clamp-3 mt-1">
+                        {cleanPreviewText(evaluationResult?.modelOutlines?.unseen || selectedSet?.unseenQuestion?.model_outline)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Informacja małym drukiem */}
             <div className="text-[9px] text-stone-500 leading-relaxed font-sans px-1 mt-1 border-t border-stone-900/60 pt-3">
               * Uwaga: Symulator AI ocenia odpowiedź bardzo rygorystycznie i dosłownie na podstawie kryteriów CKE dla Formuły 2023. Rzeczywista ocena ludzkiej komisji na prawdziwym egzaminie państwowym może różnić się na korzyść zdającego z uwagi na bardziej elastyczną i dynamiczną reakcję podczas rozmowy.
@@ -717,6 +865,140 @@ export default function MaturaUstnaPage() {
         )}
 
       </main>
+
+      {/* MODAL PODGLĄDU PEŁNYCH ODPOWIEDZI WZORCOWYCH CKE */}
+      {isOutlineModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="fixed inset-0" onClick={() => setIsOutlineModalOpen(false)} />
+          <div className={`relative max-w-xl w-full ${currentTheme.cardBg} border ${currentTheme.cardBorder} p-6 sm:p-8 rounded-3xl shadow-2xl z-10 animate-slide-in flex flex-col gap-4 text-left max-h-[85vh] overflow-hidden`}>
+            <div className="flex items-center justify-between border-b border-stone-850 pb-3">
+              <h3 className="text-sm font-bold text-stone-100 font-serif uppercase tracking-wider text-amber-500">
+                {outlineModalTitle}
+              </h3>
+              <button
+                onClick={() => { playSound("click"); setIsOutlineModalOpen(false); }}
+                className="text-stone-500 hover:text-stone-300 text-sm"
+              >
+                ✕ Zamknij
+              </button>
+            </div>
+            <div className="overflow-y-auto pr-1 flex-1 max-h-[60vh] scrollbar-thin scrollbar-thumb-stone-800">
+              <span className="text-[10px] text-stone-500 uppercase tracking-widest font-bold block mb-2">
+                Modelowy konspekt i teza (Wzorzec CKE):
+              </span>
+              <div className="space-y-1">
+                {formatOutlineContent(outlineModalContent)}
+              </div>
+            </div>
+            <div className="border-t border-stone-850 pt-3 text-[10px] text-stone-500 italic">
+              * Możesz zaznaczyć i skopiować ten plan do swojego notesu.
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
+
+// ==========================================================================
+// DOJEBANY ATMOSFERYCZNY KOMPONENT ŁADOWANIA (SUB-COMPONENT)
+// ==========================================================================
+function AtmosphericEssayLoader({ mode }: { mode: "analyze" | "generate" }) {
+  const [step, setStep] = useState(0);
+
+  // Dynamiczne, klimatyczne statusy w zależności od akcji
+  const analyzeSteps = [
+    "Zaparzanie świeżej herbaty i rozgrzewanie maszyn AI...",
+    "Egzaminator CKE zakłada okulary i otwiera Twoje wypracowanie...",
+    "Analizowanie bogactwa leksykalnego i struktur składniowych...",
+    "Weryfikacja tekstu pod kątem błędów rzeczowych i kardynalnych...",
+    "Przeszukiwanie bazy RAG w poszukiwaniu wzorców oceniania...",
+    "Konstruowanie sprawiedliwej i pomocnej informacji zwrotnej..."
+  ];
+
+  const generateSteps = [
+    "Zaparzanie świeżej herbaty i rozgrzewanie maszyn AI...",
+    "Dobieranie optymalnych lektur i motywów literackich...",
+    "Formułowanie dojrzałej, uniwersalnej tezy do tematu...",
+    "Konstruowanie wieloaspektowych argumentów merytorycznych...",
+    "Dobieranie i płynne wstrzykiwanie funkcjonalnych kontekstów CKE...",
+    "Kończenie generowania przykładowego wypracowania..."
+  ];
+
+  const loadingSteps = mode === "generate" ? generateSteps : analyzeSteps;
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setStep((prev) => (prev + 1) % loadingSteps.length);
+    }, 4500);
+    return () => clearInterval(interval);
+  }, [loadingSteps.length]);
+
+  return (
+    <div className="flex flex-col items-center justify-center p-6 text-center select-none w-full">
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes float {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-8px) rotate(1deg); }
+        }
+        @keyframes pulse-glow {
+          0%, 100% { opacity: 0.15; transform: scale(1); }
+          50% { opacity: 0.35; transform: scale(1.1); }
+        }
+        @keyframes spin-slow {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes spin-reverse-slow {
+          0% { transform: rotate(360deg); }
+          100% { transform: rotate(0deg); }
+        }
+        @keyframes particle-rise {
+          0% { transform: translateY(20px) scale(0.8); opacity: 0; }
+          20% { opacity: 0.8; }
+          80% { opacity: 0.4; }
+          100% { transform: translateY(-70px) scale(0.4); opacity: 0; }
+        }
+        .animate-float { animation: float 4s ease-in-out infinite; }
+        .animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
+        .animate-spin-slow { animation: spin-slow 20s linear infinite; }
+        .animate-spin-reverse-slow { animation: spin-reverse-slow 25s linear infinite; }
+      `}} />
+
+      {/* Środkowy element graficzny */}
+      <div className="relative w-36 h-36 flex items-center justify-center mb-6">
+        <div className="absolute inset-4 bg-amber-500/10 rounded-full blur-2xl animate-pulse-glow" />
+        <div className="absolute inset-0 rounded-full border-2 border-dashed border-amber-500/10 animate-spin-slow" />
+        <div className="absolute inset-2 rounded-full border border-dotted border-orange-500/20 animate-spin-reverse-slow" />
+
+        {/* Pływające pióro i otwarta księga (SVG) */}
+        <div className="absolute z-10 animate-float flex items-center justify-center text-amber-500/80">
+          <svg className="w-16 h-20 drop-shadow-[0_0_15px_rgba(245,158,11,0.3)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.967 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+            <path strokeLinecap="round" d="M5 8h4M5 11h3M5 14h4M15 8h4M16 11h3M15 14h3" strokeWidth="1" strokeOpacity="0.5" />
+          </svg>
+        </div>
+
+        {/* Unoszące się iskrzące drobiny */}
+        <div className="absolute inset-0 pointer-events-none">
+          <span className="absolute w-1 h-1 rounded-full bg-amber-400" style={{ animation: 'particle-rise 4s ease-in-out infinite', left: '25%', bottom: '20px', animationDelay: '0.2s' }} />
+          <span className="absolute w-1.5 h-1.5 rounded-full bg-orange-400" style={{ animation: 'particle-rise 5s ease-in-out infinite', left: '45%', bottom: '20px', animationDelay: '1.8s' }} />
+          <span className="absolute w-1 h-1 rounded-full bg-amber-500" style={{ animation: 'particle-rise 3.5s ease-in-out infinite', left: '65%', bottom: '20px', animationDelay: '0.9s' }} />
+          <span className="absolute w-2 h-2 rounded-full bg-amber-300" style={{ animation: 'particle-rise 6s ease-in-out infinite', left: '35%', bottom: '20px', animationDelay: '2.5s' }} />
+          <span className="absolute w-1 h-1 rounded-full bg-orange-500" style={{ animation: 'particle-rise 4.2s ease-in-out infinite', left: '55%', bottom: '20px', animationDelay: '1.1s' }} />
+        </div>
+      </div>
+
+      {/* Podpisy statusu */}
+      <div className="max-w-xs">
+        <p className="text-xs uppercase tracking-widest text-amber-500 font-bold mb-1.5 animate-pulse">
+          {mode === "generate" ? "Trwa generowanie rozprawki..." : "Trwa analiza wypracowania..."}
+        </p>
+        <p className="text-[11px] text-stone-400 min-h-[32px] leading-relaxed transition-all duration-500">
+          {loadingSteps[step]}
+        </p>
+      </div>
     </div>
   );
 }

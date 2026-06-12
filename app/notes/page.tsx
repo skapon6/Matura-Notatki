@@ -46,7 +46,7 @@ export default function WszystkieNotatkiPage() {
   const [notes, setNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Stany wyszukiwania i filtrowania epok oraz typu (Wszystkie | Epoki | Lektury | Inne)
+  // Stany wyszukiwania i filtrowania epok oraz typu (Wszystkie | Same Epoki | Same Lektury | Inne)
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEra, setSelectedEra] = useState("Wszystkie");
   const [selectedType, setSelectedType] = useState<"all" | "epoka" | "lektura" | "inne">("all");
@@ -136,7 +136,37 @@ export default function WszystkieNotatkiPage() {
     fetchUserDataAndNotes();
   }, []);
 
-  // Filtrowanie notatek na podstawie wyszukiwarki, kafelków epok oraz typu (Wszystkie | Epoki | Lektury | Inne)
+  // Inteligentne wyliczanie metadanych na dole po lewej stronie karty
+  const getBottomLeftMetadata = (note: any) => {
+    // 1. Jeśli z bazy danych idzie prawdziwa data, sformatuj ją ładnie
+    if (note.updated_at || note.created_at) {
+      try {
+        const date = new Date(note.updated_at || note.created_at);
+        return `Aktualizacja: ${date.toLocaleDateString("pl-PL", {
+          day: "numeric",
+          month: "short",
+          year: "numeric"
+        })}`;
+      } catch (_) {}
+    }
+
+    // 2. Jeśli brak daty, wygenerujmy dynamiczną, angażującą wskazówkę
+    const titleLower = (note.title || "").toLowerCase();
+    
+    if (note.type === "lektura") {
+      const pewniaki = ["lalka", "wesele", "dziady", "kordian", "potop", "przedwiośnie", "treny", "makbet", "skąpiec", "granica"];
+      const isPewniak = pewniaki.some(p => titleLower.includes(p));
+      return isPewniak ? "🎯 Pewniak maturalny" : "📖 Lektura obowiązkowa";
+    }
+    
+    if (note.type === "epoka") {
+      return "⏳ Kontekst epoki";
+    }
+    
+    return "💡 Pomocnik naukowy";
+  };
+
+  // Filtrowanie notatek na podstawie wyszukiwarki, kafelków epok oraz typu
   const filteredNotes = notes.filter((note) => {
     // 1. Filtrowanie po wybranej epoce
     if (selectedEra !== "Wszystkie") {
@@ -151,7 +181,6 @@ export default function WszystkieNotatkiPage() {
     // 2. Filtrowanie po rodzaju notatki (lektura vs epoka vs pomocniki)
     if (selectedType !== "all") {
       if (selectedType === "inne") {
-        // "Inne" łapie wszystko co nie jest epoką i lekturą (np. pomocniki, rozprawki, syntezy)
         if (note.type === "epoka" || note.type === "lektura") {
           return false;
         }
@@ -160,7 +189,7 @@ export default function WszystkieNotatkiPage() {
       }
     }
 
-    // 3. Filtrowanie po wpisanej frazie (tytuł, epoka, tagi)
+    // 3. Filtrowanie po wpisanej frazie
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const titleMatch = note.title?.toLowerCase().includes(query);
@@ -440,6 +469,12 @@ export default function WszystkieNotatkiPage() {
                         ))}
                       </div>
                     )}
+
+                    {/* DYNAMICZNY ZNACZNIK DATY / MATURA HINT ORAZ CZAS CZYTANIA */}
+                    <div className="flex items-center justify-between text-[11px] text-stone-500 font-sans px-1">
+                      <span>{getBottomLeftMetadata(note)}</span>
+                      <span>⏱️ {note.read_time || note.readTime || (Math.max(2, Math.round((String(note.content || "")).split(/\s+/).length / 150)) + " min")}</span>
+                    </div>
 
                     {/* Przycisk otwierania (z kłódką dla zablokowanych lektur) */}
                    {isLocked ? (

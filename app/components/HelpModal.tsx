@@ -66,7 +66,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, currentTh
             {activeSection === "general" && (
               <div className="p-4 pt-1 border-t border-stone-800/40 text-xs text-stone-400 leading-relaxed space-y-2 animate-slide-in">
                 <p>
-                  Witaj w swoim <strong className="text-stone-100 font-semibold">maturalnym kąciku spokoju</strong>! Ta platforma została zaprojektowana tak, abyś mógł uczyć się do matury z <strong className="text-stone-100 font-semibold">języka polskiego</strong> oraz <strong className="text-stone-100 font-semibold">matematyki</strong> bez zbędnego stresu [2].
+                  Witaj w swoim <strong className="text-stone-100 font-semibold">maturalnym kąciku spokoju</strong>! Ta platforma została zaprojektowana tak, abyś mógł uczyć się do matury z <strong className="text-stone-100 font-semibold">języka polskiego</strong> bez zbędnego stresu [2].
                 </p>
                 <p>
                   W panelu ustawień możesz dostosować klimat wizualny (Ciepła Biblioteka, Deszczowy Dzień lub Przytulny Kominek), a wbudowany odtwarzacz pozwoli Ci włączyć uspokajającą muzykę Lo-Fi ułatwiającą pełne skupienie.

@@ -1,65 +1,127 @@
-"use client";
+// app/components/CozyMug.tsx
+"use5 client";
 
 import React, { useState } from "react";
-import { ThemeClasses } from "../lib/theme";
+import { playSound } from "../lib/sounds";
 
 interface CozyMugProps {
-  currentTheme: ThemeClasses;
+  currentTheme: any;
 }
 
-export const CozyMug: React.FC<CozyMugProps> = ({ currentTheme }) => {
-  const [mugClicks, setMugClicks] = useState(0);
-  const [mugMessage, setMugMessage] = useState("Ciepły napar paruje... Kliknij kubek!");
+export function CozyMug({ currentTheme }: CozyMugProps) {
+  const [isSipping, setIsSipping] = useState(false);
+  const [sipMessage, setSipMessage] = useState("");
 
-  const handleMugClick = () => {
-    const clicks = mugClicks + 1;
-    setMugClicks(clicks);
+  const sipMessages = [
+    "Łyk ciepłej melisy... Spokój powraca 🌿",
+    "Zrobiłeś łyk ciepłego naparu... Skupienie wzrasta ☕",
+    "Dodano odrobinę miodu i cytryny 🍯",
+    "Herbata zaparzona idealnie w temperaturze 80°C 🌡️",
+    "Gorący kubek rozgrzewa Twoje dłonie... 🍂",
+    "Lofi i herbata to idealne połączenie 🎧"
+  ];
+
+  const handleSip = () => {
+    if (isSipping) return;
     
-    const messages = [
-      "Mmm... pyszna, ciepła cynamonowa herbata! ☕",
-      "Spokojnie, krok po kroku opanujesz cały materiał.",
-      "Zrobiłeś sobie przerwę? Bardzo dobrze, mózg potrzebuje odpoczynku.",
-      "Czy wiesz, że zapach herbaty obniża poziom stresu?",
-      "Klikasz w kubek z determinacją! Matura na 100%! 🚀",
-      "Masz ochotę na małą powtórkę? Spójrz na notatki obok.",
-      "Czujesz ten zapach goździków i pomarańczy? Wyjątkowo przytulnie."
-    ];
-    setMugMessage(messages[clicks % messages.length]);
+    try {
+      playSound("click");
+    } catch (e) {}
+
+    // Losujemy miły komunikat nad kubkiem
+    const randomMsg = sipMessages[Math.floor(Math.random() * sipMessages.length)];
+    setSipMessage(randomMsg);
+    setIsSipping(true);
+
+    setTimeout(() => {
+      setIsSipping(false);
+    }, 2500);
   };
 
   return (
-    <div 
-      onClick={handleMugClick}
-      className={`rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-5 text-center cursor-pointer select-none relative overflow-hidden transition-all duration-300 hover:scale-[1.03] hover:shadow-xl ${currentTheme.glow} group`}
-    >
-      <div className="absolute inset-0 bg-gradient-to-t from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-
-      <h3 className="text-xs uppercase tracking-widest text-amber-500 font-semibold mb-1">
-        Przytulny Kącik
-      </h3>
+    <div className={`relative rounded-3xl p-5 border ${currentTheme.cardBorder} ${currentTheme.cardBg} transition-all duration-500 shadow-md select-none flex flex-col items-center justify-center text-center`}>
       
-      <div className="relative w-24 h-24 mx-auto flex items-center justify-center my-1 select-none">
-        <svg className="absolute top-1 w-12 h-8 text-stone-400/50" viewBox="0 0 100 100" fill="none">
-          <path className="steam-line" d="M30,80 Q40,60 30,40 T40,10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-          <path className="steam-line-2" d="M50,80 Q60,65 50,45 T60,15" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-          <path className="steam-line-3" d="M70,85 Q80,70 70,50 T80,20" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-        </svg>
+      {/* ANIMACJE SPECJALNE DLA KUBKA */}
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes steam-rise {
+          0% { transform: translateY(5px) scaleX(1); opacity: 0; }
+          15% { opacity: 0.5; }
+          50% { transform: translateY(-15px) scaleX(1.2); opacity: 0.25; }
+          100% { transform: translateY(-30px) scaleX(0.8); opacity: 0; }
+        }
+        @keyframes float-mug {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-5px); }
+        }
+        @keyframes sip-pulse {
+          0% { transform: scale(1); }
+          50% { transform: scale(0.92); }
+          100% { transform: scale(1); }
+        }
+        .animate-steam-1 { animation: steam-rise 3s ease-in-out infinite; }
+        .animate-steam-2 { animation: steam-rise 4.2s ease-in-out infinite; animation-delay: 1.2s; }
+        .animate-steam-3 { animation: steam-rise 3.5s ease-in-out infinite; animation-delay: 0.6s; }
+        .animate-float-mug { animation: float-mug 5s ease-in-out infinite; }
+        .animate-sip-pulse { animation: sip-pulse 0.3s ease-in-out; }
+      `}} />
 
-        <svg className="w-16 h-16 text-amber-800/80 drop-shadow-md transform group-hover:rotate-3 transition-transform" viewBox="0 0 100 100" fill="currentColor">
-          <path d="M20,35 C20,35 20,80 30,85 C40,90 60,90 70,85 C80,80 80,35 80,35 Z" fill="#694d3f" />
-          <ellipse cx="50" cy="35" rx="30" ry="8" fill="#8b6857" />
-          <ellipse cx="50" cy="35" rx="27" ry="6" fill="#a75d33" />
-          <path d="M80,45 C80,45 92,45 92,60 C92,75 80,75 80,75" stroke="#694d3f" strokeWidth="10" strokeLinecap="round" fill="none" />
-          <path d="M50,50 L52,55 L58,56 L53,60 L55,66 L50,62 L45,66 L47,60 L42,56 L48,55 Z" fill="#e8d5c8" />
-        </svg>
+      {/* Tło poświatowe aktywowane po kliknięciu */}
+      <div className={`absolute inset-0 bg-amber-500/5 rounded-3xl blur-2xl transition-opacity duration-1000 ${
+        isSipping ? "opacity-100" : "opacity-0"
+      }`} />
+
+      <h3 className="text-xs uppercase tracking-widest text-amber-500 font-bold mb-6">Przytulny Kącik</h3>
+
+      {/* KLIKALNY KUBEK */}
+      <div 
+        onClick={handleSip}
+        className={`relative w-28 h-28 flex flex-col items-center justify-end cursor-pointer group ${
+          isSipping ? "animate-sip-pulse" : ""
+        }`}
+      >
+        {/* Pływające wektory pary */}
+        <div className="absolute top-0 inset-x-0 h-12 flex justify-center gap-2 pointer-events-none">
+          <svg className="w-2.5 h-10 text-stone-400/30 animate-steam-1" fill="none" viewBox="0 0 10 30">
+            <path d="M5 30 C 1 20, 9 10, 5 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+          <svg className="w-2.5 h-10 text-stone-400/40 animate-steam-2" fill="none" viewBox="0 0 10 30">
+            <path d="M5 30 C 9 20, 1 10, 5 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+          <svg className="w-2.5 h-10 text-stone-400/25 animate-steam-3" fill="none" viewBox="0 0 10 30">
+            <path d="M5 30 C 2 22, 8 8, 5 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </div>
+
+        {/* Kubek (Floating) */}
+        <div className="animate-float-mug relative z-10 transition-transform group-hover:scale-105 duration-300">
+          <svg className="w-20 h-16 text-[#c68a4c] drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]" viewBox="0 0 24 16" fill="currentColor">
+            {/* Ucho kubka */}
+            <path d="M18 4 C 21 4, 21 10, 18 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            {/* Ciało kubka */}
+            <path d="M3 2 L 17 2 L 15 13 C 14 15, 6 15, 5 13 Z" />
+            {/* Małe serduszko lub ozdobna plamka na kubku */}
+            <path d="M10 6 C 9 5, 8 6, 10 8 C 12 6, 11 5, 10 6" fill="rgba(21, 28, 44, 0.4)" />
+          </svg>
+        </div>
+
+        {/* Talerzyk pod kubkiem (Stabilny na stole) */}
+        <div className="w-18 h-1.5 bg-stone-850 rounded-full border border-stone-800 shadow-lg mt-1" />
       </div>
 
-      <p className="text-xs font-semibold text-stone-200 mt-2">
-        Zrób łyk ciepłego naparu ☕
-      </p>
-      <p className="text-[11px] text-stone-400 mt-1 italic leading-relaxed min-h-[32px]">
-        &quot;{mugMessage}&quot;
-      </p>
+      {/* Opisy i komunikaty */}
+      <div className="mt-5 min-h-[36px] flex items-center justify-center">
+        {isSipping ? (
+          <p className="text-xs text-amber-400 font-semibold animate-bounce">
+            {sipMessage}
+          </p>
+        ) : (
+          <div className="group-hover:text-stone-300 transition-colors">
+            <p className="text-xs font-bold text-stone-200">Zrób łyk ciepłego naparu ☕</p>
+            <p className="text-[10px] text-stone-500 mt-0.5">Kliknij swój ulubiony kubek, by się napić</p>
+          </div>
+        )}
+      </div>
+
     </div>
   );
-};
+}

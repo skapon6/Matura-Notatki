@@ -14,19 +14,19 @@ export const CozyGlowCard: React.FC<CozyGlowCardProps> = ({ children, className 
   const [isHovered, setIsHovered] = useState(false);
 
   // Bezimportowe wykrywanie motywu na podstawie klas CSS w currentTheme
-  let glowColor = "rgba(245, 158, 11, 0.05)"; // Domyślny bursztynowy dla Biblioteki (library)
+  let glowColor = "rgba(245, 158, 11, 0.15)"; // Bursztynowy dla Biblioteki (library) - podbita jasność do 15%
   let hoverBorderClass = "hover:border-amber-500/20"; // Domyślna bursztynowa ramka dla Biblioteki
   
-  const cardBgClasses = currentTheme?.cardBg || "";
+  const cardBgClasses = (currentTheme?.cardBg || "").toLowerCase();
   
   // Jeśli klasy tła karty wskazują na Deszczowy Dzień (grafit/błękit)
   if (cardBgClasses.includes("151c24") || cardBgClasses.includes("121820")) {
-    glowColor = "rgba(14, 165, 233, 0.07)"; // Niebiesko-cyjanowy spotlight
+    glowColor = "rgba(14, 165, 233, 0.18)"; // Niebiesko-cyjanowy spotlight - podbita jasność do 18%
     hoverBorderClass = "hover:border-sky-500/30"; // Chłodna ramka dla deszczu
   } 
   // Jeśli klasy tła karty wskazują na Ciepły Kominek (burgund/czerwień)
   else if (cardBgClasses.includes("251515") || cardBgClasses.includes("211111")) {
-    glowColor = "rgba(239, 68, 68, 0.07)"; // Ciepły czerwono-burgundowy spotlight
+    glowColor = "rgba(239, 68, 68, 0.18)"; // Ciepły czerwono-burgundowy spotlight - podbita jasność do 18%
     hoverBorderClass = "hover:border-red-500/30"; // Ciepła czerwona ramka dla kominka
   }
 
@@ -47,16 +47,23 @@ export const CozyGlowCard: React.FC<CozyGlowCardProps> = ({ children, className 
       onMouseLeave={() => setIsHovered(false)}
       className={`relative overflow-hidden rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} transition-all duration-300 ${hoverBorderClass} hover:shadow-lg ${className}`}
     >
-      {/* Warstwa podświetlenia podążająca za myszką (z dynamicznym kolorem glowColor) */}
+      {/* Treść karty umieszczona stabilnie pod poświatą */}
+      <div className="relative z-10">{children}</div>
+
+      {/* 
+        Warstwa podświetlenia podążająca za myszką. 
+        Dzięki z-20 i mix-blend-screen poświata nakłada się na elementy od góry, 
+        a pointer-events-none gwarantuje, że nie blokuje ona kliknięć ani zaznaczania tekstu.
+      */}
       {isHovered && (
         <div
-          className="pointer-events-none absolute -inset-px opacity-100 transition-opacity duration-300"
+          className="pointer-events-none absolute -inset-px opacity-100 transition-opacity duration-300 z-20"
           style={{
-            background: `radial-gradient(300px circle at ${coords.x}px ${coords.y}px, ${glowColor}, transparent 80%)`,
+            background: `radial-gradient(220px circle at ${coords.x}px ${coords.y}px, ${glowColor}, transparent 80%)`,
+            mixBlendMode: "screen"
           }}
         />
       )}
-      <div className="relative z-10">{children}</div>
     </div>
   );
 };
