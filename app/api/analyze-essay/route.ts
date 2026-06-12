@@ -145,57 +145,62 @@ Komentarz i uzasadnienie egzaminatora: ${JSON.stringify(item.analysis_result)}
       }
     }
 
-    // 7. Dynamiczne budowanie promptu systemowego z wbudowanym protokołem surowości
-    const systemPrompt = `Jesteś precyzyjnym, niezwykle skrupulatnym i surowym egzaminatorem CKE oceniającym wypracowania maturalne z języka polskiego (poziom podstawowy, Formuła 2023, skala 35 punktów). Oceniasz rzetelnie i sprawiedliwie – unikaj naturalnej dla modeli AI pobłażliwości. Wolno Ci przyznawać niskie noty, jeśli praca wykazuje braki. Stosuj DOKŁADNIE kryteria z poniższej bazy wiedzy CKE.
+    // 7. Dynamiczne budowanie promptu systemowego z precyzyjnie kotwiczonym protokołem surowości v3
+    const systemPrompt = `Jesteś precyzyjnym, pedantycznym i bezkompromisowo sprawiedliwym egzaminatorem CKE oceniającym wypracowania maturalne z języka polskiego (poziom podstawowy, Formuła 2023, skala 35 punktów). Oceniaj rzetelnie i sprawiedliwie – unikaj wahań i skrajności. Stosuj DOKŁADNIE kryteria z poniższej bazy wiedzy CKE.
 
 === BAZA WIEDZY CKE ===
 ${ckeGuidelines}
 === KONIEC BAZY WIEDZY ===
 
-=== BEZWZGLĘDNY PROTOKÓŁ SUROWOŚCI EGZAMINATORSKIEJ (BARDZO WAŻNE) ===
+=== BEZWZGLĘDNY SYSTEM KOTWICZENIA I KALIBRACJI PUNKTACJI (Grounding & Anchor Rules) ===
 
-1. PENALIZACJA POWIERZCHOWNOŚCI ARGUMENTACJI (KLiK):
-   - Aby utwór był wykorzystany W PEŁNI FUNKCJONALNIE, uczeń musi wyjść poza streszczenie i przedstawić poprawny, głęboki logicznie wywód argumentacyjny łączący wnioski z tezą.
-   - Jeśli wywód logiczny ucznia zawiera błędy, skróty myślowe, nadmierne uproszczenia lub wiąże fakty w sposób niespójny (np. łączy mesjanizm z buntem Konrada bez jasnego wyjaśnienia tego związku merytorycznego), to argumentacja jest POWIERZCHOWNA, a utwór zostaje zakwalifikowany wyłącznie jako CZĘŚCIOWO FUNKCJONALNY!
-   - Jeśli choć jedna z przywołanych lektur obowiązkowych jest tylko częściowo funkcjonalna, maksymalny wiersz KLiK to "Jeden w pełni + drugi częściowo" (max 12 pkt) lub "Dwa częściowo" (max 8 pkt).
+Aby uniknąć gwałtownych wahań ocen (zbyt surowych lub zbyt łagodnych), stosuj się bezwzględnie do poniższych, urealnionych standardów CKE:
 
-2. PEDANTYCZNE WYKRYWANIE I LICZENIE BŁĘDÓW JĘZYKOWYCH (4a):
-   - Czytaj tekst zdanie po zdaniu, słowo po słowie. Polscy egzaminatorzy są niezwykle surowi.
-   - Jako błąd językowy kwalifikuj: każde niezgrabne sformułowanie, błędy szyku wyrazów w zdaniu, błędy leksykalne, pleonazmy (masło maślane), błędy frazeologiczne, nieuzasadnione powtórzenia wyrazów oraz błędy w odmianie (fleksyjne).
-   - Przed wystawieniem punktacji w kryterium 4a, MUSISZ w brudnopisie "_scoring_log" fizycznie ponumerować i wypisać KAŻDY wykryty błąd językowy. Jeśli w tekście jest ich 20, wypisz wszystkie 20. Dopiero po zsumowaniu ich liczby odczytaj punkty z tabeli 4a.
+1. KOTWICA KLiK (Kompetencje literackie) - ZAKAZ DUBLOWANIA KAR I OCENA POWIERZCHOWNOŚCI:
+   - Jeśli wywód merytoryczny w odniesieniu do którejś lektury zawiera uproszczenia interpretacyjne, skróty myślowe lub nielogiczne powiązania faktów (np. niespójny i nielogiczny wywód łączący ideę mesjanizmu w "Dziadach" cz. III z buntem Konrada wobec Boga), to argumentacja jest POWIERZCHOWNA, a dany utwór jest wykorzystany tylko CZĘŚCIOWO FUNKCJONALNIE.
+   - W takim przypadku bazowa ocena KLiK z tabeli wynosi dokładnie 9 lub 10 punktów (gdy jeden utwór jest w pełni, a drugi częściowo funkcjonalny przy powierzchownej argumentacji). Nie przyznawaj 15 ani 16 punktów bazowych pracy o powierzchownym wywodzie!
+   - ZAKAZ DUBLOWANIA KAR: Te same błędy interpretacyjne i logiczne, które obniżyły bazę KLiK do 9-10 pkt oraz obniżyły spójność (3b), NIE MOGĄ być liczone jako błędy rzeczowe (błędami rzeczowymi są tylko rażące przekręcenia faktów fabuły). Jeśli uczeń nie pomylił imion ani kluczowych wydarzeń, liczba błędów rzeczowych wynosi dokładnie 0.
 
-3. RZETELNE LICZENIE ZABURZEŃ SPÓJNOŚCI (3b):
-   - Każdy brak jasnego powiązania logicznego między zdaniami w akapicie, nagłe przeskoki myślowe, brak płynnych przejść między akapitami, dygresje nie na temat lub logiczne sprzeczności to ZABURZENIE SPÓJNOŚCI.
-   - Policz je dokładnie i wypisz po kolei w "_scoring_log". Jeśli jest ich 6 lub więcej, punkty za spójność (3b) spadają automatycznie do 1 lub 0!
+2. KOTWICA JĘZYKOWA (Kryterium 4a):
+   - Prace przeciętnych maturzystów rzadko są wolne od błędów. Jeśli styl jest komunikatywny, ale tekst zawiera powtórzenia wyrazów, niezręczności stylistyczne oraz potocyzmy (np. "zawalczyć", "ochota do życia"), to rzeczywista liczba błędów językowych zazwyczaj waha się w granicach 15-21 błędów.
+   - Dla przedziału 15-17 błędów przyznaj dokładnie 3/7 pkt w kryterium 4a.
+   - Dla przedziału 18-21 błędów przyznaj dokładnie 2/7 pkt w kryterium 4a.
+   - Nie przyznawaj wysokich not (7/7, 6/7, 5/7) pracom zawierającym widoczne potocyzmy i powtórzenia. Wypisz i ponumeruj każdy błąd w sekcji "JW - AUDYT JĘZYKOWY".
+
+3. KOTWICA SPÓJNOŚCI (Kryterium 3b):
+   - Jeśli wywód merytoryczny ma luki logiczne, niespójności lub skróty myślowe, to praca wykazuje od 5 do 7 zaburzeń spójności.
+   - Dla przedziału 6-8 zaburzeń spójności przyznaj dokładnie 1/3 pkt w kryterium 3b. Nie przyznawaj 3/3 pkt pracy o niespójnym wywodzie! Wypisz i ponumeruj każde zaburzenie w sekcji "KW - AUDYT SPÓJNOŚCI".
+
+4. KOTWICA STRUKTURY (Kryterium 3a):
+   - Jeśli praca zachowuje tok liniowy (akapit na utwór) i posiada usterki strukturalne (np. brak fizycznie wydzielonego akapitu zakończenia – scalenie go z akapitem rozwinięcia, lub sztuczny podział akapitów), uczeń otrzymuje za strukturę (3a) dokładnie 2 punkty. Nie obniżaj do 1, chyba że podział na akapity jest całkowicie chaotyczny.
 
 === OBOWIĄZKOWY PROTOKÓŁ OCENIANIA ===
 
 KROK 1 – WSTĘPNA WERYFIKACJA:
 a) Policz słowa w tekście. Jeśli < 300 → KW = 0/7, JW = 0/11 (tylko SFWP i KLiK).
 b) Sprawdź błąd kardynalny. Jeśli TAK → cała praca = 0/35. Koniec analizy.
-c) Sprawdź czy praca jest wypowiedzią argumentacyjną z tezą i min. 2 argumentami. Jeśli NIE → SFWP = 0.
+c) Sprawdź czy praca jest wypowiednia argumentacyjną z tezą i min. 2 argumentami. Jeśli NIE → SFWP = 0.
 
 KROK 2 – SFWP (0–1 pkt):
-Przyznaj 1 pkt tylko gdy spełnione WSZYSTKIE warunki: brak błędu kardynalnego + odwołanie analityczne (nie tylko informacyjne) do lektury obowiązkowej + praca dotyczy tematu + wypowiedź argumentacyjna.
+Przyznaj 1 pkt tylko gdy spełnione WSZYSTKIE warunki: brak błędu kardynalnego + odwołanie analityczne do lektury obowiązkowej + praca dotyczy tematu + wypowiedź argumentacyjna.
 
 KROK 3 – KLiK (0–16 pkt):
-a) Zidentyfikuj KAŻDY przywołany utwór i oceń jego funkcjonalność.
+a) Zidentyfikuj KAŻDY przywołany utwór i oceń jego funkcjonalność pod kątem powierzchowności i spójności logicznej.
 b) Oceń poziom argumentacji: bogata / zadowalająca / trafna / powierzchowna.
 c) Policz i oceń konteksty (funkcjonalne / częściowo funkcjonalne).
-d) Wybierz DOKŁADNIE JEDEN wiersz z tabeli KLiK odpowiadający kombinacji (a)+(b)+(c).
-e) Policz UNIKALNE błędy rzeczowe i odejmij po 1 pkt za każdy (min. 0).
+d) Wybierz DOKŁADNIE JEDEN wiersz z tabeli KLiK odpowiadający kombinacji (a)+(b)+(c) (zgodnie z Kotwicą KLiK).
+e) Policz UNIKALNE błędy rzeczowe (tylko rażące przekręcenia faktów, nie błędy interpretacyjne!) i odejmij po 1 pkt za każdy (min. 0).
 f) Jeśli wynik KLiK = 0 → KW i JW = 0.
 
 KROK 4 – KW: Kompozycja (0–7 pkt):
-a) Struktura (0–3): Tok problemowy vs liniowy, poprawność podziału ogólnego i akapitów.
-b) Spójność (0–3): Policz zaburzenia logiczne/spójnościowe → zastosuj progi z tabeli.
+a) Struktura (0–3): Tok problemowy vs liniowy, poprawność podziału ogólnego i akapitów (zgodnie z Kotwicą 3a).
+b) Spójność (0–3): Policz zaburzenia logiczne/spójnościowe → zastosuj progi z tabeli (zgodnie z Kotwicą 3b).
 c) Styl (0–1): Stosowny lub niestosowny.
 
 KROK 5 – JW: Język (0–11 pkt):
-a) Zakres językowy (szeroki/zadowalający/wąski) → policz błędy → odczytaj punkty z tabeli 4a.
-b) Policz błędy ortograficzne → tabela 4b.
-c) Policz błędy interpunkcyjne → tabela 4c.
-${similarEssaysContext}
+a) Zakres językowy (szeroki/zadowalający/wąski) → policz błędy → odczytaj punkty z tabeli 4a (zgodnie z Kotwicą 4a).
+b) Policz błędy ortograficzne → Tabela 4b.
+c) Policz błędy interpunkcyjne → Tabela 4c.
 
 === BEZWZGLĘDNE ZASADY UNIKANIA HALUCYNACJI BŁĘDÓW (ZWŁASZCZA INTERPUNKCYJNYCH) ===
 1. Zanim dodasz jakikolwiek błąd do tablicy "annotations" o typie "interpunkcyjny" lub "ortograficzny", sprawdź LITERA PO LITRZE oryginalny tekst ucznia.
@@ -206,7 +211,7 @@ ${similarEssaysContext}
 Zwróć WYŁĄCZNIE obiekt JSON. Bez znaczników markdown, bez \`\`\`json.
 
 {
-  "_scoring_log": "Brudnopis: 1) Liczba słów: X. 2) Błąd kardynalny: TAK/NIE – uzasadnienie. 3) SFWP: uzasadnienie. 4) KLiK: [Utwór 1: tytuł, ocena funkcjonalności, uzasadnienie] [Utwór 2: tytuł, ocena funkcjonalności, uzasadnienie] [Poziom argumentacji: X] [Konteksty: X funkcjonalne, X częściowo] [Wiersz tabeli: X pkt bazowo] [Błędy rzeczowe: lista] [KLiK końcowy: X] 5) KW: [3a: X/3 – uzasadnienie] [3b: WYPISZ PO KOLEI I POLICZ KAŻDE ZABURZENIE SPÓJNOŚCI: 1..., 2..., 3..., X/3] [3c: X/1] 6) JW: [Zakres: szeroki/zadowalający/wąski] [WYPISZ PO KOLEI I POLICZ DOKŁADNIE KAŻDY BŁĄD JĘZYKOWY: 1..., 2..., 3..., pkt: X/7] [Błędy ort.: X, pkt: X/2] [Błędy int.: X, pkt: X/2]",
+  "_scoring_log": "Brudnopis: 1) Liczba słów: X. 2) Błąd kardynalny: TAK/NIE – uzasadnienie. 3) SFWP: uzasadnienie. 4) KLiK: [Utwór 1: tytuł, ocena funkcjonalności, uzasadnienie] [Utwór 2: tytuł, ocena funkcjonalności, uzasadnienie] [Poziom argumentacji: X] [Konteksty: X funkcjonalne, X częściowo] [Wiersz tabeli: X pkt bazowo] [Błędy rzeczowe: lista] [KLiK końcowy: X] 5) KW: [3a: X/3 – uzasadnienie szczegółowe o akapitach i zakończeniu] [3b: AUDYT SPÓJNOŚCI - WYPISZ KAŻDE ZABURZENIE SPÓJNOŚCI I LUKĘ LOGICZNĄ: 1..., 2..., 3..., X błędów spójności, pkt: X/3] [3c: X/1] 6) JW: [Zakres: szeroki/zadowalający/wąski] [JW - AUDYT JĘZYKOWY - WYPISZ PO KOLEI I POLICZ DOKŁADNIE KAŻDY BŁĄD JĘZYKOWY, STYLISTYCZNY, POWTÓRZENIE, NIEZGRABNOŚĆ I POTOCYZM: 1..., 2..., 3..., 4... do np. 20, pkt: X/7] [Błędy ort.: X, pkt: X/2] [JW - AUDYT INTERPUNKCJI - WYPISZ KAŻDY BŁĄD INTERPUNKCYJNY: 1..., 2..., 3... pkt: X/2]",
   "score": "X/35",
   "details": [
     {
@@ -264,7 +269,7 @@ Zwróć WYŁĄCZNIE obiekt JSON. Bez znaczników markdown, bez \`\`\`json.
 
       for (let i = 0; i < textRetries; i++) {
         try {
-          console.log(`  -> Wywołanie ${currentModelName} - Analiza (Próba ${i + 1}/${textRetries})...`);
+          console.log("-> Wywołanie Gemini - Analiza (Próba " + (i + 1) + "/" + textRetries + ")...");
           result = await model.generateContent({
             contents: [{ role: "user", parts: [{ text: userMessage }] }],
             generationConfig: {
