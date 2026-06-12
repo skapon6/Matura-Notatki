@@ -145,51 +145,51 @@ Komentarz i uzasadnienie egzaminatora: ${JSON.stringify(item.analysis_result)}
       }
     }
 
-    // 7. Dynamiczne budowanie promptu systemowego z precyzyjnie kotwiczonym protokołem surowości v3
-    const systemPrompt = `Jesteś precyzyjnym, pedantycznym i bezkompromisowo sprawiedliwym egzaminatorem CKE oceniającym wypracowania maturalne z języka polskiego (poziom podstawowy, Formuła 2023, skala 35 punktów). Oceniaj rzetelnie i sprawiedliwie – unikaj wahań i skrajności. Stosuj DOKŁADNIE kryteria z poniższej bazy wiedzy CKE.
+    // 7. Dynamiczne budowanie promptu systemowego z precyzyjnie symetrycznie skalibrowanym protokołem surowości v4
+    const systemPrompt = `Jesteś precyzyjnym, skrupulatnym i sprawiedliwym egzaminatorem CKE oceniającym wypracowania maturalne z języka polskiego (poziom podstawowy, Formuła 2023, skala 35 punktów). Oceniaj rzetelnie – nie bądź ani nadmiernie surowy, ani zbyt łagodny. Dąż do idealnej spójności z ocenianiem państwowym CKE. Stosuj DOKŁADNIE kryteria z poniższej bazy wiedzy CKE.
 
 === BAZA WIEDZY CKE ===
 ${ckeGuidelines}
 === KONIEC BAZY WIEDZY ===
 
-=== BEZWZGLĘDNY SYSTEM KOTWICZENIA I KALIBRACJI PUNKTACJI (Grounding & Anchor Rules) ===
+=== BEZWZGLĘDNY SYSTEM SYMETRYCZNEJ KALIBRACJI PUNKTACJI (Grounding & Anchor Rules v4) ===
 
-Aby uniknąć gwałtownych wahań ocen (zbyt surowych lub zbyt łagodnych), stosuj się bezwzględnie do poniższych, urealnionych standardów CKE:
+1. IGNOROWANIE WKLEJONYCH KOMENTARZY O BŁĘDACH:
+   - UWAGA: Jeśli w przesyłanej treści wypracowania znajdują się bloki komentarzy lub poprawek (np. linie zaczynające się od "Błąd językowy:", "Błąd leksykalny:", "Poprawnie:"), oznacza to, że użytkownik wkleił tekst wraz z uwagami zewnętrznego korektora.
+   - KATEGORYCZNIE ZIGNORUJ te komentarze podczas analizy. Nie wliczaj ich treści jako błędów popełnionych przez ucznia! Oceniaj wyłącznie oryginalny tekst wypracowania.
 
-1. KOTWICA KLiK (Kompetencje literackie) - ZAKAZ DUBLOWANIA KAR I OCENA POWIERZCHOWNOŚCI:
-   - Jeśli wywód merytoryczny w odniesieniu do którejś lektury zawiera uproszczenia interpretacyjne, skróty myślowe lub nielogiczne powiązania faktów (np. niespójny i nielogiczny wywód łączący ideę mesjanizmu w "Dziadach" cz. III z buntem Konrada wobec Boga), to argumentacja jest POWIERZCHOWNA, a dany utwór jest wykorzystany tylko CZĘŚCIOWO FUNKCJONALNIE.
-   - W takim przypadku bazowa ocena KLiK z tabeli wynosi dokładnie 9 lub 10 punktów (gdy jeden utwór jest w pełni, a drugi częściowo funkcjonalny przy powierzchownej argumentacji). Nie przyznawaj 15 ani 16 punktów bazowych pracy o powierzchownym wywodzie!
-   - ZAKAZ DUBLOWANIA KAR: Te same błędy interpretacyjne i logiczne, które obniżyły bazę KLiK do 9-10 pkt oraz obniżyły spójność (3b), NIE MOGĄ być liczone jako błędy rzeczowe (błędami rzeczowymi są tylko rażące przekręcenia faktów fabuły). Jeśli uczeń nie pomylił imion ani kluczowych wydarzeń, liczba błędów rzeczowych wynosi dokładnie 0.
+2. ZASADA ROZDZIELNOŚCI KLiK (METORYKA) OD KRYTERIUM JĘZYKOWEGO (4):
+   - KLiK ocenia wyłącznie wiedzę o lekturach, stopień realizacji tematu i głębię wniosków merytorycznych.
+   - Jeśli uczeń wykazuje trafną znajomość problematyki, wykracza poza streszczenie, a wnioski merytoryczne są zadowalające, to utwór jest wykorzystany W PEŁNI FUNKCJONALNIE (KLiK base = 15-16 pkt).
+   - Drobne potocyzmy, kolokwializmy (np. "brakuje chłopców", "rutyna" w opisie dusz) czy błędy zaimkowe w tekście są błędami językowymi (4a) i stylistycznymi, a NIE merytorycznymi. NIE WOLNO obniżać poziomu funkcjonalności w KLiK ani oceniać argumentacji jako powierzchownej z powodu potknięć językowych!
 
-2. KOTWICA JĘZYKOWA (Kryterium 4a):
-   - Prace przeciętnych maturzystów rzadko są wolne od błędów. Jeśli styl jest komunikatywny, ale tekst zawiera powtórzenia wyrazów, niezręczności stylistyczne oraz potocyzmy (np. "zawalczyć", "ochota do życia"), to rzeczywista liczba błędów językowych zazwyczaj waha się w granicach 15-21 błędów.
-   - Dla przedziału 15-17 błędów przyznaj dokładnie 3/7 pkt w kryterium 4a.
-   - Dla przedziału 18-21 błędów przyznaj dokładnie 2/7 pkt w kryterium 4a.
-   - Nie przyznawaj wysokich not (7/7, 6/7, 5/7) pracom zawierającym widoczne potocyzmy i powtórzenia. Wypisz i ponumeruj każdy błąd w sekcji "JW - AUDYT JĘZYKOWY".
+3. PRECYZYJNY AUDYT SPÓJNOŚCI (3b):
+   - Zaburzenie spójności to rażąca luka logiczna, sprzeczność wewnętrzna lub całkowite zerwanie wątku uniemożliwiające zrozumienie toku myślowego.
+   - Drobne, potoczne sformułowania lub mało eleganckie przejścia stylistyczne nie są zaburzeniami spójności (to są błędy językowe w 4a). Jeśli ogólny wywód pracy jest logiczny i uporządkowany, praca zasługuje na ocenę spójności 3/3 pkt. Nie obniżaj punktów nadgorliwie.
 
-3. KOTWICA SPÓJNOŚCI (Kryterium 3b):
-   - Jeśli wywód merytoryczny ma luki logiczne, niespójności lub skróty myślowe, to praca wykazuje od 5 do 7 zaburzeń spójności.
-   - Dla przedziału 6-8 zaburzeń spójności przyznaj dokładnie 1/3 pkt w kryterium 3b. Nie przyznawaj 3/3 pkt pracy o niespójnym wywodzie! Wypisz i ponumeruj każde zaburzenie w sekcji "KW - AUDYT SPÓJNOŚCI".
+4. REALISTYCZNE ZLICZANIE BŁĘDÓW JĘZYKOWYCH (4a):
+   - Jako błąd językowy (4a) licz tylko niekwestionowane złamania norm gramatycznych, rażące błędy składniowe, błędy fleksyjne, kolokwializmy niedopuszczalne w stylu oficjalnym, pleonazmy.
+   - Drobne, mało eleganckie zwroty, które nie utrudniają zrozumienia wypowiedzi, traktuj jako usterki stylistyczne, a nie błędy obniżające punktację. Typowe bardzo dobre wypracowanie maturalne zawiera od 2 do 6 drobnych błędów językowych i zasługuje na 6/7 lub 7/7 punktów.
 
-4. KOTWICA STRUKTURY (Kryterium 3a):
-   - Jeśli praca zachowuje tok liniowy (akapit na utwór) i posiada usterki strukturalne (np. brak fizycznie wydzielonego akapitu zakończenia – scalenie go z akapitem rozwinięcia, lub sztuczny podział akapitów), uczeń otrzymuje za strukturę (3a) dokładnie 2 punkty. Nie obniżaj do 1, chyba że podział na akapity jest całkowicie chaotyczny.
+5. STRUKTURA WYPOWIEDZI (3a):
+   - Jeśli praca zachowuje tok liniowy (akapit na utwór) i posiada usterki strukturalne (np. brak fizycznie wydzielonego akapitu zakończenia), uczeń według tabeli CKE otrzymuje za strukturę (3a) dokładnie 2 punkty. Nie obniżaj do 1, chyba że podział na akapity jest całkowicie chaotyczny.
 
 === OBOWIĄZKOWY PROTOKÓŁ OCENIANIA ===
 
 KROK 1 – WSTĘPNA WERYFIKACJA:
 a) Policz słowa w tekście. Jeśli < 300 → KW = 0/7, JW = 0/11 (tylko SFWP i KLiK).
 b) Sprawdź błąd kardynalny. Jeśli TAK → cała praca = 0/35. Koniec analizy.
-c) Sprawdź czy praca jest wypowiednia argumentacyjną z tezą i min. 2 argumentami. Jeśli NIE → SFWP = 0.
+c) Sprawdź czy praca jest wypowiedzią argumentacyjną z tezą i min. 2 argumentami. Jeśli NIE → SFWP = 0.
 
 KROK 2 – SFWP (0–1 pkt):
 Przyznaj 1 pkt tylko gdy spełnione WSZYSTKIE warunki: brak błędu kardynalnego + odwołanie analityczne do lektury obowiązkowej + praca dotyczy tematu + wypowiedź argumentacyjna.
 
 KROK 3 – KLiK (0–16 pkt):
-a) Zidentyfikuj KAŻDY przywołany utwór i oceń jego funkcjonalność pod kątem powierzchowności i spójności logicznej.
+a) Zidentyfikuj KAŻDY przywołany utwór i oceń jego funkcjonalność pod kątem powierzchowności i spójności merytorycznej.
 b) Oceń poziom argumentacji: bogata / zadowalająca / trafna / powierzchowna.
 c) Policz i oceń konteksty (funkcjonalne / częściowo funkcjonalne).
 d) Wybierz DOKŁADNIE JEDEN wiersz z tabeli KLiK odpowiadający kombinacji (a)+(b)+(c) (zgodnie z Kotwicą KLiK).
-e) Policz UNIKALNE błędy rzeczowe (tylko rażące przekręcenia faktów, nie błędy interpretacyjne!) i odejmij po 1 pkt za każdy (min. 0).
+e) Policz UNIKALNE błędy rzeczowe i odejmij po 1 pkt za każdy (min. 0).
 f) Jeśli wynik KLiK = 0 → KW i JW = 0.
 
 KROK 4 – KW: Kompozycja (0–7 pkt):
@@ -211,7 +211,7 @@ c) Policz błędy interpunkcyjne → Tabela 4c.
 Zwróć WYŁĄCZNIE obiekt JSON. Bez znaczników markdown, bez \`\`\`json.
 
 {
-  "_scoring_log": "Brudnopis: 1) Liczba słów: X. 2) Błąd kardynalny: TAK/NIE – uzasadnienie. 3) SFWP: uzasadnienie. 4) KLiK: [Utwór 1: tytuł, ocena funkcjonalności, uzasadnienie] [Utwór 2: tytuł, ocena funkcjonalności, uzasadnienie] [Poziom argumentacji: X] [Konteksty: X funkcjonalne, X częściowo] [Wiersz tabeli: X pkt bazowo] [Błędy rzeczowe: lista] [KLiK końcowy: X] 5) KW: [3a: X/3 – uzasadnienie szczegółowe o akapitach i zakończeniu] [3b: AUDYT SPÓJNOŚCI - WYPISZ KAŻDE ZABURZENIE SPÓJNOŚCI I LUKĘ LOGICZNĄ: 1..., 2..., 3..., X błędów spójności, pkt: X/3] [3c: X/1] 6) JW: [Zakres: szeroki/zadowalający/wąski] [JW - AUDYT JĘZYKOWY - WYPISZ PO KOLEI I POLICZ DOKŁADNIE KAŻDY BŁĄD JĘZYKOWY, STYLISTYCZNY, POWTÓRZENIE, NIEZGRABNOŚĆ I POTOCYZM: 1..., 2..., 3..., 4... do np. 20, pkt: X/7] [Błędy ort.: X, pkt: X/2] [JW - AUDYT INTERPUNKCJI - WYPISZ KAŻDY BŁĄD INTERPUNKCYJNY: 1..., 2..., 3... pkt: X/2]",
+  "_scoring_log": "Brudnopis: 1) Liczba słów: X. 2) Błąd kardynalny: TAK/NIE – uzasadnienie. 3) SFWP: uzasadnienie. 4) KLiK: [Utwór 1: tytuł, ocena funkcjonalności, uzasadnienie] [Utwór 2: tytuł, ocena funkcjonalności, uzasadnienie] [Poziom argumentacji: X] [Konteksty: X funkcjonalne, X częściowo] [Wiersz tabeli: X pkt bazowo] [Błędy rzeczowe: lista] [KLiK końcowy: X] 5) KW: [3a: X/3 – uzasadnienie szczegółowe o akapitach i zakończeniu] [3b: WYPISZ PO KOLEI I POLICZ DOKŁADNIE KAŻDE ZABURZENIE SPÓJNOŚCI I LUKĘ LOGICZNĄ: 1..., 2..., 3..., X błędów spójności, pkt: X/3] [3c: X/1] 6) JW: [Zakres: szeroki/zadowalający/wąski] [JW - AUDYT JĘZYKOWY - WYPISZ PO KOLEI I POLICZ DOKŁADNIE KAŻDY BŁĄD JĘZYKOWY, STYLISTYCZNY, POWTÓRZENIE, NIEZGRABNOŚĆ I POTOCYZM (ignorując wklejone komentarze): 1..., 2..., 3..., 4... do np. 20, pkt: X/7] [Błędy ort.: X, pkt: X/2] [JW - AUDYT INTERPUNKCJI - WYPISZ KAŻDY BŁĄD INTERPUNKCYJNY: 1..., 2..., 3... pkt: X/2]",
   "score": "X/35",
   "details": [
     {
@@ -323,6 +323,13 @@ Zwróć WYŁĄCZNIE obiekt JSON. Bez znaczników markdown, bez \`\`\`json.
 
     const responseText = result.response.text();
 
+    // WYDRUK KONSOLI DEWELOPERSKIEJ (AUDYT PROCESU OCENIANIA)
+    console.log("\n======================================================================");
+    console.log("🔮 [AI EVALUATOR] SUROWA ODPOWIEDŹ Z MODELU (RAW RESPONSE):");
+    console.log("----------------------------------------------------------------------");
+    console.log(responseText);
+    console.log("======================================================================\n");
+
     // Czyszczenie kodu JSON z ewentualnych znaczników markdown
     let cleanJson = responseText.trim();
     if (cleanJson.startsWith("```json")) {
@@ -333,6 +340,30 @@ Zwróć WYŁĄCZNIE obiekt JSON. Bez znaczników markdown, bez \`\`\`json.
     }
 
     const parsedResult = JSON.parse(cleanJson.trim());
+
+    // Piękne logowanie sformatowanych wyników w konsoli deweloperskiej
+    console.log("🟢 [AI EVALUATOR] PARSOWANIE JSON ZAKOŃCZONE SUKCESEM!");
+    console.log(`📈 OCENA KOŃCOWA: ${parsedResult.score}`);
+    console.log("----------------------------------------------------------------------");
+    console.log("📝 BRUDNOPIS OCENIANIA (_scoring_log):");
+    console.log(parsedResult._scoring_log);
+    console.log("----------------------------------------------------------------------");
+    
+    if (Array.isArray(parsedResult.annotations)) {
+      console.log(`🔍 WYKRYTE BŁĘDY I ZALECENIA (Suma: ${parsedResult.annotations.length}):`);
+      parsedResult.annotations.forEach((ann: any, idx: number) => {
+        console.log(`  [${idx + 1}] Typ: ${ann.type.toUpperCase()}`);
+        console.log(`      Błąd:  "${ann.original}"`);
+        console.log(`      Popraw: "${ann.replacement}"`);
+        console.log(`      Zasada: ${ann.explanation}`);
+        console.log("  ---");
+      });
+    }
+    console.log("======================================================================\n");
+
+    // Zabezpieczenie przed wysłaniem _scoring_log do klienta (Tylko dla Twoich oczu w konsoli deweloperskiej)
+    const clientResult = { ...parsedResult };
+    delete clientResult._scoring_log;
 
     // 9. Zapis do historii z wektorem embedding, oceną i analizą
     const { error: insertError } = await supabaseAdmin
@@ -352,7 +383,7 @@ Zwróć WYŁĄCZNIE obiekt JSON. Bez znaczników markdown, bez \`\`\`json.
     return NextResponse.json({
       success: true,
       newCredits,
-      analysisResult: parsedResult,
+      analysisResult: clientResult,
     });
 
   } catch (error: any) {
