@@ -14,6 +14,19 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+// Pancerny ekstraktor JSON izolujący obiekt { ... } z dowolnego tekstu AI
+const extractAndParseJSON = (text: string) => {
+  const firstBrace = text.indexOf("{");
+  const lastBrace = text.lastIndexOf("}");
+  
+  if (firstBrace === -1 || lastBrace === -1) {
+    throw new Error("Materiały wyjściowe AI nie zawierają prawidłowego obiektu JSON.");
+  }
+  
+  const jsonString = text.substring(firstBrace, lastBrace + 1);
+  return JSON.parse(jsonString);
+};
+
 export async function POST(req: NextRequest) {
   let creditDeducted = false;
   let originalCredits = 0;
@@ -145,7 +158,7 @@ Komentarz i uzasadnienie egzaminatora: ${JSON.stringify(item.analysis_result)}
       }
     }
 
-    // 7. Dynamiczne budowanie promptu systemowego z precyzyjnie symetrycznie skalibrowanym protokołem surowości v4
+    // 7. Dynamiczne budowanie promptu systemowego z precyzyjnie kotwiczonym protokołem surowości v4
     const systemPrompt = `Jesteś precyzyjnym, skrupulatnym i sprawiedliwym egzaminatorem CKE oceniającym wypracowania maturalne z języka polskiego (poziom podstawowy, Formuła 2023, skala 35 punktów). Oceniaj rzetelnie – nie bądź ani nadmiernie surowy, ani zbyt łagodny. Dąż do idealnej spójności z ocenianiem państwowym CKE. Stosuj DOKŁADNIE kryteria z poniższej bazy wiedzy CKE.
 
 === BAZA WIEDZY CKE ===
@@ -179,7 +192,7 @@ ${ckeGuidelines}
 KROK 1 – WSTĘPNA WERYFIKACJA:
 a) Policz słowa w tekście. Jeśli < 300 → KW = 0/7, JW = 0/11 (tylko SFWP i KLiK).
 b) Sprawdź błąd kardynalny. Jeśli TAK → cała praca = 0/35. Koniec analizy.
-c) Sprawdź czy praca jest wypowiedzią argumentacyjną z tezą i min. 2 argumentami. Jeśli NIE → SFWP = 0.
+c) Sprawdź czy praca jest wypowiednia argumentacyjną z tezą i min. 2 argumentami. Jeśli NIE → SFWP = 0.
 
 KROK 2 – SFWP (0–1 pkt):
 Przyznaj 1 pkt tylko gdy spełnione WSZYSTKIE warunki: brak błędu kardynalnego + odwołanie analityczne do lektury obowiązkowej + praca dotyczy tematu + wypowiedź argumentacyjna.
@@ -189,7 +202,7 @@ a) Zidentyfikuj KAŻDY przywołany utwór i oceń jego funkcjonalność pod kąt
 b) Oceń poziom argumentacji: bogata / zadowalająca / trafna / powierzchowna.
 c) Policz i oceń konteksty (funkcjonalne / częściowo funkcjonalne).
 d) Wybierz DOKŁADNIE JEDEN wiersz z tabeli KLiK odpowiadający kombinacji (a)+(b)+(c) (zgodnie z Kotwicą KLiK).
-e) Policz UNIKALNE błędy rzeczowe i odejmij po 1 pkt za każdy (min. 0).
+e) Policz UNIKALNE błędy rzeczowe (tylko rażące przekręcenia faktów, nie błędy interpretacyjne!) i odejmij po 1 pkt za każdy (min. 0).
 f) Jeśli wynik KLiK = 0 → KW i JW = 0.
 
 KROK 4 – KW: Kompozycja (0–7 pkt):
@@ -330,16 +343,8 @@ Zwróć WYŁĄCZNIE obiekt JSON. Bez znaczników markdown, bez \`\`\`json.
     console.log(responseText);
     console.log("======================================================================\n");
 
-    // Czyszczenie kodu JSON z ewentualnych znaczników markdown
-    let cleanJson = responseText.trim();
-    if (cleanJson.startsWith("```json")) {
-      cleanJson = cleanJson.substring(7);
-    }
-    if (cleanJson.endsWith("```")) {
-      cleanJson = cleanJson.substring(0, cleanJson.length - 3);
-    }
-
-    const parsedResult = JSON.parse(cleanJson.trim());
+    // PANCNY EKSTRAKTOR JSON (Izoluje obiekt { ... } zapobiegając błędom SyntaxError)
+    const parsedResult = extractAndParseJSON(responseText);
 
     // Piękne logowanie sformatowanych wyników w konsoli deweloperskiej
     console.log("🟢 [AI EVALUATOR] PARSOWANIE JSON ZAKOŃCZONE SUKCESEM!");
