@@ -46,6 +46,8 @@ export default function MojePostepyPage() {
   const [quotesCount, setQuotesCount] = useState(0);
   const [credits, setCredits] = useState(0);
   const [essaysCount, setEssaysCount] = useState(0);
+  const [essayAverage, setEssayAverage] = useState(0); // <--- DODANY STAN ŚREDNIEJ OCEN
+  const [essaySuccessRate, setEssaySuccessRate] = useState(0); // <--- DODANY STAN SKUTECZNOŚCI
   const [studyTime, setStudyTime] = useState(0);
 
   // Stany dla dynamicznego wyliczania postępu fiszek
@@ -91,9 +93,27 @@ export default function MojePostepyPage() {
           setQuotesCount(quotesRes.count);
         }
 
-        // C. Rozprawki
+        // C. Rozprawki i ich statystyki
         if (essaysRes.data) {
           setEssaysCount(essaysRes.data.length);
+
+          let totalScoreNumerator = 0;
+          let parsedCount = 0;
+
+          essaysRes.data.forEach((row: any) => {
+            const scoreStr = row.score; // np. "21/35"
+            if (scoreStr && typeof scoreStr === "string") {
+              const numerator = parseInt(scoreStr.split("/")[0], 10);
+              if (!isNaN(numerator)) {
+                totalScoreNumerator += numerator;
+                parsedCount++;
+              }
+            }
+          });
+
+          const average = parsedCount > 0 ? parseFloat((totalScoreNumerator / parsedCount).toFixed(1)) : 0;
+          setEssayAverage(average);
+          setEssaySuccessRate(Math.round((average / 35) * 100));
         }
 
         // D. Fiszki i ich postęp
@@ -142,7 +162,7 @@ export default function MojePostepyPage() {
     return slug.split("-").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
   };
 
-  // MATEMATYCZNE WYPROWADZENIE DYNAMICZNYCH PROCENTÓW OPANOWANIA EPOK NA PODSTAWIE BAZY FISZEK [1]
+  // Matematyczne wyprowadzenie dynamicznych procentów opanowania epok na podstawie bazy fiszek
   const calculateGroupProgress = (erasInGroup: string[]) => {
     const cardsInGroup = flashcards.filter((c) =>
       erasInGroup.some((era) => c.era?.toLowerCase() === era.toLowerCase())
@@ -259,7 +279,7 @@ export default function MojePostepyPage() {
       {/* RENDEROWANIE ZAWARTOŚCI */}
       <main className="max-w-4xl mx-auto w-full p-6 flex flex-col gap-6 flex-1 select-none animate-slide-in">
         
-        {/* CZTERY DYNAMICZNE KAFELKI STATYSTYK (COZYGLOWCARD - POPRAWIONE NA WARSTWY BLOCK) */}
+        {/* CZTERY DYNAMICZNE KAFELKI STATYSTYK */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
           
           <CozyGlowCard currentTheme={currentTheme} className="p-5 flex flex-col items-center justify-center text-center gap-2">
@@ -287,6 +307,48 @@ export default function MojePostepyPage() {
           </CozyGlowCard>
 
         </div>
+
+        {/* DYNAMICZNY PANEL STATYSTYK ROZPRAWEK AI (NOWOŚĆ) */}
+        {essaysCount > 0 && (
+          <CozyGlowCard currentTheme={currentTheme} className="p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-md animate-slide-in">
+            <div className="flex items-center gap-4 text-left">
+              <div className="text-3xl shrink-0">✍️</div>
+              <div>
+                <h4 className="text-xs uppercase tracking-widest text-amber-500 font-bold mb-1">Analiza Pisania Rozprawek AI</h4>
+                <p className="text-xs text-stone-400 leading-relaxed font-sans max-w-md">
+                  {essayAverage >= 28 ? (
+                    <span>👑 <strong className="text-stone-100 font-semibold">Poziom mistrzowski!</strong> Twoje wypracowania wykraczają merytorycznie poza schematy. Masz świetnie opanowane kryteria CKE i dojrzały język. Jesteś w pełni gotowy!</span>
+                  ) : essayAverage >= 17.5 ? (
+                    <span>🎯 <strong className="text-stone-100 font-semibold">Solidna i stabilna forma!</strong> Wykazujesz się zadowalającą wiedzą merytoryczną. Skup się teraz na eliminacji drobnych błędów językowych i spójności.</span>
+                  ) : (
+                    <span>☕ <strong className="text-stone-100 font-semibold">Trening czyni mistrza!</strong> Każda napisana i przeanalizowana praca to krok bliżej do sukcesu. Sprawdź szczegółowe uwagi krytyka w historii ocen!</span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 sm:gap-4 shrink-0 font-mono text-center select-none">
+              <div className="bg-stone-950/40 px-4 py-2 rounded-xl border border-stone-850">
+                <span className="block text-lg sm:text-xl font-extrabold text-stone-100">
+                  {essaysCount}
+                </span>
+                <span className="text-[9px] text-stone-500 uppercase tracking-wider font-sans">Napisane</span>
+              </div>
+              <div className="bg-stone-950/40 px-4 py-2 rounded-xl border border-stone-850">
+                <span className="block text-lg sm:text-xl font-extrabold text-amber-500">
+                  {essayAverage} <span className="text-xs text-stone-500">/ 35</span>
+                </span>
+                <span className="text-[9px] text-stone-500 uppercase tracking-wider font-sans">Średnia</span>
+              </div>
+              <div className="bg-stone-950/40 px-4 py-2 rounded-xl border border-stone-850">
+                <span className="block text-lg sm:text-xl font-extrabold text-stone-100">
+                  {essaySuccessRate}%
+                </span>
+                <span className="text-[9px] text-stone-500 uppercase tracking-wider font-sans">Skuteczność</span>
+              </div>
+            </div>
+          </CozyGlowCard>
+        )}
 
         {/* CENTRALNY PANEL POSTĘPU OPANOWANIA EPOK */}
         <CozyGlowCard currentTheme={currentTheme} className="p-6 sm:p-8 flex flex-col gap-6">
@@ -360,7 +422,7 @@ export default function MojePostepyPage() {
           </div>
         </CozyGlowCard>
 
-        {/* NOWY, DOLNY PANEL: OSTATNIO OPANOWANE FISZKI (WYELIMINOWANO KAFELEK OPIEKUNA AI) */}
+        {/* NOWY, DOLNY PANEL: OSTATNIO OPANOWANE FISZKI */}
         <CozyGlowCard currentTheme={currentTheme} className="p-6 sm:p-8 flex flex-col gap-4">
           <div>
             <h3 className="text-xs uppercase tracking-widest text-emerald-400 font-bold flex items-center gap-2 select-none">

@@ -66,7 +66,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, currentTh
             {activeSection === "general" && (
               <div className="p-4 pt-1 border-t border-stone-800/40 text-xs text-stone-400 leading-relaxed space-y-2 animate-slide-in">
                 <p>
-                  Witaj w swoim <strong className="text-stone-100 font-semibold">maturalnym kąciku spokoju</strong>! Ta platforma została zaprojektowana tak, abyś mógł uczyć się do matury z <strong className="text-stone-100 font-semibold">języka polskiego</strong> bez zbędnego stresu [2].
+                  Witaj w swoim <strong className="text-stone-100 font-semibold">maturalnym kąciku spokoju</strong>! Ta platforma została zaprojektowana tak, abyś mógł uczyć się do matury z <strong className="text-stone-100 font-semibold">języka polskiego</strong> bez zbędnego stresu.
                 </p>
                 <p>
                   W panelu ustawień możesz dostosować klimat wizualny (Ciepła Biblioteka, Deszczowy Dzień lub Przytulny Kominek), a wbudowany odtwarzacz pozwoli Ci włączyć uspokajającą muzykę Lo-Fi ułatwiającą pełne skupienie.
@@ -118,7 +118,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, currentTh
                   Przećwicz stresujący egzamin ustny w bezpiecznym domu. Kliknij losowanie, aby otrzymać zestaw (pytanie jawne o lekturę oraz pytanie niejawne o dołączony obraz).
                 </p>
                 <p>
-                  <strong>Zakres treningu:</strong> Możesz wybrać, czy chcesz ćwiczyć cały zestaw (oba zadania – koszt 3 tokeny), czy skupić się wyłącznie na jednym wybranym pytaniu (tylko jawne o lekturę lub tylko niejawne o plakat/obraz – koszt 2 tokeny) [1].
+                  <strong>Zakres treningu:</strong> Możesz wybrać, czy chcesz ćwiczyć cały zestaw (oba zadania – koszt 3 tokeny), czy skupić się wyłącznie na jednym wybranym pytaniu (tylko jawne o lekturę lub tylko niejawne o plakat/obraz – koszt 2 tokeny).
                 </p>
                 <p>
                   Przygotuj notatki na brudnopisie, a następnie wygłoś swoją mowę do mikrofonu (system sam zamieni Twój głos na tekst). Po wysłaniu, wirtualna komisja oceni Twoją mowę, przeanalizuje motywy na obrazie i wystawi przejrzysty protokół punktowy.
@@ -147,7 +147,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, currentTh
                   Szybka powtórka najważniejszych faktów, cech bohaterów i epok. Kliknij kartę, aby ją obrócić i poznać odpowiedź.
                 </p>
                 <p>
-                  <strong className="text-stone-100 font-semibold">Szybkie wyszukiwanie:</strong> Nie musisz przewijać setek kafelków [3]. Kliknij w pole wyszukiwania nad fiszką i wpisz np. „Lalka” lub „Antyk”, aby uczyć się wyłącznie zagadnień z wybranej lektury lub epoki [4].
+                  <strong className="text-stone-100 font-semibold">Szybkie wyszukiwanie:</strong> Nie musisz przewijać setek kafelków. Kliknij w pole wyszukiwania nad fiszką i wpisz np. „Lalka” lub „Antyk”, aby uczyć się wyłącznie zagadnień z wybranej lektury lub epoki.
                 </p>
                 <p>
                   <strong className="text-stone-100 font-semibold">Statusy nauki:</strong> Oznaczaj karty jako opanowane, aby odłożyć je do osobnej zakładki i powtarzać tylko ten materiał, który wciąż sprawia Ci trudność.
@@ -193,7 +193,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, currentTh
             {activeSection === "pricing" && (
               <div className="p-4 pt-1 border-t border-stone-800/40 text-xs text-stone-400 leading-relaxed space-y-3.5 animate-slide-in">
                 <p>
-                  Darmowe konto pozwala na czytanie części notatek. Kupując jeden z pakietów dostępowych (Mini, Medium lub roczny Premium), odblokowujesz całą bazę wiedzy, mapy myśli i otrzymujesz darmowe tokeny na start [1]. <strong className="text-stone-100 font-semibold">W dowolnym momencie możesz również osobno dokupić dodatkowe pakiety kredytów (tokenów)</strong>, jeśli zabraknie Ci ich na analizy lub symulacje egzaminów ustnych.
+                  Darmowe konto pozwala na czytanie części notatek. Kupując jeden z pakietów dostępowych (Mini, Medium lub roczny Premium), odblokowujesz całą bazę wiedzy, mapy myśli i otrzymujesz darmowe tokeny na start. <strong className="text-stone-100 font-semibold">W dowolnym momencie możesz również osobno dokupić dodatkowe pakiety kredytów (tokenów)</strong>, jeśli zabraknie Ci ich na analizy lub symulacje egzaminów ustnych.
                 </p>
                 
                 {/* Wykaz zużycia kredytów - zaktualizowany o koszt 2 i 3 tokenów */}

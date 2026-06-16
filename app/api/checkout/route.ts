@@ -1,3 +1,4 @@
+// app/api/checkout/route.ts
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
@@ -21,9 +22,9 @@ export async function POST(request: Request) {
     }
   );
 
-  // Sprawdzamy sesję użytkownika
-  const { data: { session: authSession } } = await supabase.auth.getSession();
-  if (!authSession) {
+  // 1. Bezpiecznie sprawdzamy sesję użytkownika przez getUser() (Zabezpieczenie przed konsolą i oszustwami)
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
     return NextResponse.json({ error: 'Niezalogowany użytkownik' }, { status: 401 });
   }
 
@@ -33,11 +34,11 @@ export async function POST(request: Request) {
 
     let lineItems: any[] = [];
     let metadata: any = {
-      userId: authSession.user.id,
+      userId: user.id, // Przekazujemy bezpiecznie zweryfikowane ID użytkownika
     };
     let mode: 'payment' | 'subscription' = 'payment';
 
-    // 1. OBSŁUGA JEDNORAZOWYCH PAKIETÓW TOKENÓW (Działa "w locie" bez Price ID!)
+    // 2. OBSŁUGA JEDNORAZOWYCH PAKIETÓW TOKENÓW (Działa w locie)
     if (type === 'tokens') {
       mode = 'payment';
       let amountInCents = 0;
@@ -62,7 +63,8 @@ export async function POST(request: Request) {
             currency: 'pln',
             product_data: {
               name: `Pakiet ${tokenCount} Tokenów AI`,
-              description: `Jednorazowe doładowanie konta o ${tokenCount} kredytów do wykorzystania przy ocenianiu wypracowań maturalnych.`,
+              // ZAKTUALIZOWANY, UNIWERSALNY OPIS PRODUKTU DLA STRIPE (Zadania pisemne + ustne)
+              description: `Jednorazowe doładowanie o ${tokenCount} kredytów do wykorzystania we wszystkich funkcjach AI (asystent rozprawek oraz próbne egzaminy ustne na żywo).`,
             },
             unit_amount: amountInCents,
           },
@@ -75,7 +77,7 @@ export async function POST(request: Request) {
       metadata.tokenAmount = tokenCount.toString();
 
     } else {
-      // 2. KLASYCZNA SUBSKRYPCJA (Używa stałych Price ID z .env)
+      // 3. KLASYCZNA SUBSKRYPCJA (Używa stałych Price ID z .env)
       mode = 'payment';
       let priceId = '';
 

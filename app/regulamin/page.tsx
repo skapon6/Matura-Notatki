@@ -200,7 +200,7 @@ export default function RegulaminPage() {
               W sprawach nieuregulowanych niniejszym regulaminem zastosowanie mają przepisy Kodeksu Cywilnego, ustawy o świadczeniu usług drogą elektroniczną oraz prawa polskiego. Sądem właściwym do rozstrzygania sporów jest sąd miejscowo właściwy dla siedziby administratora, chyba że przepisy bezwzględnie obowiązujące stanowią inaczej.
             </p>
             <p>
-              Konsument ma prawo skorzystać z pozasądowych metod rozwiązywania sporów, w tym z platformy ODR dostępnej pod adresem: <strong className="text-stone-100">https://ec.europa.eu/consumers/odr</strong>.
+              Konsument ma prawo skorzystać z pozasądowych metod rozwiązywania sporów, w tym z platformy ODR dostępnej pod adresem: <strong className="text-stone-100">https://consumer-redress.ec.europa.eu</strong>.
             </p>
           </section>
 
