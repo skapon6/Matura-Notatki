@@ -29,14 +29,14 @@ export default function PolitykaPrywatnosciPage() {
         {/* Content */}
         <div className="text-xs sm:text-sm text-stone-300 space-y-6 leading-relaxed text-left font-sans">
           <p className="italic text-stone-400">
-            Ostatnia aktualizacja: 29 maja 2026 r. Dbamy o Twoją prywatność. Poniższy dokument wyjaśnia, jak zbieramy, przetwarzamy i chronimy Twoje dane osobowe w ramach naszej platformy edukacyjnej, zgodnie z Rozporządzeniem Parlamentu Europejskiego i Rady (UE) 2016/679 z dnia 27 kwietnia 2016 r. (RODO).
+            Ostatnia aktualizacja: 11 czerwca 2026 r. Dbamy o Twoją prywatność. Poniższy dokument wyjaśnia, jak zbieramy, przetwarzamy i chronimy Twoje dane osobowe w ramach naszej platformy edukacyjnej, zgodnie z Rozporządzeniem Parlamentu Europejskiego i Rady (UE) 2016/679 z dnia 27 kwietnia 2016 r. (RODO).
           </p>
 
           {/* 1 */}
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-[#c68a4c] uppercase tracking-wider font-serif">1. Administrator Danych Osobowych</h3>
             <p>
-              Administratorem Twoich danych osobowych jest właściciel platformy edukacyjnej: <strong className="text-stone-100">[Nazwa Twojej Firmy / Imię i Nazwisko]</strong>, z siedzibą w: <strong className="text-stone-100">[Nazwa Miejscowości, Kraj]</strong>, NIP: <strong className="text-stone-100">[NIP jeśli dotyczy]</strong>. W sprawach związanych z przetwarzaniem danych oraz realizacją Twoich praw możesz kontaktować się z nami pod adresem e-mail: <strong className="text-stone-100">[Twój Adres E-mail]</strong>.
+              Administratorem Twoich danych osobowych jest właściciel platformy edukacyjnej: <strong className="text-stone-100">Kacper Leś</strong>, zamieszkały pod adresem: <strong className="text-stone-100">Pustków-Osiedle (kod pocztowy: 39-206)</strong>, prowadzący działalność nierejestrowaną . W sprawach związanych z przetwarzaniem danych oraz realizacją Twoich praw możesz kontaktować się z nami pod adresem e-mail: <strong className="text-stone-100">wiedzaszytanamiare@kontakt.pl</strong>.
             </p>
           </section>
 
@@ -56,7 +56,7 @@ export default function PolitykaPrywatnosciPage() {
           {/* 3 */}
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-[#c68a4c] uppercase tracking-wider font-serif">3. Cel i Podstawa Prawna Przetwarzania Danych</h3>
-            <p>Twoje dane przetwarzamy w następujących celach i na następujących podstawach prawnych:</p>
+            <p>Twoje dane przetwarzamy w następujących celach i na następujących podstawach wyglądających prawnie:</p>
             <ul className="list-disc pl-5 space-y-1">
               <li>Świadczenia usług drogą elektroniczną, obsługi konta i realizacji próbnych ocen CKE — <strong>art. 6 ust. 1 lit. b RODO</strong> (wykonanie umowy).</li>
               <li>Przetwarzania płatności za doładowania kredytów i zakup pakietów za pośrednictwem Stripe — <strong>art. 6 ust. 1 lit. b RODO</strong> (wykonanie umowy).</li>
@@ -132,7 +132,7 @@ export default function PolitykaPrywatnosciPage() {
               <li><strong>Wniesienia skargi</strong> do Prezesa Urzędu Ochrony Danych Osobowych (UODO), ul. Stawki 2, 00-193 Warszawa, jeśli uznasz, że przetwarzamy Twoje dane niezgodnie z prawem.</li>
             </ul>
             <p>
-              Aby skorzystać z powyższych praw, skontaktuj się z nami na adres: <strong className="text-stone-100">[Twój Adres E-mail]</strong>. Odpowiemy na Twoje żądanie w terminie 30 dni od jego otrzymania.
+              Aby skorzystać z powyższych praw, skontaktuj się z nami na adres: <strong className="text-stone-100">wiedzaszytanamiare@kontakt.pl</strong>. Odpowiemy na Twoje żądanie w terminie 30 dni od jego otrzymania.
             </p>
           </section>
 
@@ -155,7 +155,7 @@ export default function PolitykaPrywatnosciPage() {
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-[#c68a4c] uppercase tracking-wider font-serif">10. Zmiany Polityki Prywatności</h3>
             <p>
-              Administrator zastrzega prawo do aktualizacji niniejszej polityki prywatności. O każdej istotnej zmianie Użytkownicy posiadający aktywne konto zostaną poinformowani drogą e-mailową z co najmniej <strong className="text-stone-100">14-dniowym wyprzedzeniem</strong>. Aktualna wersja polityki jest zawsze dostępna pod adresem <strong className="text-stone-100">[Adres Domeny]/prywatnosc</strong>.
+              Administrator zastrzega prawo do aktualizacji niniejszej polityki prywatności. O każdej istotnej zmianie Użytkownicy posiadający aktywne konto zostaną poinformowani drogą e-mailową z co najmniej <strong className="text-stone-100">14-dniowym wyprzedzeniem</strong>. Aktualna wersja polityki jest zawsze dostępna pod adresem <strong className="text-stone-100">wiedzaszytanamiare.pl/prywatnosc</strong>.
             </p>
           </section>
 
