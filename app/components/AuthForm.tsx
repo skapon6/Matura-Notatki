@@ -23,7 +23,8 @@ const BLOCKED_DOMAINS = [
   "temp-mail.co", "temporary-mail.net", "generator.email", "emaildeck.com",
   "moakt.com", "10minutemail.net", "tempmailaddress.com", "spambox.us",
   "crazymailing.com", "armyspy.com", "cuvox.de", "dayrep.com",
-  "fleckens.hu", "gustr.com", "teleworm.us", "spydeer.me", "10minutemail.co.za"
+  "fleckens.hu", "gustr.com", "teleworm.us", "spydeer.me", "10minutemail.co.za", 
+  "lidugw.com", "laoia.com", "dyleris.com", "gonrr.net", 
 ];
 
 // Funkcja weryfikująca czy domena maila nie należy do czarnej listy [11.3]
