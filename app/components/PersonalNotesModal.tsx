@@ -1,3 +1,4 @@
+// components/PersonalNotesModal.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -36,10 +37,15 @@ export const PersonalNotesModal: React.FC<PersonalNotesModalProps> = ({
   // Stan przechowujący aktualnie wybrany do podglądu cytat
   const [activePreview, setActivePreview] = useState<PersonalNote | null>(null);
 
-  // Ustawianie domyślnego podglądu (zawsze ostatni dodany jako pierwszy)
+  // Ustawianie domyślnego podglądu (zabezpieczone testem istnienia na zaktualizowanej liście)
   useEffect(() => {
     if (isOpen) {
-      if (selectedNote) {
+      // Bezpieczna weryfikacja: sprawdzamy, czy przekazany z góry cytat w ogóle jeszcze istnieje na naszej liście
+      const selectedNoteExists = selectedNote && personalNotes.some(
+        (n) => String(n.id) === String(selectedNote.id)
+      );
+
+      if (selectedNoteExists && selectedNote) {
         setActivePreview(selectedNote);
       } else if (personalNotes.length > 0) {
         // Domyślnie wczytujemy najnowszy (pierwszy na liście) cytat z bazy
@@ -70,9 +76,18 @@ export const PersonalNotesModal: React.FC<PersonalNotesModalProps> = ({
       if (error) {
         triggerNotification("Nie udało się usunąć zapisanego cytatu.", "error");
       } else {
-        setPersonalNotes((prev) => prev.filter((item) => item.id !== id));
-        if (activePreview?.id === id) {
-          setActivePreview(null);
+        // Bezpieczne filtrowanie listy przy użyciu rzutowania do String (zapobiega błędom typów Supabase)
+        const updatedNotes = personalNotes.filter((item) => String(item.id) !== String(id));
+        setPersonalNotes(updatedNotes);
+
+        // Rozwiązanie "wiszącego podglądu": jeśli usunięto aktualnie podglądany cytat
+        if (activePreview && String(activePreview.id) === String(id)) {
+          if (updatedNotes.length > 0) {
+            // Automatycznie ładujemy kolejny dostępny cytat do aktywnego widoku
+            setActivePreview(updatedNotes[0]);
+          } else {
+            setActivePreview(null);
+          }
         }
         triggerNotification("Cytat został usunięty.", "success");
       }
@@ -112,7 +127,7 @@ export const PersonalNotesModal: React.FC<PersonalNotesModalProps> = ({
         {/* Scrollable Body */}
         <div className="p-6 overflow-y-auto flex-1 flex flex-col gap-5 scrollbar-thin scrollbar-thumb-stone-800">
           
-          {/* GŁÓWNA KARTA AKTYWNEGO PODGLĄDU (Ostatnio dodany lub kliknięty cytat) */}
+          {/* GŁÓWNA KARTA AKTYWNEGO PODGLĄDU */}
           {activePreview ? (
             <div className="p-6 rounded-2xl border border-amber-600/20 bg-[#1c1613] flex flex-col gap-4 shadow-md transition-all">
               <div className="flex justify-between items-center border-b border-stone-800/60 pb-2.5">
@@ -154,55 +169,60 @@ export const PersonalNotesModal: React.FC<PersonalNotesModalProps> = ({
               </div>
             </div>
           ) : (
-            <div className="text-center py-8 text-stone-600 text-xs border border-dashed border-stone-800 rounded-2xl select-none">
-              Wybierz cytat z listy poniżej, aby wyświetlić jego podgląd.
+            <div className="text-center py-12 text-stone-500 text-xs border border-dashed border-stone-800 rounded-2xl select-none">
+              😴 Brak zapisanych cytatów. Zaznacz ciekawy tekst w bazie notatek i kliknij gwiazdkę (⭐), aby go tutaj dodać!
             </div>
           )}
 
           {/* CZYSTA, ESTETYCZNA LISTA WSZYSTKICH ZAPISÓW */}
-          <div>
-            <h4 className="text-[10px] uppercase tracking-widest text-stone-500 font-bold mb-3 px-1">
-              Wszystkie zapisane fragmenty (kliknij, aby podglądnąć)
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {personalNotes.map((note) => (
-                <div
-                  key={note.id}
-                  onClick={() => { playSound("click"); setActivePreview(note); }}
-                  className={`p-4 rounded-2xl border cursor-pointer transition-all flex flex-col gap-2 relative group ${
-                    activePreview?.id === note.id 
-                      ? "border-amber-500/40 bg-stone-900/40 shadow-md" 
-                      : "border-stone-800/40 bg-stone-900/10 hover:bg-stone-900/30 hover:border-stone-800"
-                  }`}
-                >
-                  {/* Dyskretny kosz na hover w rogu dolnej karty */}
-                  <button
-                    onClick={(e) => handleDelete(e, note.id)}
-                    className="absolute top-2.5 right-2.5 text-stone-600 hover:text-red-400 p-1 rounded-md hover:bg-stone-950 transition-all opacity-0 group-hover:opacity-100 duration-200"
-                    title="Usuń cytat"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
+          {personalNotes.length > 0 && (
+            <div>
+              <h4 className="text-[10px] uppercase tracking-widest text-stone-500 font-bold mb-3 px-1">
+                Wszystkie zapisane fragmenty (kliknij, aby podglądnać)
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {personalNotes.map((note) => {
+                  const isCurrentActive = activePreview && String(activePreview.id) === String(note.id);
+                  return (
+                    <div
+                      key={note.id}
+                      onClick={() => { playSound("click"); setActivePreview(note); }}
+                      className={`p-4 rounded-2xl border cursor-pointer transition-all flex flex-col gap-2 relative group ${
+                        isCurrentActive 
+                          ? "border-amber-500/40 bg-stone-900/40 shadow-md animate-fade-in" 
+                          : "border-stone-800/40 bg-stone-900/10 hover:bg-stone-900/30 hover:border-stone-800"
+                      }`}
+                    >
+                      {/* Dyskretny kosz na hover w rogu dolnej karty */}
+                      <button
+                        onClick={(e) => handleDelete(e, note.id)}
+                        className="absolute top-2.5 right-2.5 text-stone-600 hover:text-red-400 p-1 rounded-md hover:bg-stone-950 transition-all opacity-0 group-hover:opacity-100 duration-200"
+                        title="Usuń cytat"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
 
-                  <div className="flex items-center gap-2">
-                    {note.source && (
-                      <span className="text-[8px] uppercase tracking-widest text-amber-500 font-bold bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
-                        📍 {note.source}
-                      </span>
-                    )}
-                    <span className="text-[8px] text-stone-600 font-mono">
-                      {new Date(note.created_at).toLocaleDateString("pl-PL")}
-                    </span>
-                  </div>
-                  <p className="text-xs text-stone-300 italic leading-relaxed select-text font-serif line-clamp-3">
-                    &quot;{note.content}&quot;
-                  </p>
-                </div>
-              ))}
+                      <div className="flex items-center gap-2">
+                        {note.source && (
+                          <span className="text-[8px] uppercase tracking-widest text-amber-500 font-bold bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                            📍 {note.source}
+                          </span>
+                        )}
+                        <span className="text-[8px] text-stone-600 font-mono">
+                          {new Date(note.created_at).toLocaleDateString("pl-PL")}
+                        </span>
+                      </div>
+                      <p className="text-xs text-stone-300 italic leading-relaxed select-text font-serif line-clamp-3">
+                        &quot;{note.content}&quot;
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
         </div>
       </div>

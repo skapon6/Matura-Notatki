@@ -327,7 +327,7 @@ export default function Home() {
               Witaj w swojej cichej przystani naukowej. Zaloguj się lub utwórz bezpłatne konto, aby uzyskać dostęp do notatek.
             </p>
             <div className="mt-6 p-4 rounded-2xl bg-stone-900/30 border border-stone-800/40 text-xs italic text-stone-400">
-              &quot;Cierpliwość i praca tworzą wielkie deeds.&quot; — Konfucjusz
+              &quot;Czytanie książek to najpiękniejsza zabawa, jaką sobie ludzkość wymyśliła.&quot; — Wisława Szymborska
             </div>
           </div>
           <AuthForm currentTheme={currentTheme} triggerNotification={triggerNotification} />
