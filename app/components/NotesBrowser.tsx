@@ -179,8 +179,12 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
     
     const chipsString = Array.isArray(note.chips) ? note.chips.join(" ") : "";
     const chipsLower = chipsString.toLowerCase();
+
+    // Dodano era oraz type do indeksu wyszukiwania, aby filtry epok i wyszukiwanie tekstowe działały niezawodnie
+    const eraLower = (note.era || "").toLowerCase();
+    const typeLower = (note.type || "").toLowerCase();
     
-    const textToSearch = `${titleLower} ${contentLower} ${chipsLower}`;
+    const textToSearch = `${titleLower} ${contentLower} ${chipsLower} ${eraLower} ${typeLower}`;
     
     const matchesSearch = textToSearch.includes(searchQuery.toLowerCase());
     
@@ -281,6 +285,13 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
               }
             };
 
+            // Dynamiczny dobór emoji w zależności od typu notatki
+            const getNoteEmoji = (type: string) => {
+              if (type === "epoka") return "⏳";
+              if (type === "lektura") return "📕";
+              return "💡";
+            };
+
             return (
               <CozyGlowLinkCard
                 href={`/notes/${note.slug}`}
@@ -293,7 +304,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
               >
                 <div className="flex items-center justify-between text-[11px] font-semibold text-stone-400 w-full">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-base">📕</span>
+                    <span className="text-base">{getNoteEmoji(note.type)}</span>
                     <span className="uppercase tracking-wider text-[#c68a4c]">{note.subject || "Język Polski"}</span>
                   </div>
                   <div className="flex items-center gap-2">

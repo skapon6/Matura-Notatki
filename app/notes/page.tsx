@@ -136,6 +136,32 @@ export default function WszystkieNotatkiPage() {
     fetchUserDataAndNotes();
   }, []);
 
+  // Bezpieczne pobieranie opisu i parsowanie z tablicy JSONB z bazy danych
+  const getNoteDescription = (note: any) => {
+    const content = note.content;
+    if (!content) return "";
+    
+    // Jeśli to czysty string
+    if (typeof content === "string") {
+      if (content.startsWith('["') && content.endsWith('"]')) {
+        try {
+          const parsed = JSON.parse(content);
+          if (Array.isArray(parsed)) return parsed[0];
+        } catch (_) {}
+      }
+      return content;
+    }
+    
+    // Jeśli to tablica (JSONB array)
+    if (Array.isArray(content)) {
+      const first = content[0];
+      if (typeof first === "string") return first;
+      if (first && (first.content || first.text)) return first.content || first.text;
+    }
+    
+    return "";
+  };
+
   // Inteligentne wyliczanie metadanych na dole po lewej stronie karty
   const getBottomLeftMetadata = (note: any) => {
     // 1. Jeśli z bazy danych idzie prawdziwa data, sformatuj ją ładnie
@@ -449,9 +475,9 @@ export default function WszystkieNotatkiPage() {
                       {note.title}
                     </h2>
 
-                    {/* Poprawiony opis pobierany bezpośrednio z bazy danych */}
-                    <p className="text-xs text-stone-400 leading-relaxed font-sans line-clamp-3">
-                      {note.content}
+                    {/* Poprawiony opis pobierany bezpośrednio z bazy danych i wyświetlany w całości */}
+                    <p className="text-xs text-stone-400 leading-relaxed font-sans">
+                      {getNoteDescription(note)}
                     </p>
                   </div>
 
