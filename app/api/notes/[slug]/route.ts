@@ -94,8 +94,24 @@ export async function GET(
 
     const html = await response.text()
 
+    // Definiujemy politykę CSP dla kodu HTML notatki pobranej z GitHuba
+    const cspHeader = `
+      default-src 'self';
+      script-src 'self' 'unsafe-inline';
+      style-src 'self' 'unsafe-inline';
+      img-src 'self' blob: data: https://kgycvgcvceaaaopjhato.supabase.co;
+      font-src 'self';
+      object-src 'none';
+      frame-ancestors 'none';
+    `.replace(/\s{2,}/g, ' ').trim();
+
     return new NextResponse(html, {
-      headers: { 'Content-Type': 'text/html; charset=utf-8' }
+      headers: { 
+        'Content-Type': 'text/html; charset=utf-8',
+        'Content-Security-Policy': cspHeader,      // Usuwa błąd "CSP Header Not Set" w ZAP
+        'X-Frame-Options': 'DENY',                 // Chroni przed osadzaniem w ramkach (Clickjacking)
+        'X-Content-Type-Options': 'nosniff',       // Blokuje próby MIME sniffingu
+      }
     })
   } catch (err) {
     console.error('Błąd pobierania pliku:', err)
