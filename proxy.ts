@@ -1,10 +1,12 @@
-// middleware.ts
+// proxy.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export function middleware(request: NextRequest) {
-  // 1. ZABEZPIECZENIA: Generowanie losowego tokenu (nonce) dla każdego żądania
-  const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
+// W Next.js 16 nazwa funkcji to "proxy" zamiast "middleware"
+export function proxy(request: NextRequest) {
+  // 1. ZABEZPIECZENIA: Generowanie tokenu (nonce) bez użycia Node'owego "Buffer"
+  // Używamy standardowego Web API: btoa + crypto, które działają w Edge Runtime i Proxy
+  const nonce = btoa(crypto.randomUUID());
   const isDev = process.env.NODE_ENV === 'development';
 
   // Definicja polityki CSP (dostosuj adres Supabase do swojego projektu)
@@ -65,7 +67,7 @@ export function middleware(request: NextRequest) {
   return response;
 }
 
-// Konfigurujemy filtry ścieżek
+// Konfigurujemy filtry ścieżek (pozostaje bez zmian)
 export const config = {
   matcher: [
     '/((?!api|_next/static|_next/image|favicon.ico).*)',
