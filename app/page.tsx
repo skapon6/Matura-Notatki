@@ -487,35 +487,67 @@ export default function Home() {
 
               <CozyGlowCard currentTheme={currentTheme} className="p-5 group">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-purple-600/5 rounded-full blur-2xl group-hover:bg-purple-600/10 transition-all duration-500" />
+                
                 <div className="flex justify-between items-start">
-                  <span className="text-xs font-semibold uppercase tracking-widest text-purple-400 bg-purple-950/60 px-2.5 py-1 rounded-md border border-purple-800/40">Sztuczna Inteligencja</span>
-                  <span className="text-stone-500 text-lg">{hasAccess ? "🤖" : "🔒"}</span>
+                  <span className="text-xs font-semibold uppercase tracking-widest text-purple-400 bg-purple-950/60 px-2.5 py-1 rounded-md border border-purple-800/40">
+                    Sztuczna Inteligencja
+                  </span>
+                  
+                  {/* ZIELONY BADGE PROMOCYJNY ZAMIAST KŁÓDKI (wyświetlany tylko gdy brak pakietu) */}
+                  {!hasAccess ? (
+                    <span className="bg-emerald-950/80 text-emerald-400 border border-emerald-800/40 text-[9px] uppercase font-bold px-2 py-0.5 rounded-md tracking-wide animate-pulse">
+                      🎁 Wypróbuj za darmo
+                    </span>
+                  ) : (
+                    <span className="text-stone-500 text-lg">🤖</span>
+                  )}
                 </div>
+                
                 <h3 className="text-base font-bold text-stone-100 mt-4 font-serif">Strefa Nauka AI 🤖</h3>
-                <p className="text-xs text-stone-400 mt-2 leading-relaxed">Wirtualni asystenci pomogą sprawdzić Twoje wypracowanie lub przeprowadzić próbny egzamin ustny na żywo według kryteriów CKE!</p>
-                <div className="flex flex-col gap-2.5 mt-4">
-            {/* Pierwszy przycisk - Nasycony Fioletowy Gradient */}
-              <button 
-                onClick={() => handlePremiumNavigation("/ocenianie-rozprawek")} 
-                className="w-full py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-extrabold rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-violet-500/20 active:scale-[0.98]"
-              >
-                ✍️ Edytor Rozprawek AI (1 Token)
-              </button>
+                <p className="text-xs text-stone-400 mt-2 leading-relaxed">
+                  Wirtualni asystenci pomogą sprawdzić Twoje wypracowanie lub przeprowadzić próbny egzamin ustny na żywo według kryteriów CKE!
+                </p>
 
-            {/* Drugi przycisk - Fioletowy z efektem "Glassmorphism" (wyraźny i aktywny) */}
-              <button 
-                onClick={() => handlePremiumNavigation("/matura-ustna")} 
-                className="w-full py-2.5 bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 hover:text-violet-200 font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2 border border-violet-500 hover:border-violet-400 shadow-lg shadow-violet-500/10 active:scale-[0.98]"
-              >
-                🎙️ Matura Ustna AI (3 Tokeny)
-              </button>
+                {/* ESTETYCZNE ZIELONE PUDEŁKO PROMOCYJNE (wyświetlane na zielono tylko gdy brak pakietu) */}
+                {!hasAccess && (
+                  <div className="mt-3.5 px-3.5 py-2.5 bg-emerald-950/40 border border-emerald-800/30 rounded-xl flex items-center gap-2">
+                    <span className="text-base shrink-0">🎁</span>
+                    <p className="text-[11px] font-sans font-semibold text-emerald-400 leading-snug text-left">
+                      {!user 
+                        ? "Załóż darmowe konto i przetestuj jedną rozprawkę za darmo! Otrzymasz 1 token na start."
+                        : "Masz jeden token na start! Wykorzystaj go poniżej na bezpłatną ocenę swojej rozprawki."}
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex flex-col gap-2.5 mt-4">
+                  {/* Pierwszy przycisk - Nasycony Fioletowy Gradient */}
+                  <button 
+                    onClick={() => handlePremiumNavigation("/ocenianie-rozprawek")} 
+                    className="w-full py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-extrabold rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-violet-500/20 active:scale-[0.98]"
+                  >
+                    ✍️ Edytor Rozprawek AI (1 Token)
+                  </button>
+
+                  {/* Drugi przycisk - Fioletowy z efektem "Glassmorphism" */}
+                  <button 
+                    onClick={() => handlePremiumNavigation("/matura-ustna")} 
+                    className="w-full py-2.5 bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 hover:text-violet-200 font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2 border border-violet-500 hover:border-violet-400 shadow-lg shadow-violet-500/10 active:scale-[0.98]"
+                  >
+                    🎙️ Matura Ustna AI (3 Tokeny)
+                  </button>
                 </div>
+
                 {user && (
                   <div className="mt-4 pt-4 border-t border-stone-800/60 flex flex-col gap-3">
                     <div className="flex justify-between items-center bg-purple-950/20 border border-purple-900/30 px-3 py-2 rounded-xl">
-                      <span className="text-[10px] text-purple-300 font-semibold uppercase tracking-wider">Pozostałe tokeny:</span>
+                      <span className="text-[10px] text-purple-300 font-semibold uppercase tracking-wider">
+                        Pozostałe tokeny:
+                      </span>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold font-mono text-purple-400 bg-stone-900 px-2 py-0.5 rounded-md border border-purple-900/40">{profile?.essay_credits ?? 0} tokeny</span>
+                        <span className="text-xs font-bold font-mono text-purple-400 bg-stone-900 px-2 py-0.5 rounded-md border border-purple-900/40">
+                          {profile?.essay_credits ?? 0} tokeny
+                        </span>
                         <button 
                           onClick={() => setIsTokenModalOpen(true)} 
                           className="text-[9px] uppercase tracking-wider font-extrabold bg-gradient-to-br from-amber-300 to-amber-500 text-stone-950 px-2 py-1 rounded-md hover:from-amber-200 hover:to-amber-400 transition-all shadow-md shadow-amber-500/20 flex items-center gap-1.5"

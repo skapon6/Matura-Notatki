@@ -106,7 +106,36 @@ export default function OcenianieRozprawekPage() {
       return;
     }
 
-    const wordCount = essayText.split(/\s+/).filter(Boolean).length;
+    // Walidacja limitu słów i spamu dla tematu rozprawki (Zabezpieczenie przed zapychaniem bazy danych / DoS)
+    const topicWords = selectedTopic.split(/\s+/).filter(Boolean);
+    const hasInvalidTopicWord = topicWords.some((word) => word.length > 40);
+
+    if (hasInvalidTopicWord) {
+      triggerAlert("Temat zawiera nieprawidłowe, zbyt długie słowa (maksymalnie 40 znaków na słowo)!", "error");
+      return;
+    }
+
+    if (topicWords.length > 200) {
+      triggerAlert("Temat rozprawki przekracza maksymalny limit 200 słów!", "error");
+      return;
+    }
+
+    // Walidacja limitu znaków wypracowania
+    if (essayText.length > 15000) {
+      triggerAlert("Wypracowanie jest zbyt długie (maksymalnie 15 000 znaków)!", "error");
+      return;
+    }
+
+    // Walidacja spamu (zbyt długie słowa w wypracowaniu)
+    const essayWords = essayText.split(/\s+/).filter(Boolean);
+    const hasInvalidEssayWord = essayWords.some((word) => word.length > 40);
+
+    if (hasInvalidEssayWord) {
+      triggerAlert("Wypracowanie zawiera nieprawidłowe, zbyt długie słowa (maksymalnie 40 znaków na słowo)!", "error");
+      return;
+    }
+
+    const wordCount = essayWords.length;
     if (wordCount < 50) {
       triggerAlert("Wprowadzona rozprawka jest za krótka! Wklej co najmniej 50 słów, aby przeprowadzić analizę.", "error");
       return;
@@ -164,6 +193,20 @@ export default function OcenianieRozprawekPage() {
   const handleGenerateEssay = async () => {
     if (!selectedTopic.trim()) {
       triggerAlert("Wprowadź temat rozprawki, na który mam napisać przykładową pracę!", "error");
+      return;
+    }
+
+    // Walidacja limitu słów i spamu dla tematu rozprawki (Zabezpieczenie przed zapychaniem bazy danych / DoS)
+    const topicWords = selectedTopic.split(/\s+/).filter(Boolean);
+    const hasInvalidTopicWord = topicWords.some((word) => word.length > 40);
+
+    if (hasInvalidTopicWord) {
+      triggerAlert("Temat zawiera nieprawidłowe, zbyt długie słowa (maksymalnie 40 znaków na słowo)!", "error");
+      return;
+    }
+
+    if (topicWords.length > 200) {
+      triggerAlert("Temat rozprawki przekracza maksymalny limit 200 słów!", "error");
       return;
     }
 
@@ -373,7 +416,7 @@ export default function OcenianieRozprawekPage() {
           <div className="lg:col-span-8 flex flex-col gap-4">
             <div>
               <label className="text-xs uppercase tracking-widest text-amber-500 font-semibold block mb-2">
-                Temat Twojej rozprawki
+                Temat Twojej rozprawki (Maksymalnie 200 słów)
               </label>
               <input 
                 type="text"

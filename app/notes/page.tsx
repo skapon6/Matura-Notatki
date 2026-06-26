@@ -50,6 +50,7 @@ export default function WszystkieNotatkiPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEra, setSelectedEra] = useState("Wszystkie");
   const [selectedType, setSelectedType] = useState<"all" | "epoka" | "lektura" | "inne">("all");
+  const [showOnlyFree, setShowOnlyFree] = useState(false); // Nowy stan filtra darmowych notatek
 
   // System przytulnych powiadomień
   const [cozyNotification, setCozyNotification] = useState<{
@@ -164,7 +165,6 @@ export default function WszystkieNotatkiPage() {
 
   // Inteligentne wyliczanie metadanych na dole po lewej stronie karty
   const getBottomLeftMetadata = (note: any) => {
-    // 1. Jeśli z bazy danych idzie prawdziwa data, sformatuj ją ładnie
     if (note.updated_at || note.created_at) {
       try {
         const date = new Date(note.updated_at || note.created_at);
@@ -176,7 +176,6 @@ export default function WszystkieNotatkiPage() {
       } catch (_) {}
     }
 
-    // 2. Jeśli brak daty, wygenerujmy dynamiczną, angażującą wskazówkę
     const titleLower = (note.title || "").toLowerCase();
     
     if (note.type === "lektura") {
@@ -186,7 +185,7 @@ export default function WszystkieNotatkiPage() {
     }
     
     if (note.type === "epoka") {
-      return "⏳ Kontekst epoki";
+      return "📜 Kontekst epoki"; // Zmiana klepsydry na zwój pisma
     }
     
     return "💡 Pomocnik naukowy";
@@ -194,6 +193,11 @@ export default function WszystkieNotatkiPage() {
 
   // Filtrowanie notatek na podstawie wyszukiwarki, kafelków epok oraz typu
   const filteredNotes = notes.filter((note) => {
+    // 0. Filtrowanie po "Tylko darmowe" (wyświetlane i aktywne tylko gdy brak pełnego dostępu)
+    if (!hasAccess && showOnlyFree && !note.is_free) {
+      return false;
+    }
+
     // 1. Filtrowanie po wybranej epoce
     if (selectedEra !== "Wszystkie") {
       const eraMatch = note.era?.toLowerCase() === selectedEra.toLowerCase();
@@ -311,23 +315,14 @@ export default function WszystkieNotatkiPage() {
           <div className={`flex items-center gap-2 sm:gap-3 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} transition-all duration-300 select-none shadow-md hover:border-amber-500/20 hover:bg-stone-900/30 hover:shadow-lg hover:shadow-amber-500/5`}>
             <button type="button" onClick={handlePrevTrack} className="text-stone-400 hover:text-amber-400 p-1 rounded-xl hover:bg-stone-800/40 transition-colors">
               <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.334 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.334 4zM4.066 11.2a1 1 0 01-14 0 7 7 0 0114 0z" />
               </svg>
             </button>
-            <button type="button" onClick={toggleLofi} className="flex items-center gap-1.5 sm:gap-2 px-3 py-1 sm:px-4 sm:py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 hover:text-amber-400 border border-amber-500/20 transition-all font-semibold text-xs active:scale-95">
-              {lofiActive ? (
-                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              ) : (
-                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              )}
-              <span className="hidden md:inline text-[10px] sm:text-xs tracking-wide">
-                {lofiTracks[currentTrackIndex].name}
-              </span>
+            <button 
+              onClick={toggleLofi}
+              className={`text-xs px-4 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} ${currentTheme.subText} hover:text-stone-100 font-semibold transition-all`}
+            >
+              {currentTrackIndex !== null ? lofiTracks[currentTrackIndex].name : "Włącz Lofi"}
             </button>
             <button type="button" onClick={handleNextTrack} className="text-stone-400 hover:text-amber-400 p-1 rounded-xl hover:bg-stone-800/40 transition-colors">
               <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -365,9 +360,26 @@ export default function WszystkieNotatkiPage() {
               Rodzaj notatek:
             </span>
             <div className="flex gap-1.5 flex-wrap">
+              {/* NOWY PRZYCISK: Szybki filtr darmowych notatek (wyświetlany wyłącznie gdy użytkownik NIE ma pełnego dostępu) */}
+              {!hasAccess && (
+                <button
+                  onClick={() => {
+                    playSound("click");
+                    setShowOnlyFree(!showOnlyFree);
+                  }}
+                  className={`text-[10px] px-3.5 py-1.5 rounded-xl border font-bold uppercase transition-all flex items-center gap-1.5 ${
+                    showOnlyFree
+                      ? "bg-emerald-950/80 text-emerald-400 border-emerald-500/40 shadow-md shadow-emerald-950/30"
+                      : "bg-emerald-950/10 text-emerald-400 border-emerald-900/30 hover:text-stone-300"
+                  }`}
+                >
+                  🎁 Pokaż tylko darmowe
+                </button>
+              )}
+
               {[
                 { id: "all" as const, label: "Wszystkie" },
-                { id: "epoka" as const, label: "🏛️ Same Epoki" },
+                { id: "epoka" as const, label: "📜 Same Epoki" }, // Zmiana klepsydry na zwój pisma
                 { id: "lektura" as const, label: "📖 Same Lektury" },
                 { id: "inne" as const, label: "📝 Pomocniki / Inne" },
               ].map((typeItem) => (
@@ -379,14 +391,30 @@ export default function WszystkieNotatkiPage() {
                   }}
                   className={`text-[10px] px-3.5 py-1.5 rounded-xl border font-bold uppercase transition-all ${
                     selectedType === typeItem.id
-                      ? "bg-amber-500/20 text-amber-400 border-amber-500/40"
-                      : "bg-stone-950/20 text-stone-500 border-transparent hover:text-stone-300"
+                      ? `${currentTheme.accentBg || "bg-amber-500/20 text-amber-400"} font-bold border-transparent`
+                      : "border-stone-800/60 bg-stone-950/40 text-stone-400 hover:border-stone-700 hover:text-stone-200"
                   }`}
                 >
                   {typeItem.label}
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2 pt-1">
+            {eras.map((era) => (
+              <button
+                key={era}
+                onClick={() => setSelectedEra(era)}
+                className={`text-xs px-3 py-1.5 rounded-xl border transition-all ${
+                  selectedEra === era
+                    ? `${currentTheme.accentBg || "bg-amber-500/20 text-amber-400"} font-bold border-transparent`
+                    : "border-stone-800/60 bg-stone-950/40 text-stone-400 hover:border-stone-700 hover:text-stone-200"
+                }`}
+              >
+                {era}
+              </button>
+            ))}
           </div>
 
           {/* Input Wyszukiwarki */}
@@ -399,23 +427,6 @@ export default function WszystkieNotatkiPage() {
               className="w-full bg-stone-950/80 border border-stone-800/80 rounded-2xl py-3 px-5 text-sm text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60"
             />
             <span className="absolute right-5 top-3.5 text-stone-500 text-sm">🔍</span>
-          </div>
-
-          {/* Kafelki Epok */}
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-stone-800">
-            {eras.map((era) => (
-              <button
-                key={era}
-                onClick={() => setSelectedEra(era)}
-                className={`text-xs px-3.5 py-2 rounded-xl font-semibold border whitespace-nowrap transition-all ${
-                  selectedEra === era
-                    ? "bg-amber-500/20 text-amber-400 border-amber-500/40"
-                    : "bg-stone-950/20 text-stone-500 border-stone-800/40 hover:text-stone-300"
-                }`}
-              >
-                {era}
-              </button>
-            ))}
           </div>
 
         </div>
@@ -435,12 +446,16 @@ export default function WszystkieNotatkiPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredNotes.map((note) => {
               const isLocked = !note.is_free && !hasAccess;
+              const isFreeNoteStyle = !hasAccess && note.is_free; // Wyświetlane tylko gdy darmowe konto i darmowa notatka
               
+              const cardBorderClass = isFreeNoteStyle ? "border-emerald-800/40" : currentTheme.cardBorder;
+              const cardBgClass = isFreeNoteStyle ? "bg-emerald-950/10 shadow-emerald-950/20" : currentTheme.cardBg;
+
               return (
                 <CozyGlowCard 
                   key={note.id}
                   currentTheme={currentTheme}
-                  className="p-6 flex flex-col justify-between gap-4 shadow-lg"
+                  className={`p-6 flex flex-col justify-between gap-4 shadow-lg border ${cardBorderClass} ${cardBgClass} hover:scale-[1.01] transition-all duration-300`}
                 >
                   <div className="flex flex-col gap-3">
                     <div className="flex items-center justify-between gap-2">
@@ -457,15 +472,24 @@ export default function WszystkieNotatkiPage() {
                               ? "bg-amber-950/40 border-amber-900/50 text-amber-400"
                               : "bg-blue-950/40 border-blue-900/50 text-blue-300"
                         }`}>
-                          {note.type === "epoka" ? "🏛️ Epoka" : note.type === "lektura" ? "📖 Lektura" : "📝 Pomocnik"}
+                          {note.type === "epoka" ? "📜 Epoka" : note.type === "lektura" ? "📖 Lektura" : "📝 Pomocnik"}
                         </span>
+
+                        {/* ZIELONY BADGE DARMOWEJ NOTATKI (wyświetlany wyłącznie gdy darmowe konto i darmowa notatka) */}
+                        {isFreeNoteStyle && (
+                          <span className="bg-emerald-950/80 text-emerald-400 border border-emerald-800/40 text-[9px] uppercase font-bold px-2 py-0.5 rounded-md tracking-wide animate-pulse">
+                            🎁 Darmowa
+                          </span>
+                        )}
                       </div>
                       
-                      {/* Trudność notatki */}
-                      <span className={`text-[9px] uppercase tracking-widest font-extrabold px-2 py-0.5 rounded border ${
-                        note.difficulty === "Trudny" 
-                          ? "bg-red-950/50 border-red-900/40 text-red-400 shrink-0"
-                          : "bg-emerald-950/50 border-emerald-900/40 text-emerald-400 shrink-0"
+                      {/* Trudność notatki ze zmienionymi kolorami (Łatwy -> zielony, Średni -> pomarańczowy, Trudny -> czerwony) */}
+                      <span className={`text-[9px] uppercase tracking-widest font-extrabold px-2 py-0.5 rounded border shrink-0 ${
+                        ["łatwy", "latwy", "easy"].includes((note.difficulty || "Średni").toLowerCase())
+                          ? "bg-emerald-950/50 border-emerald-900/40 text-emerald-400"
+                          : ["średni", "sredni", "medium"].includes((note.difficulty || "Średni").toLowerCase())
+                            ? "bg-orange-950/50 border-orange-900/40 text-orange-400"
+                            : "bg-red-950/50 border-red-900/40 text-red-400"
                       }`}>
                         {note.difficulty || "Średni"}
                       </span>
@@ -508,7 +532,7 @@ export default function WszystkieNotatkiPage() {
                         onClick={() => handleOpenNote(note)}
                         className="w-full py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 bg-stone-950 border border-stone-800 text-stone-500 hover:bg-stone-900/40"
                       >
-                        <span>🔒</span> Zablokowane (Premium)
+                        <span>🔒</span> Zablokowane (Wymaga pakietu)
                       </button>
                     ) : (
                       <a

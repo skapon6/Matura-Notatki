@@ -13,7 +13,7 @@ const epochKeywords: Record<string, string[]> = {
   "Barok": ["barok", "vanitas", "konceptyzm", "sarmatyzm", "marinizm", "paski", "morsztyn", "naborowski", "skąpiec", "molier"],
   "Oświecenie": ["oświecenie", "krasicki", "monachomachia", "hymn do miłości", "żona modna", "powrót posła", "bajki"],
   "Romantyzm": ["romantyzm", "kordian", "mickiewicz", "słowacki", "dziady", "pan tadeusz", "ballady i romanse", "nie-boska komedia", "krasiński"],
-  "Pozytywizm": ["pozytywizm", "lalka", "prus", "orzeszkowa", "nad niemnem", "mendel gdanski", "gloria victis", "potop", "sienkiewicz"],
+  "Pozytywizm": ["pozytywizm", "lalka", "prus", "orzeszkowa", "nad niemnem", "mendel gdanski", "gloria victis", "potop", "trylogia", "kmicic"],
   "Młoda Polska": ["młoda polska", "wesele", "wyspiański", "ludzie bezdomni", "chłopi", "reymont", "deszcz jesienny", "tetmajer", "kasprowicz"],
   "Dwudziestolecie": ["dwudziestolecie", "ferdydurke", "gombrowicz", "przedwiośnie", "żeromski", "granica", "nałkowska", "skamander", "schulz", "sklepy cynamonowe"],
   "Wojna i okupacja": ["wojna", "okupacja", "kamienie na szaniec", "baczyński", "borowski", "opoowiadania borowskiego", "inny świat", "grudziński"],
@@ -29,6 +29,7 @@ const CozyGlowLinkCard = ({
   rel,
   className = "",
   currentTheme,
+  isFree = false, // Nowy parametr do wyróżniania darmowych notatek
 }: {
   children: React.ReactNode;
   href: string;
@@ -37,6 +38,7 @@ const CozyGlowLinkCard = ({
   rel?: string;
   className?: string;
   currentTheme: any;
+  isFree?: boolean;
 }) => {
   const cardRef = React.useRef<HTMLAnchorElement>(null);
   const [coords, setCoords] = React.useState({ x: 0, y: 0 });
@@ -48,7 +50,11 @@ const CozyGlowLinkCard = ({
   
   const cardBgClasses = currentTheme?.cardBg || "";
   
-  if (cardBgClasses.includes("151c24") || cardBgClasses.includes("121820")) {
+  // Jeśli notatka jest darmowa (i user nie ma pełnego pakietu), całe podświetlenie po najechaniu robi się szmaragdowe
+  if (isFree) {
+    glowColor = "rgba(16, 185, 129, 0.25)"; // Szmaragdowy dla darmowych kart (emerald) - 25%
+    hoverBorderClass = "hover:border-emerald-500/30"; // Zielona ramka dla darmowych kart
+  } else if (cardBgClasses.includes("151c24") || cardBgClasses.includes("121820")) {
     glowColor = "rgba(14, 165, 233, 0.25)"; // Niebiesko-cyjanowy dla deszczu (rainy) - podbite do 25%
     hoverBorderClass = "hover:border-sky-500/30"; // Chłodna ramka dla deszczu (rainy)
   } else if (cardBgClasses.includes("251515") || cardBgClasses.includes("211111")) {
@@ -65,6 +71,9 @@ const CozyGlowLinkCard = ({
     });
   };
 
+  const borderClass = isFree ? "border-emerald-800/40" : currentTheme.cardBorder;
+  const bgClass = isFree ? "bg-emerald-950/10 shadow-md shadow-emerald-950/20" : currentTheme.cardBg;
+
   return (
     <a
       ref={cardRef}
@@ -75,15 +84,12 @@ const CozyGlowLinkCard = ({
       onMouseMove={handleMouseMove}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`relative overflow-hidden rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} transition-all duration-300 ${hoverBorderClass} hover:shadow-lg ${className}`}
+      className={`relative overflow-hidden rounded-2xl border ${borderClass} ${bgClass} transition-all duration-300 ${hoverBorderClass} hover:shadow-lg ${className}`}
     >
       {/* Treść (z-10 pod poświatą) */}
       <div className="relative z-10 w-full h-full flex flex-col justify-between">{children}</div>
 
-      {/* 
-        Warstwa podświetlenia podążająca za myszką. 
-        Powiększona do 320px dla długich kart notatek.
-      */}
+      {/* Warstwa podświetlenia podążająca za myszką */}
       {isHovered && (
         <div
           className="pointer-events-none absolute -inset-px opacity-100 transition-opacity duration-300 z-20"
@@ -116,6 +122,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("Wszystkie");
+  const [showOnlyFree, setShowOnlyFree] = useState(false); // Stan filtra "Tylko darmowe"
 
   const getExcerpt = (note: any) => {
     if (note.excerpt && typeof note.excerpt === 'string') return note.excerpt;
@@ -143,7 +150,6 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
 
   // Inteligentne wyliczanie metadanych na dole po lewej stronie karty
   const getBottomLeftMetadata = (note: any) => {
-    // 1. Jeśli z bazy danych idzie prawdziwa data, sformatuj ją ładnie
     if (note.updated_at || note.created_at) {
       try {
         const date = new Date(note.updated_at || note.created_at);
@@ -155,7 +161,6 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
       } catch (_) {}
     }
 
-    // 2. Jeśli brak daty, wygenerujmy dynamiczną, angażującą wskazówkę
     const titleLower = (note.title || "").toLowerCase();
     
     if (note.type === "lektura") {
@@ -165,7 +170,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
     }
     
     if (note.type === "epoka") {
-      return "⏳ Kontekst epoki";
+      return "📜 Kontekst epoki"; // Zmiana klepsydry na zwój pisma
     }
     
     return "💡 Pomocnik naukowy";
@@ -173,6 +178,11 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
 
   // 1. Najpierw filtrujemy całą bazę notatek przekazaną z góry
   const filteredNotes = notes.filter((note) => {
+    // Jeśli włączono filtr darmowych (i użytkownik NIE ma pełnego dostępu), odrzucamy niedarmowe
+    if (!hasAccess && showOnlyFree && !note.is_free) {
+      return false;
+    }
+
     const titleLower = (note.title || "").toLowerCase();
     const contentString = typeof note.content === 'string' ? note.content : JSON.stringify(note.content || "");
     const contentLower = contentString.toLowerCase();
@@ -229,6 +239,21 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
         </div>
 
         <div className="flex flex-wrap gap-2 pt-1 border-t border-stone-800/40">
+          {/* NOWY PRZYCISK: Szybki filtr darmowych notatek (wyświetlany TYLKO gdy użytkownik NIE ma pełnego dostępu) */}
+          {!hasAccess && (
+            <button
+              onClick={() => setShowOnlyFree(!showOnlyFree)}
+              className={`text-xs px-3.5 py-1.5 rounded-xl border transition-all flex items-center gap-1.5 ${
+                showOnlyFree
+                  ? "bg-emerald-950/80 text-emerald-400 border-emerald-500 text-emerald-300 shadow-md shadow-emerald-950/30"
+                  : "border-stone-800/80 bg-stone-900/40 text-stone-400 hover:text-stone-200"
+              }`}
+            >
+              🎁 Pokaż tylko darmowe
+            </button>
+          )}
+
+          {/* Filtry epok literackich */}
           {[
             "Wszystkie", 
             "Antyk", 
@@ -281,13 +306,13 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
             const handleNoteClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
               if (!hasAccess && !note.is_free) {
                 e.preventDefault();
-                triggerNotification("🔒 Ta notatka wymaga kupna jednego z pakietów, aby odblokować całą bazę notatek!", "error");
+                triggerNotification("🔒 Ta notatka wymaga kupna jednego z pakietów. Odblokuj pełny pakiet na stronie głównej!", "error");
               }
             };
 
             // Dynamiczny dobór emoji w zależności od typu notatki
             const getNoteEmoji = (type: string) => {
-              if (type === "epoka") return "⏳";
+              if (type === "epoka") return "📜"; // Zmiana klepsydry na zwój pisma
               if (type === "lektura") return "📕";
               return "💡";
             };
@@ -300,12 +325,20 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
                 rel="noopener noreferrer"
                 key={note.id}
                 currentTheme={currentTheme}
+                isFree={!hasAccess && note.is_free} // Poświata i zielona ramka działają wyłącznie gdy użytkownik NIE ma pełnego pakietu
                 className="p-5 hover:scale-[1.01] group"
               >
                 <div className="flex items-center justify-between text-[11px] font-semibold text-stone-400 w-full">
                   <div className="flex items-center gap-1.5">
                     <span className="text-base">{getNoteEmoji(note.type)}</span>
                     <span className="uppercase tracking-wider text-[#c68a4c]">{note.subject || "Język Polski"}</span>
+                    
+                    {/* ZIELONY BADGE DARMOWEJ NOTATKI (wyświetlany wyłącznie gdy użytkownik NIE ma pełnego pakietu) */}
+                    {!hasAccess && note.is_free && (
+                      <span className="bg-emerald-950/80 text-emerald-400 border border-emerald-800/40 text-[9px] uppercase font-bold px-2 py-0.5 rounded-md tracking-wide animate-pulse">
+                        🎁 Darmowa
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="flex items-center gap-1">
@@ -321,6 +354,19 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
                     }`}>
                       {note.type === "epoka" ? "Epoka" : note.type === "lektura" ? "Lektura" : "Pomocnik"}
                     </span>
+
+                    {/* DYNAMICZNY BADGE POZIOMU TRUDNOŚCI Z KOLORAMI: Łatwy -> zielony, Średni -> pomarańczowy, Trudny -> czerwony */}
+                    {note.difficulty && (
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] uppercase font-bold border ${
+                        ["łatwy", "latwy", "easy"].includes(note.difficulty.toLowerCase())
+                          ? "bg-emerald-950/40 border-emerald-900/50 text-emerald-400"
+                          : ["średni", "sredni", "medium"].includes(note.difficulty.toLowerCase())
+                            ? "bg-orange-950/40 border-orange-900/50 text-orange-400"
+                            : "bg-red-950/40 border-red-900/50 text-red-400"
+                      }`}>
+                        {note.difficulty}
+                      </span>
+                    )}
                   </div>
                 </div>
                 
