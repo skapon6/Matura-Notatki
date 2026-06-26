@@ -489,36 +489,53 @@ export default function Home() {
                 <div className="absolute top-0 right-0 w-24 h-24 bg-purple-600/5 rounded-full blur-2xl group-hover:bg-purple-600/10 transition-all duration-500" />
                 
                 <div className="flex justify-between items-start">
-                  <span className="text-xs font-semibold uppercase tracking-widest text-purple-400 bg-purple-950/60 px-2.5 py-1 rounded-md border border-purple-800/40">
-                    Sztuczna Inteligencja
-                  </span>
-                  
-                  {/* ZIELONY BADGE PROMOCYJNY ZAMIAST KŁÓDKI (wyświetlany tylko gdy brak pakietu) */}
-                  {!hasAccess ? (
+                <span className="text-xs font-semibold uppercase tracking-widest text-purple-400 bg-purple-950/60 px-2.5 py-1 rounded-md border border-purple-800/40">
+                  Sztuczna Inteligencja
+                </span>
+                
+                {/* DYNAMICZNY BADGE: Pokazuje zielony badge tylko, gdy użytkownik ma > 0 tokenów */}
+                {!hasAccess ? (
+                  (profile?.essay_credits ?? 0) > 0 ? (
                     <span className="bg-emerald-950/80 text-emerald-400 border border-emerald-800/40 text-[9px] uppercase font-bold px-2 py-0.5 rounded-md tracking-wide animate-pulse">
                       🎁 Wypróbuj za darmo
                     </span>
                   ) : (
-                    <span className="text-stone-500 text-lg">🤖</span>
-                  )}
-                </div>
+                    <span className="bg-red-950/20 text-red-400 border border-red-900/30 text-[9px] uppercase font-bold px-2 py-0.5 rounded-md tracking-wide">
+                      🔒 Brak tokenów
+                    </span>
+                  )
+                ) : (
+                  <span className="text-stone-500 text-lg">🤖</span>
+                )}
+              </div>
                 
                 <h3 className="text-base font-bold text-stone-100 mt-4 font-serif">Strefa Nauka AI 🤖</h3>
                 <p className="text-xs text-stone-400 mt-2 leading-relaxed">
                   Wirtualni asystenci pomogą sprawdzić Twoje wypracowanie lub przeprowadzić próbny egzamin ustny na żywo według kryteriów CKE!
                 </p>
 
-                {/* ESTETYCZNE ZIELONE PUDEŁKO PROMOCYJNE (wyświetlane na zielono tylko gdy brak pakietu) */}
-                {!hasAccess && (
-                  <div className="mt-3.5 px-3.5 py-2.5 bg-emerald-950/40 border border-emerald-800/30 rounded-xl flex items-center gap-2">
-                    <span className="text-base shrink-0">🎁</span>
-                    <p className="text-[11px] font-sans font-semibold text-emerald-400 leading-snug text-left">
-                      {!user 
-                        ? "Załóż darmowe konto i przetestuj jedną rozprawkę za darmo! Otrzymasz 1 token na start."
-                        : "Masz jeden token na start! Wykorzystaj go poniżej na bezpłatną ocenę swojej rozprawki."}
-                    </p>
-                  </div>
-                )}
+                {/* DYNAMICZNY PANEL: Zmienia kolor i treść w zależności od tego, czy użytkownik ma jeszcze jakieś tokeny */}
+                  {!hasAccess && (
+                    (profile?.essay_credits ?? 0) > 0 ? (
+                      // Stan A: Użytkownik ma darmowe lub dokupione tokeny -> Zielony panel
+                      <div className="mt-3.5 px-3.5 py-2.5 bg-emerald-950/40 border border-emerald-800/30 rounded-xl flex items-center gap-2">
+                        <span className="text-base shrink-0">🪙</span>
+                        <p className="text-[11px] font-sans font-semibold text-emerald-400 leading-snug text-left">
+                          {!user 
+                            ? "Załóż darmowe konto i przetestuj jedną rozprawkę za darmo! Otrzymasz 1 token na start."
+                            : "Masz wolne tokeny! Wykorzystaj je powyżej na analizę rozprawki lub symulację matury ustnej."}
+                        </p>
+                      </div>
+                    ) : (
+                      // Stan B: Użytkownik wyczerpał darmowe tokeny (ma 0) -> Czerwony panel informujący o konieczności zakupu
+                      <div className="mt-3.5 px-3.5 py-2.5 bg-red-950/20 border border-red-900/30 rounded-xl flex items-center gap-2">
+                        <span className="text-base shrink-0">🔒</span>
+                        <p className="text-[11px] font-sans font-semibold text-red-400 leading-snug text-left">
+                          Wykorzystałeś darmowe tokeny. Odblokuj pełny pakiet lub doładuj tokeny powyżej, aby dalej korzystać z asystentów AI!
+                        </p>
+                      </div>
+                    )
+                  )}
 
                 <div className="flex flex-col gap-2.5 mt-4">
                   {/* Pierwszy przycisk - Nasycony Fioletowy Gradient */}

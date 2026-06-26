@@ -99,7 +99,7 @@ export async function GET(
       default-src 'self';
       script-src 'self' 'unsafe-inline';
       style-src 'self' 'unsafe-inline';
-      img-src 'self' blob: data: https://kgycvgcvceaaaopjhato.supabase.co;
+      img-src 'self' blob: data: https://kgycvgcvceaaaopjhato.supabase.co https://upload.wikimedia.org; -- OTO POPRAWKA (DODANA DOMENA WIKIPEDII)
       font-src 'self';
       object-src 'none';
       base-uri 'self';

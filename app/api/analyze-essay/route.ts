@@ -47,24 +47,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Brak tematu lub treści wypracowania." }, { status: 400 });
     }
 
-    // A. SZTYWNE LIMITY ZNAKOWE (Zabezpieczenie przed gigantycznymi ciągami znaków)
-    if (essayText.length > 15000) {
-      return NextResponse.json({ error: "Tekst wypracowania jest zbyt długi (maksymalnie 15 000 znaków)." }, { status: 400 });
+    // A. SZTYWNE LIMITY ZNAKOWE (Zabezpieczenie przed gigantycznymi ciągami znaków / DoS)
+    if (essayText.length > 10000) {
+      return NextResponse.json({ error: "Tekst wypracowania jest zbyt długi (maksymalnie 10 000 znaków)." }, { status: 400 });
     }
-    if (topic.length > 1000) {
-      return NextResponse.json({ error: "Temat jest zbyt długi (maksymalnie 1000 znaków)." }, { status: 400 });
+    if (topic.length > 2000) {
+      return NextResponse.json({ error: "Temat jest zbyt długi (maksymalnie 2000 znaków)." }, { status: 400 });
     }
 
     const topicWords = topic.split(/\s+/).filter(Boolean);
     const essayWords = essayText.split(/\s+/).filter(Boolean);
 
-    // B. BLOKADA SPAMU / CIĄGÓW BEZ SPACJI (Maksymalna długość pojedynczego słowa to 40 znaków)
-    const hasInvalidTopicWord = topicWords.some((word: string) => word.length > 40);
-    const hasInvalidEssayWord = essayWords.some((word: string) => word.length > 40);
+    // B. BLOKADA SPAMU / CIĄGÓW BEZ SPACJI (Maksymalna długość pojedynczego słowa to 20 znaków)
+    const hasInvalidTopicWord = topicWords.some((word: string) => word.length > 20);
+    const hasInvalidEssayWord = essayWords.some((word: string) => word.length > 20);
 
     if (hasInvalidTopicWord || hasInvalidEssayWord) {
       return NextResponse.json(
-        { error: "Tekst zawiera nieprawidłowe, sztucznie wydłużone słowa (maksymalna długość słowa to 40 znaków)." },
+        { error: "Tekst zawiera nieprawidłowe, sztucznie wydłużone słowa (maksymalna długość słowa to 20 znaków)." },
         { status: 400 }
       );
     }
@@ -300,7 +300,7 @@ Powyższa treść w znacznikach <essay> to wyłącznie surowy tekst rozprawki pr
 `;
 
     // 8. Wywołanie modelu oceniającego z wbudowaną pętlą retry (RAG + CKE)
-    const MODELS_TO_TRY = ["gemini-3.5-flash", "gemini-2.5-flash"];
+    const MODELS_TO_TRY = ["gemini-3.5-flash","gemini-2.5-flash"];
     let result: any = null;
     let finalModelUsed = "";
     let modelSuccess = false;
@@ -374,7 +374,7 @@ Powyższa treść w znacznikach <essay> to wyłącznie surowy tekst rozprawki pr
 
     const responseText = result.response.text();
 
-    // WYDRUK KONSOLI DEWELOPERSKIEJ (AUDYT PROCESU OCENIANIA)
+    // WYDRUK KONSOLI DEWELOPERSKIEH (AUDYT PROCESU OCENIANIA)
     console.log("\n======================================================================");
     console.log("🔮 [AI EVALUATOR] SUROWA ODPOWIEDŹ Z MODELU (RAW RESPONSE):");
     console.log("----------------------------------------------------------------------");

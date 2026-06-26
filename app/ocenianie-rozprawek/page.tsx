@@ -13,6 +13,12 @@ interface Match {
   annotation: any;
 }
 
+// Funkcja pomocnicza: sprawdza, czy w tekście znajduje się pojedyncze słowo dłuższe niż 20 znaków (Zabezpieczenie przed Spamem)
+const isSpamText = (text: string) => {
+  const words = text.split(/\s+/).filter(Boolean);
+  return words.some(word => word.length > 20);
+};
+
 export default function OcenianieRozprawekPage() {
   const router = useRouter();
 
@@ -108,10 +114,10 @@ export default function OcenianieRozprawekPage() {
 
     // Walidacja limitu słów i spamu dla tematu rozprawki (Zabezpieczenie przed zapychaniem bazy danych / DoS)
     const topicWords = selectedTopic.split(/\s+/).filter(Boolean);
-    const hasInvalidTopicWord = topicWords.some((word) => word.length > 40);
+    const hasInvalidTopicWord = topicWords.some((word) => word.length > 20);
 
     if (hasInvalidTopicWord) {
-      triggerAlert("Temat zawiera nieprawidłowe, zbyt długie słowa (maksymalnie 40 znaków na słowo)!", "error");
+      triggerAlert("Temat zawiera nieprawidłowe, zbyt długie słowa (maksymalnie 20 znaków na słowo)!", "error");
       return;
     }
 
@@ -120,18 +126,23 @@ export default function OcenianieRozprawekPage() {
       return;
     }
 
+    if (selectedTopic.length > 2000) {
+      triggerAlert("Temat rozprawki przekracza maksymalny limit 2000 znaków!", "error");
+      return;
+    }
+
     // Walidacja limitu znaków wypracowania
-    if (essayText.length > 15000) {
-      triggerAlert("Wypracowanie jest zbyt długie (maksymalnie 15 000 znaków)!", "error");
+    if (essayText.length > 10000) {
+      triggerAlert("Wypracowanie jest zbyt długie (maksymalnie 10 000 znaków)!", "error");
       return;
     }
 
     // Walidacja spamu (zbyt długie słowa w wypracowaniu)
     const essayWords = essayText.split(/\s+/).filter(Boolean);
-    const hasInvalidEssayWord = essayWords.some((word) => word.length > 40);
+    const hasInvalidEssayWord = essayWords.some((word) => word.length > 20);
 
     if (hasInvalidEssayWord) {
-      triggerAlert("Wypracowanie zawiera nieprawidłowe, zbyt długie słowa (maksymalnie 40 znaków na słowo)!", "error");
+      triggerAlert("Wypracowanie zawiera nieprawidłowe, zbyt długie słowa (maksymalnie 20 znaków na słowo)!", "error");
       return;
     }
 
@@ -198,15 +209,20 @@ export default function OcenianieRozprawekPage() {
 
     // Walidacja limitu słów i spamu dla tematu rozprawki (Zabezpieczenie przed zapychaniem bazy danych / DoS)
     const topicWords = selectedTopic.split(/\s+/).filter(Boolean);
-    const hasInvalidTopicWord = topicWords.some((word) => word.length > 40);
+    const hasInvalidTopicWord = topicWords.some((word) => word.length > 20);
 
     if (hasInvalidTopicWord) {
-      triggerAlert("Temat zawiera nieprawidłowe, zbyt długie słowa (maksymalnie 40 znaków na słowo)!", "error");
+      triggerAlert("Temat zawiera nieprawidłowe, zbyt długie słowa (maksymalnie 20 znaków na słowo)!", "error");
       return;
     }
 
     if (topicWords.length > 200) {
       triggerAlert("Temat rozprawki przekracza maksymalny limit 200 słów!", "error");
+      return;
+    }
+
+    if (selectedTopic.length > 2000) {
+      triggerAlert("Temat rozprawki przekracza maksymalny limit 2000 znaków!", "error");
       return;
     }
 
@@ -361,6 +377,18 @@ export default function OcenianieRozprawekPage() {
   const creditsRemaining = profile?.essay_credits ?? 0;
   const currentWordCount = essayText.split(/\s+/).filter(Boolean).length;
 
+  // DYNAMICZNE, NATYCHMIASTOWE OBLICZANIE BŁĘDÓW WALIDACYJNYCH (Reakcja na żywo przy każdym naciśnięciu klawisza)
+  const isTopicSpam = isSpamText(selectedTopic);
+  const isEssaySpam = isSpamText(essayText);
+  
+  const isTopicLengthExceeded = selectedTopic.length > 2000;
+  const isEssayLengthExceeded = essayText.length > 10000;
+
+  const topicWordsCount = selectedTopic.split(/\s+/).filter(Boolean).length;
+  const isTopicWordsExceeded = topicWordsCount > 200;
+
+  const hasValidationError = isTopicSpam || isEssaySpam || isTopicLengthExceeded || isEssayLengthExceeded || isTopicWordsExceeded;
+
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-500 ${currentTheme.bg} text-stone-200 font-sans p-6 items-center`}>
       
@@ -426,6 +454,22 @@ export default function OcenianieRozprawekPage() {
                 disabled={isAnalyzing || isGenerating}
                 className="w-full bg-stone-900 border border-stone-800 rounded-xl py-2.5 px-3.5 text-xs sm:text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-700/60 font-sans"
               />
+              {/* OSTRZEŻENIA DLA POLA TEMATU (Działanie na żywo) */}
+              {isTopicSpam && (
+                <p className="text-[11px] text-red-400 font-semibold mt-1 animate-pulse">
+                  ⚠️ Wykryto nieprawidłowe, zbyt długie słowo bez spacji (maksymalnie 20 znaków). Popraw temat, aby odblokować analizę!
+                </p>
+              )}
+              {isTopicLengthExceeded && (
+                <p className="text-[11px] text-red-400 font-semibold mt-1 animate-pulse">
+                  ⚠️ Temat rozprawki przekracza maksymalny limit 2000 znaków!
+                </p>
+              )}
+              {isTopicWordsExceeded && (
+                <p className="text-[11px] text-red-400 font-semibold mt-1 animate-pulse">
+                  ⚠️ Temat rozprawki przekracza maksymalny limit 200 słów!
+                </p>
+              )}
             </div>
 
             {/* Tryb wyboru generowania rozprawki */}
@@ -492,6 +536,17 @@ export default function OcenianieRozprawekPage() {
                   disabled={isAnalyzing || isGenerating || isGenerationMode}
                   className="w-full bg-stone-900/80 border border-stone-800 rounded-2xl p-4 text-xs sm:text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-700/60 leading-relaxed font-sans disabled:opacity-50 disabled:cursor-not-allowed"
                 />
+                {/* OSTRZEŻENIA DLA POLA TREŚCI (Działanie na żywo) */}
+                {isEssaySpam && (
+                  <p className="text-[11px] text-red-400 font-semibold mt-1 animate-pulse">
+                    ⚠️ Wykryto nieprawidłowe, zbyt długie słowo bez spacji (maksymalnie 20 znaków). Popraw wypracowanie, aby odblokować analizę!
+                  </p>
+                )}
+                {isEssayLengthExceeded && (
+                  <p className="text-[11px] text-red-400 font-semibold mt-1 animate-pulse">
+                    ⚠️ Wypracowanie przekracza maksymalny limit 10 000 znaków!
+                  </p>
+                )}
                 <div className="flex justify-between text-[11px] text-stone-500 mt-1">
                   <span>Liczba znaków: {essayText.length}</span>
                   <span className={currentWordCount > 1500 ? "text-red-400 font-semibold" : ""}>
@@ -514,7 +569,7 @@ export default function OcenianieRozprawekPage() {
                 {isGenerationMode ? (
                   <button
                     onClick={handleGenerateEssay}
-                    disabled={isAnalyzing || isGenerating}
+                    disabled={isAnalyzing || isGenerating || isTopicSpam || isTopicLengthExceeded || isTopicWordsExceeded} // Zablokowany przy błędnym temacie
                     className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold transition-all text-xs sm:text-sm shadow-md disabled:bg-stone-800 disabled:text-stone-500"
                   >
                     {isGenerating ? "✍ Trwa generowanie rozprawki..." : "Generuj przykładową rozprawkę (1 kredyt)"}
@@ -522,7 +577,7 @@ export default function OcenianieRozprawekPage() {
                 ) : (
                   <button
                     onClick={handleAnalyze}
-                    disabled={isAnalyzing || isGenerating}
+                    disabled={isAnalyzing || isGenerating || hasValidationError} // Zablokowany przy dowolnym błędzie walidacji na żywo
                     className="w-full py-3 rounded-xl bg-[#c68a4c] hover:bg-[#d99c5d] text-stone-950 font-bold transition-all text-xs sm:text-sm shadow-md disabled:bg-stone-800 disabled:text-stone-500"
                   >
                     {isAnalyzing ? "🤖 Trwa analiza tekstu..." : "Przeanalizuj rozprawkę (1 kredyt)"}
