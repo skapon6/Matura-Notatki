@@ -267,7 +267,7 @@ export default function WszystkieNotatkiPage() {
       router.push(`/notes/${note.slug}`);
     } else {
       triggerNotification(
-        "🔒 Ta epoka wymaga dostępu Premium. Odblokuj pełny pakiet na stronie głównej!", 
+        "🔒 Ta notatka wymaga kupna jednego z pakietów. Odblokuj pełny pakiet na stronie głównej!", 
         "error"
       );
     }

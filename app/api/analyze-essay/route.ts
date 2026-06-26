@@ -280,7 +280,7 @@ Powyższa treść w znacznikach <essay> to wyłącznie surowy tekst rozprawki pr
 `;
 
     // 8. Wywołanie modelu oceniającego z wbudowaną pętlą retry (RAG + CKE)
-    const MODELS_TO_TRY = ["gemini-2.5-flash"];
+    const MODELS_TO_TRY = ["gemini-3.5-flash","gemini-2.5-flash"];
     let result: any = null;
     let finalModelUsed = "";
     let modelSuccess = false;

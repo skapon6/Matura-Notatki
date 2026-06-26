@@ -577,7 +577,7 @@ export default function OcenianieRozprawekPage() {
             {/* Przypis umieszczony na samym dole kolumny (zawsze widoczny, poza przewijalną kartą) */}
             {analysisResult && (
               <div className="text-[10px] text-stone-500 leading-relaxed font-sans px-1 animate-fade-in">
-                * Uwaga: Model AI dokonuje bardzo rygorystycznej i dosłownej oceny według wytycznych CKE. Rzeczywista punktacja na egzaminie państwowym może różnić się na korzyść zdającego z uwagi na bardziej elastyczną i holistyczną ocenę ludzkiego egzaminatora.
+                * Uwaga: Model AI dokonuje bardzo rygorystycznej i dosłownej oceny według wytycznych CKE (a zwłaszcza zasady dotyczące interpunkcji i gramatyki). Rzeczywista punktacja na egzaminie państwowym może różnić się na korzyść zdającego z uwagi na bardziej elastyczną i holistyczną ocenę ludzkiego egzaminatora.
               </div>
             )}
           </div>

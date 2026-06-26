@@ -29,17 +29,25 @@ export default function RegulaminPage() {
         {/* Content */}
         <div className="text-xs sm:text-sm text-stone-300 space-y-6 leading-relaxed text-left font-sans">
           <p className="italic text-stone-400">
-            Ostatnia aktualizacja: 11 czerwca 2026 r. Niniejszy regulamin określa zasady korzystania z platformy internetowej oferującej asystenta pisania rozprawek oraz symulator matury ustnej z języka polskiego.
+            Ostatnia aktualizacja: 26 czerwca 2026 r. Niniejszy regulamin określa zasady korzystania z platformy internetowej oferującej asystenta pisania rozprawek oraz symulator matury ustnej z języka polskiego.
           </p>
 
           {/* 1 */}
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-[#c68a4c] uppercase tracking-wider font-serif">1. Postanowienia Ogólne</h3>
             <p>
-              Właścicielem i administratorem platformy dostępnej pod adresem <strong className="text-stone-100">wiedzaszytanamiare.pl</strong> jest <strong className="text-stone-100">Kacper Leś</strong>, zamieszkały pod adresem: <strong className="text-stone-100">Pustków-Osiedle (kod pocztowy: 39-206)</strong>, kontakt e-mail: <strong className="text-stone-100">wiedzaszytanamiare@kontakt.pl</strong>. Serwis świadczy usługi drogą elektroniczną w postaci interaktywnych notatek maturalnych, automatycznego sprawdzania rozprawek oraz symulacji egzaminu ustnego przy użyciu algorytmów sztucznej inteligencji.
+              Właścicielem i administratorem platformy dostępnej pod adresem <strong className="text-stone-100">wiedzaszytanamiare.pl</strong> jest <strong className="text-stone-100">Kacper Leś</strong>, prowadzący działalność pod adresem: <strong className="text-stone-100">39-206 Pustków-Osiedle</strong>, kontakt e-mail: <strong className="text-stone-100">wiedzaszytanamiare@kontakt.pl</strong>. 
+              {/* JEŚLI MASZ FIRMĘ (JDG), ODBLOKUJ I UZUPEŁNIJ PONIŻSZE LINIE:
+              prowadzący działalność gospodarczą pod firmą Kacper Leś [Nazwa Firmy jeśli inna], wpisany do Centralnej Ewidencji i Informacji o Działalności Gospodarczej (CEIDG), posiadający NIP: [TWÓJ NIP] oraz REGON: [TWÓJ REGON]. 
+              */}
+              {/* JEŚLI PROWADZISZ DZIAŁALNOŚĆ NIEREJESTROWANĄ, ZOSTAW PONIŻSZY ZAPIS: */}
+              Działalność prowadzona jest w formie działalności nierejestrowanej w rozumieniu art. 5 ustawy z dnia 6 marca 2018 r. — Prawo przedsiębiorców.
             </p>
             <p>
-              Korzystanie z serwisu jest równoznaczne z akceptacją niniejszego regulaminu w całości. Osoby niepełnoletnie (poniżej 18. roku życia) mogą korzystać z serwisu wyłącznie za zgodą rodziców lub opiekunów prawnych.
+              Serwis świadczy usługi drogą elektroniczną w postaci dostępu do interaktywnych notatek maturalnych, automatycznego sprawdzania rozprawek oraz symulacji egzaminu ustnego przy użyciu algorytmów sztucznej inteligencji.
+            </p>
+            <p>
+              Korzystanie z serwisu jest równoznaczne z akceptacją niniejszego regulaminu w całości przez Użytkownika. Osoby niepełnoletnie (poniżej 18. roku życia) mogą korzystać z serwisu wyłącznie za zgodą rodziców lub opiekunów prawnych.
             </p>
           </section>
 
@@ -48,10 +56,10 @@ export default function RegulaminPage() {
             <h3 className="text-sm font-bold text-[#c68a4c] uppercase tracking-wider font-serif">2. Definicje</h3>
             <ul className="list-disc pl-5 space-y-1">
               <li><strong>Serwis</strong> – platforma internetowa dostępna pod adresem wiedzaszytanamiare.pl.</li>
-              <li><strong>Użytkownik</strong> – osoba fizyczna posiadająca zarejestrowane konto w serwisie.</li>
-              <li><strong>Kredyty / Tokeny</strong> – wewnętrzna waluta serwisu umożliwiająca korzystanie z funkcji AI.</li>
-              <li><strong>Pakiet</strong> – jeden z trzech planów dostępu: Mini, Medium lub Premium, różniących się ceną, czasem ważności oraz zakresem przyznawanych tokenów na start.</li>
-              <li><strong>Treść cyfrowa</strong> – kredyty, dostęp do notatek, wyniki ocen AI oraz inne materiały edukacyjne dostarczane w formie elektronicznej.</li>
+              <li><strong>Użytkownik</strong> – osoba fizyczna posiadająca zarejestrowane konto w serwisie, w tym Konsument lub Przedsiębiorca na prawach konsumenta.</li>
+              <li><strong>Kredyty / Tokeny</strong> – wewnętrzna jednostka rozliczeniowa serwisu umożliwiająca wywoływanie funkcji AI.</li>
+              <li><strong>Pakiet</strong> – jeden z planów dostępu (Mini, Medium lub Premium) umożliwiający jednorazowy zakup określonego czasu dostępu do bazy wiedzy oraz pakietu tokenów na start.</li>
+              <li><strong>Usługa cyfrowa / Treść cyfrowa</strong> – kredyty, dostęp do bazy wiedzy, map myśli, fiszek, wyniki ocen AI oraz inne materiały dostarczane w formie elektronicznej za pośrednictwem Serwisu.</li>
             </ul>
           </section>
 
@@ -59,10 +67,10 @@ export default function RegulaminPage() {
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-[#c68a4c] uppercase tracking-wider font-serif">3. Rejestracja i Warunki Techniczne</h3>
             <p>
-              Korzystanie z większości funkcji serwisu wymaga bezpłatnej rejestracji konta za pośrednictwem systemu Supabase Auth. Użytkownik zobowiązuje się do podania prawdziwych danych podczas rejestracji oraz do nieudostępniania danych logowania osobom trzecim. Jedno konto może być użytkowane wyłącznie przez jedną osobę — zakaz udostępniania konta jest kluczowym warunkiem regulaminu.
+              Korzystanie z funkcji Serwisu wymaga bezpłatnej rejestracji konta za pośrednictwem systemu Supabase Auth. Użytkownik zobowiązuje się do podania prawdziwych danych podczas rejestracji oraz do nieudostępniania danych logowania osobom trzecim. Jedno konto może być użytkowane wyłącznie przez jedną osobę — zakaz udostępniania konta osobom trzecim jest kluczowym warunkiem korzystania z platformy.
             </p>
             <p>
-              Do prawidłowego działania platformy wymagane jest urządzenie z dostępem do sieci Internet, aktualna przeglądarka internetowa (np. Google Chrome, Firefox, Edge, Safari) oraz włączona obsługa plików cookie i skryptów JavaScript. Dla symulatora matury ustnej zaleca się posiadanie sprawnego mikrofonu.
+              Do prawidłowego działania platformy wymagane jest urządzenie z dostępem do sieci Internet, aktualna przeglądarka internetowa (np. Google Chrome, Firefox, Edge, Safari) oraz włączona obsługa plików cookie i skryptów JavaScript. Dla modułu symulatora matury ustnej wymagane jest posiadanie sprawnego mikrofonu.
             </p>
           </section>
 
@@ -70,15 +78,15 @@ export default function RegulaminPage() {
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-[#c68a4c] uppercase tracking-wider font-serif">4. Pakiety i Dostęp do Funkcji</h3>
             <p>
-              Serwis oferuje trzy plany dostępu różniące się zakresem udostępnianych treści i funkcji:
+              Serwis oferuje trzy plany dostępu. Wszystkie pakiety stanowią <strong>zakup jednorazowy</strong> (nie odnawiają się automatycznie w formie subskrypcji):
             </p>
             <ul className="list-disc pl-5 space-y-1">
-              <li><strong className="text-stone-100">Mini (29 zł):</strong> Pełny dostęp do bazy wiedzy, map myśli i fiszek na okres dokładnie <strong>30 dni</strong> od zakupu. Zawera pakiet <strong>5 uniwersalnych tokenów</strong> na start.</li>
-              <li><strong className="text-stone-100">Medium (59 zł):</strong> Pełny dostęp do bazy wiedzy, map myśli i fiszek na okres dokładnie <strong>90 dni</strong> od zakupu. Zawiera pakiet <strong>10 uniwersalnych tokenów</strong> na start.</li>
-              <li><strong className="text-stone-100">Premium (89 zł):</strong> Pełny dostęp do wszystkich treści edukacyjnych i modułów AI na okres dokładnie <strong>365 dni (1 rok)</strong> od zakupu. Zawiera pakiet <strong>15 uniwersalnych tokenów</strong> na start.</li>
+              <li><strong className="text-stone-100">Mini (29 zł):</strong> Pełny dostęp do bazy wiedzy, map myśli i fiszek na okres dokładnie <strong>30 dni</strong> od dnia zakupu. Zawiera pakiet <strong>5 uniwersalnych tokenów</strong> na start. Po 30 dniach dostęp wygasa i wymaga ręcznego odnowienia.</li>
+              <li><strong className="text-stone-100">Medium (59 zł):</strong> Pełny dostęp do bazy wiedzy, map myśli i fiszek na okres dokładnie <strong>90 dni</strong> od dnia zakupu. Zawiera pakiet <strong>10 uniwersalnych tokenów</strong> na start. Po 90 dniach dostęp wygasa i wymaga ręcznego odnowienia.</li>
+              <li><strong className="text-stone-100">Premium (89 zł):</strong> Pełny dostęp do wszystkich treści edukacyjnych i modułów AI na okres dokładnie <strong>365 dni (1 rok)</strong> od dnia zakupu. Zawiera pakiet <strong>15 uniwersalnych tokenów</strong> na start. Po roku dostęp wygasa i wymaga ręcznego odnowienia.</li>
             </ul>
             <p>
-              Szczegółowy zakres każdego pakietu oraz aktualne ceny są prezentowane na stronie cennika w chwili zakupu. Administrator zastrzega prawo do modyfikacji zawartości pakietów z zachowaniem 14-dniowego okresu powiadomienia użytkowników posiadających aktywny pakiet.
+              Szczegółowy zakres każdego pakietu oraz aktualne ceny są prezentowane na stronie cennika w chwili zakupu. Administrator zastrzega sobie prawo do modyfikacji zawartości pakietów z zachowaniem 14-dniowego okresu powiadomienia zarejestrowanych użytkowników posiadających aktywny pakiet.
             </p>
           </section>
 
@@ -86,7 +94,7 @@ export default function RegulaminPage() {
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-[#c68a4c] uppercase tracking-wider font-serif">5. System Kredytów (Tokenów) i Płatności</h3>
             <p>
-              Serwis korzysta z wewnętrznego systemu rozliczeń opartego o kredyty (tokeny) zapisywane w profilu użytkownika:
+              Serwis korzysta z wewnętrznego systemu rozliczeń opartego o kredyty (tokeny) przypisywane do profilu użytkownika:
             </p>
             <ul className="list-disc pl-5 space-y-1">
               <li><strong>Ocenianie rozprawki AI:</strong> pobiera dokładnie <strong>1 kredyt</strong> z konta użytkownika.</li>
@@ -95,29 +103,29 @@ export default function RegulaminPage() {
               <li><strong>Symulacja pojedynczego zadania ustnego AI (tylko jawne lub tylko niejawne):</strong> pobiera dokładnie <strong>2 kredyty</strong> z konta użytkownika.</li>
             </ul>
             <p>
-              Użytkownik może w każdej chwili doładować stan swoich kredytów, kupując pakiety tokenów za pośrednictwem bezpiecznego operatora płatności <strong>Stripe</strong>. Ceny pakietów są widoczne w panelu użytkownika. Kredyty są przypisane wyłącznie do jednego konta, nie podlegają wymianie na gotówkę, nie są transferowalne na inne konta i nie posiadają daty ważności — są aktywne tak długo, jak aktywne jest konto użytkownika.
+              Użytkownik może w każdej chwili doładować stan swoich kredytów, kupując dodatkowe pakiety tokenów za pośrednictwem operatora płatności <strong>Stripe</strong>. Ceny pakietów są widoczne w panelu użytkownika. Kredyty są przypisane wyłącznie do jednego konta, nie podlegają wymianie na gotówkę, nie są transferowalne i nie posiadają daty ważności — są aktywne tak długo, jak aktywne jest konto użytkownika w Serwisie.
             </p>
             <p>
-              Pobranie kredytów następuje w momencie wysłania żądania do systemu AI, niezależnie od treści wygenerowanej odpowiedzi. W przypadku udokumentowanej awarii technicznej leżącej po stronie serwisu, administrator może — według własnego uznania — zwrócić pobrane kredyty.
+              Pobranie kredytów następuje automatycznie w momencie zatwierdzenia i wysłania żądania analizy do systemu AI. W przypadku błędu technicznego leżącego po stronie infrastruktury Serwisu (np. brak odpowiedzi z modelu AI), system automatycznie dokonuje zwrotu pobranego kredytu na konto użytkownika (rollback).
             </p>
           </section>
 
           {/* 6 */}
           <section className="space-y-2">
-            <h3 className="text-sm font-bold text-[#c68a4c] uppercase tracking-wider font-serif">6. Prawo do Odstąpienia od Umowy i Zwroty</h3>
+            <h3 className="text-sm font-bold text-[#c68a4c] uppercase tracking-wider font-serif">6. Prawo do Odstąpienia od Umowy</h3>
             <p>
-              Zgodnie z art. 38 pkt 13 ustawy z dnia 30 maja 2014 r. o prawach konsumenta (Dz.U. 2014 poz. 827 z późn. zm.), prawo do odstąpienia od umowy zawartej na odległość <strong className="text-stone-100">nie przysługuje konsumentowi</strong> w przypadku umów o dostarczanie treści cyfrowych, które nie są zapisane na nośniku materialnym, jeżeli spełnianie świadczenia rozpoczęło się za wyraźną zgodą konsumenta przed upływem terminu do odstąpienia od umowy i po poinformowaniu go przez przedsiębiorcę o utracie prawa do odstąpienia od umowy.
+              Zgodnie z art. 38 pkt 13 ustawy z dnia 30 maja 2014 r. o prawach konsumenta, prawo do odstąpienia od umowy zawartej na odległość <strong>nie przysługuje konsumentowi</strong> w przypadku umów o dostarczanie treści cyfrowych lub usług cyfrowych, za które konsument jest zobowiązany do zapłaty ceny, jeżeli spełnianie świadczenia rozpoczęło się za wyraźną i uprzednią zgodą konsumenta, który został poinformowany przed rozpoczęciem świadczenia, że po spełnieniu świadczenia przez przedsiębiorcę utraci prawo odstąpienia od umowy, i przyjął to do wiadomości, a przedsiębiorca dostarczył konsumentowi potwierdzenie zawarcia umowy na trwałym nośniku (e-mail).
             </p>
             <p>
-              Dokonując zakupu kredytów lub pakietu przez Stripe, Użytkownik:
+              Dokonując zakupu pakietu lub doładowania kredytów za pośrednictwem systemu Stripe, Użytkownik:
             </p>
             <ul className="list-disc pl-5 space-y-1">
-              <li>potwierdza zapoznanie się z niniejszym regulaminem,</li>
-              <li>wyraża wyraźną zgodę na natychmiastowe dostarczenie treści cyfrowej (aktywację kredytów / pakietu),</li>
-              <li>przyjmuje do wiadomości, że po aktywacji konta traci prawo do odstąpienia od umowy i zwrotu środków za zakupiony pakiet lub doładowanie kredytów.</li>
+              <li>potwierdza zapoznanie się z niniejszym regulaminem i akceptuje go,</li>
+              <li>wyraża wyraźną zgodę na natychmiastowe dostarczenie usługi/treści cyfrowej (aktywację tokenów lub pakietu dostępu) przed upływem terminu do odstąpienia od umowy,</li>
+              <li>przyjmuje do wiadomości, że z momentem aktywacji traci prawo do odstąpienia od umowy i żądania zwrotu środków.</li>
             </ul>
             <p>
-              Powyższa zgoda jest potwierdzana poprzez zaznaczenie odpowiedniego checkboxa w formularzu zakupu, przed dokonaniem płatności. Brak zaznaczenia checkboxa uniemożliwia sfinalizowanie transakcji.
+              Powyższa zgoda jest udzielana poprzez zaznaczenie odpowiedniego pola wyboru (checkbox) na etapie finalizacji zamówienia. W przypadku braku zgody, usługa nie może zostać dostarczona natychmiastowo.
             </p>
           </section>
 
@@ -125,13 +133,13 @@ export default function RegulaminPage() {
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-[#c68a4c] uppercase tracking-wider font-serif">7. Wyłączenie Odpowiedzialności (Zastrzeżenie AI)</h3>
             <p>
-              Wszystkie analizy, oceny, sugerowane punkty oraz pytania dopytujące są generowane przez zaawansowane modele językowe AI (Google Gemini). Choć dokładamy wszelkich starań, aby algorytm opierał się na wytycznych CKE Formuły 2023, <strong className="text-stone-100">usługa ma charakter wyłącznie edukacyjny i pomocniczy</strong>.
+              Wszystkie analizy, oceny, punktacja, uwagi, komentarze oraz pytania dopytujące są generowane przy użyciu algorytmów sztucznej inteligencji (Google Gemini). Serwis dokłada wszelkich starań, aby system opierał się na oficjalnych wytycznych CKE Formuły 2023, jednak <strong className="text-stone-100">usługa ma charakter wyłącznie pomocniczy i edukacyjny</strong>.
             </p>
             <p>
-              Serwis nie gwarantuje, że oficjalny egzaminator CKE podczas państwowego egzaminu maturalnego oceni pracę użytkownika w ten sam sposób, co algorytm AI. Administrator nie ponosi żadnej odpowiedzialności za ostateczny wynik egzaminacyjny uzyskany przez użytkownika przed Państwową Komisją Egzaminacyjną ani za jakiekolwiek decyzje edukacyjne podjęte na podstawie ocen serwisu.
+              Serwis nie gwarantuje, że oficjalny egzaminator CKE podczas państwowego egzaminu oceni pracę użytkownika w identyczny sposób. Administrator nie ponosi odpowiedzialności za ostateczny wynik egzaminacyjny uzyskany przez użytkownika przed Państwową Komisją Egzaminacyjną, ani za decyzje edukacyjne podjęte na podstawie analiz Serwisu.
             </p>
             <p>
-              W najszerszym zakresie dopuszczalnym przez prawo, administrator nie ponosi odpowiedzialności za przerwy w działaniu serwisu wynikające z przyczyn leżących po stronie dostawców zewnętrznych (Supabase, Google Gemini API, Stripe), siły wyższej lub planowanych prac technicznych.
+              W najszerszym zakresie dopuszczalnym przez obowiązujące prawo, administrator nie ponosi odpowiedzialności za przerwy w działaniu platformy wynikające z awarii dostawców zewnętrznych (Stripe, Supabase, Google Gemini API), siły wyższej czy niezbędnych prac konserwacyjnych.
             </p>
           </section>
 
@@ -142,15 +150,14 @@ export default function RegulaminPage() {
               Użytkownikowi zabrania się w szczególności:
             </p>
             <ul className="list-disc pl-5 space-y-1">
-              <li>automatycznego wysyłania żądań do API serwisu za pomocą skryptów, botów lub innych narzędzi automatyzacji,</li>
-              <li>odsprzedaży lub udostępniania konta oraz kredytów osobom trzecim,</li>
-              <li>podejmowania prób obejścia systemu kredytowego lub nielegalnego uzyskania dostępu do treści Premium,</li>
-              <li>kopiowania, reprodukowania lub dystrybucji treści objętych prawami autorskimi serwisu bez pisemnej zgody administratora,</li>
-              <li>wprowadzania do serwisu treści bezprawnych, obraźliwych, naruszających prawa osób trzecich lub dobre obyczaje,</li>
-              <li>działań mogących zakłócić lub przeciążyć infrastrukturę techniczną serwisu.</li>
+              <li>automatycznego odpytywania API Serwisu za pomocą skryptów, botów, narzędzi RPA lub innych metod automatyzacji,</li>
+              <li>udostępniania, wypożyczania lub odsprzedaży konta oraz kredytów osobom trzecim,</li>
+              <li>podejmowania prób obchodzenia systemu płatności, zabezpieczeń kredytowych lub uzyskania nieuprawnionego dostępu do strefy Premium,</li>
+              <li>kopiowania, dystrybucji lub wtórnego wykorzystania bazy wiedzy, pytań CKE, notatek i grafik Serwisu bez pisemnej zgody właściciela,</li>
+              <li>wprowadzania do Serwisu treści o charakterze bezprawnym, obraźliwym lub naruszającym prawa osób trzecich.</li>
             </ul>
             <p>
-              Naruszenie powyższych zasad uprawnia administratora do natychmiastowego zawieszenia lub trwałego usunięcia konta bez prawa do zwrotu niewykorzystanych kredytów lub opłat za pakiet.
+              Naruszenie powyższych zasad uprawnia administratora do natychmiastowego zablokowania lub usunięcia konta Użytkownika bez obowiązku zwrotu niewykorzystanych środków lub pakietów.
             </p>
           </section>
 
@@ -158,49 +165,54 @@ export default function RegulaminPage() {
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-[#c68a4c] uppercase tracking-wider font-serif">9. Zawieszenie i Usunięcie Konta</h3>
             <p>
-              Administrator zastrzega sobie prawo do zawieszenia dostępu do konta lub jego trwałego usunięcia w przypadku:
+              Administrator zastrzega sobie prawo do zawieszenia dostępu do konta lub jego trwałego usunięcia w przypadku naruszenia postanowień regulaminu, podejrzenia oszustwa płatniczego, działań na szkodę infrastruktury technicznej platformy lub uzasadnionego podejrzenia przejęcia konta przez osoby trzecie.
             </p>
-            <ul className="list-disc pl-5 space-y-1">
-              <li>naruszenia postanowień niniejszego regulaminu,</li>
-              <li>podejrzenia oszustwa lub nieuczciwego korzystania z systemu płatności,</li>
-              <li>działań na szkodę serwisu, jego użytkowników lub dostawców zewnętrznych,</li>
-              <li>uzasadnionego podejrzenia włamania lub przejęcia konta.</li>
-            </ul>
             <p>
-              W przypadku zawieszenia konta z winy Użytkownika, niewykorzystane kredyty oraz opłaty za aktywny pakiet nie podlegają zwrotowi. O zawieszeniu konta Użytkownik zostanie poinformowany na adres e-mail podany przy rejestracji, o ile nie będzie to sprzeczne z bezpieczeństwem serwisu lub postępowaniem wyjaśniającym.
+              O zablokowaniu konta Użytkownik zostanie poinformowany drogą e-mailową. W przypadku usunięcia konta z winy Użytkownika, niewykorzystane kredyty oraz aktywne pakiety nie podlegają zwrotowi.
             </p>
           </section>
 
           {/* 10 */}
           <section className="space-y-2">
-            <h3 className="text-sm font-bold text-[#c68a4c] uppercase tracking-wider font-serif">10. Prawa Autorskie i Ograniczenia</h3>
+            <h3 className="text-sm font-bold text-[#c68a4c] uppercase tracking-wider font-serif">10. Prawa Autorskie i Ograniczenia Techniczne</h3>
             <p>
-              Wszystkie materiały dydaktyczne, struktura notatek, quizy, teksty autorskie, kod źródłowy oraz elementy graficzne platformy są objęte prawami autorskimi i stanowią wyłączną własność administratora serwisu.
+              Wszystkie materiały dydaktyczne, notatki, mapy myśli, baza pytań, kod źródłowy oraz elementy graficzne platformy stanowią wyłączną własność intelektualną Kacpra Lesia i są chronione prawem autorskim.
             </p>
             <p>
-              Użytkownik zachowuje pełne prawa autorskie do wprowadzanych przez siebie rozprawek i monologów. Kopiowanie zawartości serwisu (w tym bazy notatek i pytań CKE) w celach komercyjnych bez pisemnej zgody administratora jest zabronione i może skutkować odpowiedzialnością cywilną. W celu ochrony bazy dydaktycznej serwis stosuje techniczne środki ograniczające kopiowanie i wycinanie tekstu notatek.
+              Użytkownik zachowuje pełne prawa autorskie do wprowadzanych przez siebie rozprawek i monologów. Kopiowanie zawartości bazy dydaktycznej Serwisu w celach komercyjnych bez pisemnej zgody jest zabronione. W celu ochrony unikalnej bazy dydaktycznej Serwis stosuje techniczne środki ograniczające masowe kopiowanie, zaznaczanie i wycinanie tekstu notatek.
             </p>
           </section>
 
           {/* 11 */}
           <section className="space-y-2">
-            <h3 className="text-sm font-bold text-[#c68a4c] uppercase tracking-wider font-serif">11. Zmiany Regulaminu</h3>
+            <h3 className="text-sm font-bold text-[#c68a4c] uppercase tracking-wider font-serif">11. Dane Osobowe i Polityka Prywatności</h3>
             <p>
-              Administrator zastrzega prawo do zmiany niniejszego regulaminu. O każdej istotnej zmianie Użytkownicy posiadający aktywne konto zostaną poinformowani drogą e-mailową z co najmniej <strong className="text-stone-100">14-dniowym wyprzedzeniem</strong> przed wejściem zmian w życie. Dalsze korzystanie z serwisu po upływie tego terminu jest równoznaczne z akceptacją zmienionego regulaminu. Jeżeli Użytkownik nie akceptuje nowych warunków, przysługuje mu prawo do usunięcia konta.
+              Zasady przetwarzania danych osobowych Użytkowników (w tym rejestracji przez Supabase oraz płatności Stripe) reguluje odrębny dokument – <strong>Polityka Prywatności</strong>, dostępny na stronie głównej Serwisu. Rejestrując konto, Użytkownik potwierdza zapoznanie się z Polityką Prywatności, co jest niezbędne do realizacji świadczenia usług drogą elektroniczną (zgodnie z RODO).
             </p>
           </section>
 
           {/* 12 */}
           <section className="space-y-2">
-            <h3 className="text-sm font-bold text-[#c68a4c] uppercase tracking-wider font-serif">12. Reklamacje i Postanowienia Końcowe</h3>
+            <h3 className="text-sm font-bold text-[#c68a4c] uppercase tracking-wider font-serif">12. Zmiany Regulaminu</h3>
             <p>
-              Wszelkie reklamacje dotyczące działania platformy (np. błędy przy doładowaniu płatności Stripe, awaria API, nieprawidłowe pobranie kredytów) należy zgłaszać na adres e-mail: <strong className="text-stone-100">wiedzaszytanamiare@kontakt.pl</strong>. Reklamacja powinna zawierać: opis problemu, datę i godzinę zdarzenia oraz adres e-mail konta. Administrator rozpatrzy reklamację w terminie do <strong>14 dni</strong>.
+              Administrator zastrzega sobie prawo do wprowadzania zmian w niniejszym regulaminie z ważnych przyczyn (np. zmiany przepisów prawa, rozwój techniczny platformy). O każdej istotnej zmianie zarejestrowani Użytkownicy zostaną powiadomieni drogą e-mailową z co najmniej <strong>14-dniowym wyprzedzeniem</strong>. Brak akceptacji nowych warunków uprawnia Użytkownika do żądania usunięcia konta przed wejściem zmian w życie.
+            </p>
+          </section>
+
+          {/* 13 */}
+          <section className="space-y-2">
+            <h3 className="text-sm font-bold text-[#c68a4c] uppercase tracking-wider font-serif">13. Reklamacje i Zgodność Usługi z Umową (Konsumenci)</h3>
+            <p>
+              Wszelkie reklamacje (w tym dotyczące braku zgodności usług/treści cyfrowych z umową) należy zgłaszać drogą elektroniczną na adres: <strong className="text-stone-100">wiedzaszytanamiare@kontakt.pl</strong>.
             </p>
             <p>
-              W sprawach nieuregulowanych niniejszym regulaminem zastosowanie mają przepisy Kodeksu Cywilnego, ustawy o świadczeniu usług drogą elektroniczną oraz prawa polskiego. Sądem właściwym do rozstrzygania sporów jest sąd miejscowo właściwy dla siedziby administratora, chyba że przepisy bezwzględnie obowiązujące stanowią inaczej.
+              Do reklamacji konsumenckich dotyczących dostarczania treści lub usług cyfrowych po 1 stycznia 2023 r. zastosowanie mają przepisy <strong>Rozdziału 5b ustawy o prawach konsumenta</strong>. Jeżeli dostarczona usługa/treść cyfrowa jest niezgodna z umową, Konsument może żądać doprowadzenia jej do zgodności z umową lub – w określonych ustawą przypadkach (np. gdy niezgodność jest istotna) – złożyć oświadczenie o obniżeniu ceny lub odstąpieniu od umowy.
             </p>
             <p>
-              Konsument ma prawo skorzystać z pozasądowych metod rozwiązywania sporów, w tym z platformy ODR dostępnej pod adresem: <strong className="text-stone-100">https://consumer-redress.ec.europa.eu</strong>.
+              Administrator rozpatruje zgłoszenie reklamacyjne w terminie do <strong>14 dni</strong> od dnia jego otrzymania i przesyła odpowiedź na adres e-mail Użytkownika.
+            </p>
+            <p>
+              Konsument ma prawo skorzystać z pozasądowych metod rozwiązywania sporów, w tym ze złożenia skargi za pośrednictwem unijnej platformy ODR dostępnej pod adresem: <strong className="text-stone-100">https://consumer-redress.ec.europa.eu</strong>.
             </p>
           </section>
 

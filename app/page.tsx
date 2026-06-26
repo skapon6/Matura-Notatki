@@ -272,7 +272,7 @@ export default function Home() {
     if (path === "/ocenianie-rozprawek" || path === "/matura-ustna" || path === "/notes") {
       router.push(path);
     } else if (!hasAccess) {
-      triggerNotification("🔒 Ta funkcja wymaga konta Premium.", "error");
+      triggerNotification("🔒 Ta funkcja wymaga kupna jednego z pakietów.", "error");
     } else {
       router.push(path);
     }
@@ -453,7 +453,7 @@ export default function Home() {
                         ? 'bg-amber-950/50 border-amber-900/60 text-amber-400 font-semibold' 
                         : 'bg-stone-900/60 border-stone-800 text-stone-500'
                     }`}>
-                      {hasAccess ? "Wejdź 🧠" : "Premium 🔒"}
+                      {hasAccess ? "Wejdź 🧠" : "Brak dostępu 🔒"}
                     </span>
                   </button>
 
@@ -462,7 +462,7 @@ export default function Home() {
                       <span className="text-lg">📈</span>
                       <span className="text-sm font-medium group-hover:text-amber-400 transition-colors">Moje Postępy</span>
                     </div>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full border ${hasAccess ? 'bg-emerald-950/50 border-emerald-900/60 text-emerald-400' : 'bg-stone-900/60 border-stone-800 text-stone-500'}`}>{hasAccess ? "Wejdź ✨" : "Premium 🔒"}</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full border ${hasAccess ? 'bg-emerald-950/50 border-emerald-900/60 text-emerald-400' : 'bg-stone-900/60 border-stone-800 text-stone-500'}`}>{hasAccess ? "Wejdź ✨" : "Brak dostępu 🔒"}</span>
                   </button>
 
                   <button onClick={() => handlePremiumNavigation("/fiszki")} className="flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-900/60 group transition-all text-left w-full">
@@ -470,7 +470,7 @@ export default function Home() {
                       <span className="text-lg">⚡</span>
                       <span className="text-sm font-medium group-hover:text-amber-400 transition-colors">Szybkie Fiszki</span>
                     </div>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full border ${hasAccess ? 'bg-purple-950/50 border-purple-900/60 text-purple-300' : 'bg-stone-900/60 border-stone-800 text-stone-500'}`}>{hasAccess ? "Graj ⚡" : "Premium 🔒"}</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full border ${hasAccess ? 'bg-purple-950/50 border-purple-900/60 text-purple-300' : 'bg-stone-900/60 border-stone-800 text-stone-500'}`}>{hasAccess ? "Graj ⚡" : "Brak dostępu 🔒"}</span>
                   </button>
                 </nav>
               </CozyGlowCard>

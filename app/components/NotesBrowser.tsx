@@ -281,7 +281,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
             const handleNoteClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
               if (!hasAccess && !note.is_free) {
                 e.preventDefault();
-                triggerNotification("🔒 Ta notatka wymaga konta Premium. Kliknij 'Uzyskaj Pełny Dostęp' u góry strony, aby odblokować całą bazę notatek!", "error");
+                triggerNotification("🔒 Ta notatka wymaga kupna jednego z pakietów, aby odblokować całą bazę notatek!", "error");
               }
             };
 
