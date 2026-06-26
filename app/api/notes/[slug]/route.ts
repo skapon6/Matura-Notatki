@@ -102,6 +102,8 @@ export async function GET(
       img-src 'self' blob: data: https://kgycvgcvceaaaopjhato.supabase.co;
       font-src 'self';
       object-src 'none';
+      base-uri 'self';
+      form-action 'self';
       frame-ancestors 'none';
     `.replace(/\s{2,}/g, ' ').trim();
 
