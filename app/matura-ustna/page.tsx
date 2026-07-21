@@ -504,7 +504,7 @@ export default function MaturaUstnaPage() {
               {[
                 { id: "both" as const, label: "👑 Oba zadania (3 Tokeny)", desc: "Pełny zestaw (30 pkt)" },
                 { id: "public_only" as const, label: "📖 Tylko jawne (2 Tokeny)", desc: "Lektura (15 pkt)" },
-                { id: "unseen_only" as const, label: "🖼️ Tylko niejawne (2 Tokeny)", desc: "Obraz (15 pkt)" },
+                { id: "unseen_only" as const, label: "🖼️ Tylko niejawne (2 Tokeny)", desc: "Obraz lub wiersz (15 pkt)" },
               ].map((modeItem) => (
                 <button
                   key={modeItem.id}
@@ -583,10 +583,10 @@ export default function MaturaUstnaPage() {
                     {selectedSet.unseenQuestion.stimulus_text && (
                       <div className="w-full rounded-xl p-4 sm:p-5 border border-stone-800 bg-stone-900/40 shadow-inner my-2 max-h-64 sm:max-h-72 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-stone-800 text-left">
                         <span className="text-[8px] uppercase tracking-widest text-stone-500 font-bold block mb-2 select-none">
-                          Tekst źródłowy CKE (materiał bodźcowy):
+                          Tekst źródłowy :
                         </span>
                         <p className="text-xs sm:text-sm text-stone-300 leading-relaxed font-serif italic whitespace-pre-line select-text">
-                          {selectedSet.unseenQuestion.stimulus_text}
+                          {selectedSet.unseenQuestion.stimulus_text ? selectedSet.unseenQuestion.stimulus_text.replace(/\\n/g, "\n") : ""}
                         </p>
                       </div>
                     )}
