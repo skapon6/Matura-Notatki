@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false, // Wyłączenie nagłówka informującego o Next.js
+  devIndicators: false,
 
   async headers() {
     return [

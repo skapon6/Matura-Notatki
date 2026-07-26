@@ -10,19 +10,47 @@ import { getThemeClasses, CozyTheme } from "../lib/theme";
 // Pomocnicza funkcja do upiększania slugów notatek na czytelne tytuły lektur
 const prettifySlug = (slug: string) => {
   if (!slug) return "";
+  
+  // 1. Bezpośrednie mapowanie dla najczęstszych lektur i ich części
   const preMapped: Record<string, string> = {
     "lalka": "Lalka",
     "wesele": "Wesele",
     "kordian": "Kordian",
     "pan-tadeusz": "Pan Tadeusz",
+    "dziady-ii": "Dziady cz. II",
+    "dziady-iii": "Dziady cz. III",
+    "dziady-cz-ii": "Dziady cz. II",
     "dziady-cz-iii": "Dziady cz. III",
+    "dziady-cz-iv": "Dziady cz. IV",
     "makbet": "Makbet",
     "skapiec": "Skąpiec",
     "dzuma": "Dżuma",
     "rok-1984": "Rok 1984"
   };
-  if (preMapped[slug.toLowerCase()]) return preMapped[slug.toLowerCase()];
-  return slug.split("-").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+
+  const normalized = slug.toLowerCase().trim();
+  if (preMapped[normalized]) return preMapped[normalized];
+
+  // 2. Dynamiczny fallback z obsługą liczb rzymskich i spójnika "i"
+  return slug
+    .split("-")
+    .map((word, index) => {
+      const lower = word.toLowerCase();
+      
+      // Spójnik "i" pozostawiamy małą literą (np. "Jawa i sen"), chyba że to pierwsze słowo
+      if (lower === "i" && index > 0) {
+        return "i";
+      }
+      
+      // Jeżeli słowo składa się wyłącznie ze znaków rzymskich (i, v, x), zapisujemy je w całości wersalikami
+      if (/^[ivx]+$/.test(lower)) {
+        return lower.toUpperCase();
+      }
+      
+      // Domyślna kapitalizacja (pierwsza litera wielka)
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(" ");
 };
 
 export default function FiszkiPage() {
