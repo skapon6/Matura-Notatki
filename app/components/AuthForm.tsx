@@ -36,6 +36,7 @@ const isDisposableEmail = (email: string): boolean => {
 export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotification }) => {
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState(""); // <-- NOWY STAN DLA POWTÓRZENIA HASŁA
   const [newPassword, setNewPassword] = useState("");
   
   // Stany formularza
@@ -59,6 +60,13 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
     };
   }, []);
 
+  // Pomocnicza funkcja czyszcząca pola haseł przy przełączaniu formularzy
+  const resetPasswordFields = () => {
+    setAuthPassword("");
+    setConfirmPassword("");
+    setNewPassword("");
+  };
+
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthFormLoading(true);
@@ -76,7 +84,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
           setIsRecoveryMode(false);
           setIsForgotPassword(false);
           setIsRegisterForm(false);
-          setNewPassword("");
+          resetPasswordFields();
         }
       } else if (isForgotPassword) {
         // 2. Wysyłanie prośby o reset hasła na e-mail
@@ -101,6 +109,16 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
           return;
         }
 
+        // --- WALIDACJA POPRAWNOŚCI POWTÓRZONEGO HASŁA ---
+        if (authPassword !== confirmPassword) {
+          triggerNotification(
+            "Podane hasła nie są identyczne. Upewnij się, że wpisałeś je poprawnie w obu polach.", 
+            "error"
+          );
+          setAuthFormLoading(false);
+          return;
+        }
+
         // 3. Rejestracja użytkownika
         const { error } = await supabase.auth.signUp({
           email: authEmail,
@@ -111,6 +129,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
         } else {
           triggerNotification("Konto zostało utworzone! Potwierdź rejestrację klikając link w wysłanym e-mailu.", "success");
           setIsRegisterForm(false);
+          resetPasswordFields();
         }
       } else {
         // 4. Klasyczne logowanie
@@ -122,6 +141,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
           triggerNotification(translateAuthError(error.message), "error");
         } else {
           triggerNotification("Zalogowano pomyślnie!", "success");
+          resetPasswordFields();
         }
       }
     } catch (err) {
@@ -188,6 +208,18 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
                 required
                 className="w-full bg-stone-900 border border-stone-800 rounded-xl py-2 px-4 text-sm text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60"
               />
+              
+              {/* NOWE POLE POWTÓRZENIA HASŁA: Widoczne wyłącznie przy zakładaniu konta */}
+              {isRegisterForm && (
+                <input
+                  type="password"
+                  placeholder="Powtórz hasło"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  className="w-full bg-stone-900 border border-stone-800 rounded-xl py-2 px-4 text-sm text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60 animate-slide-in"
+                />
+              )}
             </>
           )}
 
@@ -238,6 +270,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
               onClick={() => {
                 setIsRecoveryMode(false);
                 setIsForgotPassword(false);
+                resetPasswordFields();
               }}
               className="text-xs text-stone-500 hover:underline focus:outline-none"
             >
@@ -246,7 +279,10 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
           ) : isForgotPassword ? (
             <button
               type="button"
-              onClick={() => setIsForgotPassword(false)}
+              onClick={() => {
+                setIsForgotPassword(false);
+                resetPasswordFields();
+              }}
               className="text-xs text-amber-500 hover:underline focus:outline-none"
             >
               Wróć do logowania
@@ -254,7 +290,10 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
           ) : isRegisterForm ? (
             <button
               type="button"
-              onClick={() => setIsRegisterForm(false)}
+              onClick={() => {
+                setIsRegisterForm(false);
+                resetPasswordFields();
+              }}
               className="text-xs text-amber-500 hover:underline focus:outline-none"
             >
               Masz już konto? Zaloguj się
@@ -263,14 +302,20 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
             <>
               <button
                 type="button"
-                onClick={() => setIsForgotPassword(true)}
+                onClick={() => {
+                  setIsForgotPassword(true);
+                  resetPasswordFields();
+                }}
                 className="text-xs text-stone-500 hover:text-stone-300 hover:underline focus:outline-none"
               >
                 Nie pamiętasz hasła?
               </button>
               <button
                 type="button"
-                onClick={() => setIsRegisterForm(true)}
+                onClick={() => {
+                  setIsRegisterForm(true);
+                  resetPasswordFields();
+                }}
                 className="text-xs text-amber-500 hover:underline focus:outline-none"
               >
                 Nie masz konta? Zarejestruj się

@@ -14,17 +14,38 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Pancerny ekstraktor JSON izolujący obiekt { ... } z dowolnego tekstu AI
+// Pancerny ekstraktor JSON izolujący poprawny obiekt { ... } z dowolnego tekstu AI
 const extractAndParseJSON = (text: string) => {
-  const firstBrace = text.indexOf("{");
-  const lastBrace = text.lastIndexOf("}");
-  
-  if (firstBrace === -1 || lastBrace === -1) {
+  if (!text) {
+    throw new Error("Otrzymano pustą odpowiedź od AI.");
+  }
+
+  // Znajdujemy indeks pierwszego otwarcia nawiasu klamrowego '{'
+  let firstBrace = text.indexOf('{');
+  if (firstBrace === -1) {
     throw new Error("Materiały wyjściowe AI nie zawierają prawidłowego obiektu JSON.");
   }
-  
-  const jsonString = text.substring(firstBrace, lastBrace + 1);
-  return JSON.parse(jsonString);
+
+  // Iteracyjne wyszukiwanie i parowanie nawiasów
+  while (firstBrace !== -1) {
+    let lastBrace = text.lastIndexOf('}');
+    
+    while (lastBrace > firstBrace) {
+      const jsonString = text.substring(firstBrace, lastBrace + 1);
+      try {
+        // Próbujemy sparsować wycięty fragment
+        return JSON.parse(jsonString);
+      } catch (err) {
+        // Jeśli się nie udało (np. przez dodatkowy tekst lub ucięte nawiasy na końcu),
+        // szukamy poprzedniego znaku zamknięcia '}'
+        lastBrace = text.lastIndexOf('}', lastBrace - 1);
+      }
+    }
+    // Jeśli dla danego '{' nie znaleziono dopasowania, szukamy kolejnego znaku '{'
+    firstBrace = text.indexOf('{', firstBrace + 1);
+  }
+
+  throw new Error("Nie udało się wyodrębnić i sparsować poprawnej struktury JSON z odpowiedzi AI.");
 };
 
 export async function POST(req: NextRequest) {
@@ -154,7 +175,7 @@ export async function POST(req: NextRequest) {
           console.error("!!! Błąd wywołania RPC match_essays:", rpcError);
         } else if (similar && similar.length > 0) {
           similarEssaysContext = `\n\n=== REPREZENTATYWNE PRZYKŁADY Z BAZY WIEDZY (WZORCE OCENIANIA) ===
-Poniżej znajdują się podobne rozprawki, które zostały już wcześniej ocenione i zatwierdzone przez administratora lub starszego egzaminatora. Twoja aktualna ocena musi być w pełni spójna z poniższymi wzorcami pod względem surowości i kryteriów. Naśladuj ich stil oceniania i zachowaj konsekwencję punktacji:\n`;
+Poniżej znajdują się podobne rozprawki, które zostały już wcześniej ocenione i zatwierdzone przez administratora lub starszego egzaminatora. Twoja aktualna ocena musi być w pełni spójna z poniższymi wzorcami pod względem surowości i kryteriów. Naśladuj ich styl oceniania i zachowaj konsekwencję punktacji:\n`;
 
           similar.forEach((item: any, index: number) => {
             similarEssaysContext += `
@@ -210,7 +231,7 @@ ${ckeGuidelines}
 KROK 1 – WSTĘPNA WERYFIKACJA:
 a) Policz słowa w tekście. Jeśli < 300 → KW = 0/7, JW = 0/11 (tylko SFWP i KLiK).
 b) Sprawdź błąd kardynalny. Jeśli TAK → cała praca = 0/35. Koniec analizy.
-c) Sprawdź czy praca jest wypowiednia argumentacyjną z tezą i min. 2 argumentami. Jeśli NIE → SFWP = 0.
+c) Sprawdź czy praca jest wypowiednią argumentacyjną z tezą i min. 2 argumentami. Jeśli NIE → SFWP = 0.
 
 KROK 2 – SFWP (0–1 pkt):
 Przyznaj 1 pkt tylko gdy spełnione WSZYSTKIE warunki: brak błędu kardynalnego + odwołanie analityczne do lektury obowiązkowej + praca dotyczy tematu + wypowiedź argumentacyjna.
@@ -234,7 +255,7 @@ b) Policz błędy ortograficzne → Tabela 4b.
 c) Policz błędy interpunkcyjne → Tabela 4c.
 
 === BEZWZGLĘDNE ZASADY UNIKANIA HALUCYNACJI BŁĘDÓW (ZWŁASZCZA INTERPUNKCYJNYCH) ===
-1. Zanim dodasz jakikolwiek błąd do tablicy "annotations" o typie "interpunkcyjny" lub "ortograficzny", sprawdź LITERA PO LITRZE oryginalny tekst ucznia.
+1. Zanim dodasz jakikolwiek błąd do tablicy "annotations" o typie "interpunkcyjny" or "ortograficzny", sprawdź LITERA PO LITRZE oryginalny tekst ucznia.
 2. NIGDY nie flaguj błędu interpunkcyjnego (np. brak przecinka przed "czy", "że", "który", "ponieważ"), jeśli ten przecinek FIZYCZNIE ZNAJDUJE SIĘ w tekście ucznia!
 3. Jeśli uczeń postawił poprawny przecinek, nie poprawiaj go i nie zgłaszaj fałszywego błędu (tzw. false positive). Analizuj tekst sprawiedliwie, a nie nadgorliwie.
 
