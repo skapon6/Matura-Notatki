@@ -126,7 +126,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
       } else if (isForgotPassword) {
         // 4. Wysłanie maila z linkiem resetującym
         const { error } = await supabase.auth.resetPasswordForEmail(authEmail, {
-          redirectTo: typeof window !== "undefined" ? window.location.origin : undefined,
+        redirectTo: `${window.location.origin}/reset-hasla`, // <-- WSKAZUJEMY NOWĄ PODSTRONĘ
         });
 
         if (error) {
