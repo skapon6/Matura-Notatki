@@ -9,6 +9,9 @@ export function translateAuthError(errorMsg: string): string {
   const msg = errorMsg.toLowerCase().trim();
 
   // 1. Walidacja złożoności i siły hasła (Password Strength Policy)
+  if (msg.includes("different from the old password") || msg.includes("same as the old password")) {
+    return "Nowe hasło musi różnić się od Twojego dotychczasowego hasła.";
+  }
   if (msg.includes("password should contain at least one character of each") || msg.includes("abcdefghijklmnopqrstuvwxyz")) {
     return "Hasło jest za słabe! Musi zawierać co najmniej jedną małą literę, jedną wielką literę oraz jedną cyfrę.";
   }
@@ -27,12 +30,20 @@ export function translateAuthError(errorMsg: string): string {
     return "Twój adres e-mail nie został jeszcze zweryfikowany. Kliknij link aktywacyjny wysłany na Twoją pocztę.";
   }
 
-  // 3. Limity częstotliwości zapytań (Rate Limits)
+  // 3. Linki weryfikacyjne i tokeny OTP (Reset hasła / Rejestracja)
+  if (msg.includes("otp_expired") || msg.includes("token has expired") || msg.includes("invalid or has expired") || msg.includes("email link is invalid")) {
+    return "Link wygasł lub został już wcześniej wykorzystany. Wyślij nową prośbę o reset hasła.";
+  }
+  if (msg.includes("auth session missing")) {
+    return "Brak aktywnej sesji autoryzacyjnej. Otwórz ponownie link z wiadomości e-mail.";
+  }
+
+  // 4. Limity częstotliwości zapytań (Rate Limits)
   if (msg.includes("email rate limit exceeded") || msg.includes("rate limit") || msg.includes("too many requests")) {
     return "Przekroczono limit wysyłania wiadomości. Odczekaj chwilę przed kolejną próbą.";
   }
 
-  // 4. Inne błędy systemowe i sieciowe
+  // 5. Inne błędy systemowe i sieciowe
   if (msg.includes("signup is disabled") || msg.includes("sign up is disabled")) {
     return "Rejestracja nowych użytkowników jest obecnie tymczasowo wyłączona przez administratora.";
   }
@@ -40,6 +51,28 @@ export function translateAuthError(errorMsg: string): string {
     return "Błąd połączenia sieciowego. Sprawdź swoje połączenie z internetem i spróbuj ponownie.";
   }
 
-  // Fallback - jeśli błąd nie pasuje do wzorców, zwracamy go w oryginalnej formie, by nie utrudniać debugowania
+  // Fallback - jeśli błąd nie pasuje do wzorców, zwracamy go w oryginalnej formie
   return errorMsg;
+}
+// Dodaj na końcu pliku lib/auth-utils.ts:
+
+/**
+ * Jednolita walidacja hasła dla rejestracji i resetu hasła
+ */
+export function validatePasswordStrength(password: string): string | null {
+  if (password.length < 8) {
+    return "Hasło musi mieć co najmniej 8 znaków.";
+  }
+  if (!/[0-9]/.test(password)) {
+    return "Hasło musi zawierać co najmniej jedną cyfrę.";
+  }
+  if (!/[a-zA-Z]/.test(password)) {
+    return "Hasło musi zawierać co najmniej jedną literę.";
+  }
+  // Opcjonalnie: jeśli chcesz wymuszać znak specjalny, odkomentuj poniższe 3 linijki:
+  // if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+  //   return "Hasło musi zawierać co najmniej jeden znak specjalny (np. ! @ # $).";
+  // }
+
+  return null; // Hasło jest poprawne
 }

@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import { getThemeClasses, CozyTheme } from "../lib/theme";
 import Link from "next/link";
+import { translateAuthError, validatePasswordStrength } from "../lib/auth-utils";
+
 
 export default function ResetHaslaPage() {
   const router = useRouter();
@@ -40,18 +42,21 @@ export default function ResetHaslaPage() {
     }
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
 
-    if (newPassword.length < 6) {
-      setErrorMsg("Hasło musi mieć co najmniej 6 znaków.");
-      return;
+    // 1. Sprawdzamy siłę hasła jednolitą funkcją
+    const passwordError = validatePasswordStrength(newPassword);
+    if (passwordError) {
+        setErrorMsg(passwordError);
+        return;
     }
 
+    // 2. Sprawdzamy powtórzenie hasła
     if (newPassword !== confirmPassword) {
-      setErrorMsg("Wpisane hasła nie są identyczne.");
-      return;
+        setErrorMsg("Wpisane hasła nie są identyczne.");
+        return;
     }
 
     setLoading(true);
@@ -62,7 +67,8 @@ export default function ResetHaslaPage() {
       });
 
       if (error) {
-        setErrorMsg("Wystąpił błąd podczas aktualizacji hasła: " + error.message);
+        // TŁUMACZENIE BŁĘDU NA JĘZYK POLSKI
+        setErrorMsg(translateAuthError(error.message));
       } else {
         setSuccess(true);
         setTimeout(() => {
@@ -70,7 +76,7 @@ export default function ResetHaslaPage() {
         }, 2500);
       }
     } catch {
-      setErrorMsg("Nieoczekiwany błąd połączenia.");
+      setErrorMsg("Wystąpił nieoczekiwany błąd połączenia.");
     } finally {
       setLoading(false);
     }
@@ -94,7 +100,7 @@ export default function ResetHaslaPage() {
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {errorMsg && (
-              <div className="p-3 rounded-xl bg-red-950/50 border border-red-800/40 text-red-300 text-xs text-center">
+              <div className="p-3 rounded-xl bg-red-950/50 border border-red-800/40 text-red-300 text-xs text-center leading-relaxed">
                 {errorMsg}
               </div>
             )}
@@ -130,7 +136,7 @@ export default function ResetHaslaPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 mt-2 bg-[#c68a4c] hover:bg-[#d99c5d] text-stone-950 font-bold rounded-xl text-xs sm:text-sm transition-all shadow-md active:scale-95 disabled:opacity-50"
+              className="w-full py-3 mt-2 bg-[#c68a4c] hover:bg-[#d99c5d] text-stone-950 font-bold rounded-xl text-xs sm:text-sm transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
             >
               {loading ? "Zapisywanie nowego hasła..." : "Zapisz nowe hasło 🔑"}
             </button>
