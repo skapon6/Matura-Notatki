@@ -1,9 +1,11 @@
+// app/components/ClimaticSettingsModal.tsx (lub components/ClimaticSettingsModal.tsx)
 "use client";
 
 import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { playSound } from "../lib/sounds";
 import { CozyTheme } from "../lib/theme";
+import { translateAuthError, validatePasswordStrength } from "../lib/auth-utils";
 
 interface ClimaticSettingsModalProps {
   isOpen: boolean;
@@ -35,7 +37,7 @@ export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
   // Stany dla usuwania konta
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
-  // Stany dla dziennego celu nauki (Cozy Goal)
+  // Stany dla dziennego celu nauki
   const [studyGoal, setStudyGoal] = useState<number>(25);
 
   // Wczytywanie zapisanego celu nauki z localStorage
@@ -52,28 +54,33 @@ export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
 
   const currentTheme = getThemeClasses(cozyTheme);
 
-  // 1. BEZPIECZNA ZMIANA HASŁA (Wymaga weryfikacji starego hasła)
+  // 1. BEZPIECZNA ZMIANA HASŁA
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Sprawdzamy zgodność powtórzonego hasła
     if (newPassword !== confirmPassword) {
-      triggerNotification("Nowe hasła nie są identyczne!", "error");
+      triggerNotification("Nowe hasła nie są identyczne. Upewnij się, że wpisałeś je poprawnie.", "error");
       return;
     }
-    if (newPassword.length < 6) {
-      triggerNotification("Nowe hasło musi mieć co najmniej 6 znaków!", "error");
+
+    // Sprawdzamy siłę hasła (min. 8 znaków, cyfra, litera)
+    const passwordError = validatePasswordStrength(newPassword);
+    if (passwordError) {
+      triggerNotification(passwordError, "error");
       return;
     }
 
     setLoading(true);
     try {
-      // Weryfikacja starego hasła przez tymczasowe ponowne zalogowanie
+      // Weryfikacja starego hasła przez ponowne uwierzytelnienie
       const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: user.email,
+        email: user?.email,
         password: oldPassword,
       });
 
       if (signInError) {
-        triggerNotification("Podane stare hasło jest niepoprawne!", "error");
+        triggerNotification("Podane obecne hasło jest niepoprawne!", "error");
         setLoading(false);
         return;
       }
@@ -84,9 +91,10 @@ export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
       });
 
       if (updateError) {
-        triggerNotification(updateError.message, "error");
+        triggerNotification(translateAuthError(updateError.message), "error");
       } else {
-        triggerNotification("Hasło zostało pomyślnie zmienione! 🎉", "success");
+        playSound("success");
+        triggerNotification("Hasło zostało pomyślnie zaktualizowane! 🎉", "success");
         setOldPassword("");
         setNewPassword("");
         setConfirmPassword("");
@@ -102,19 +110,25 @@ export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
   // 2. USUWANIE KONTA (Przez bezpieczne API serwera)
   const handleDeleteAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (deleteConfirmText !== "USUŃ") {
+    if (deleteConfirmText.trim().toUpperCase() !== "USUŃ") {
       triggerNotification("Wpisz słowo USUŃ, aby potwierdzić decyzję.", "error");
       return;
     }
 
     setLoading(true);
     try {
-      const response = await fetch("/api/user/delete", { method: "POST" });
+      const response = await fetch("/api/user/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user?.id,
+          userEmail: user?.email,
+        }),
+      });
       const data = await response.json();
 
       if (response.ok && data.success) {
         triggerNotification("Twoje konto zostało pomyślnie usunięte. Żegnaj! 👋", "success");
-        // Wylogowujemy klienta lokalnie i przeładowujemy stronę
         await supabase.auth.signOut();
         window.location.href = "/";
       } else {
@@ -122,7 +136,7 @@ export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
       }
     } catch (err) {
       console.error(err);
-      triggerNotification("Błąd połączenia z serwerem usuwania konta.", "error");
+      triggerNotification("Błąd połączenia z serwerem podczas usuwania konta.", "error");
     } finally {
       setLoading(false);
     }
@@ -132,7 +146,9 @@ export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
   const handleSaveGoal = (minutes: number) => {
     playSound("success");
     setStudyGoal(minutes);
-    localStorage.setItem("cozy_study_goal", minutes.toString());
+    if (typeof window !== "undefined") {
+      localStorage.setItem("cozy_study_goal", minutes.toString());
+    }
     triggerNotification(`Dzienny cel nauki ustawiony na ${minutes} minut! 🎯`, "success");
   };
 
@@ -152,8 +168,8 @@ export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
             </div>
           </div>
           <button
-            onClick={onClose}
-            className="p-1.5 rounded-xl hover:bg-stone-900 text-stone-400 hover:text-stone-200 transition-all border border-stone-850"
+            onClick={() => { playSound("click"); onClose(); }}
+            className="p-1.5 rounded-xl hover:bg-stone-900 text-stone-400 hover:text-stone-200 transition-all border border-stone-800 cursor-pointer"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -171,7 +187,7 @@ export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
             <button
               key={tab.id}
               onClick={() => { playSound("click"); setActiveTab(tab.id as TabType); }}
-              className={`text-xs px-3.5 py-2 rounded-xl font-semibold border transition-all ${
+              className={`text-xs px-3.5 py-2 rounded-xl font-semibold border transition-all cursor-pointer ${
                 activeTab === tab.id
                   ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
                   : "bg-transparent text-stone-500 border-transparent hover:text-stone-300"
@@ -200,11 +216,11 @@ export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
                 ].map((item) => (
                   <button
                     key={item.id}
-                    onClick={() => { playSound("click"); setCozyTheme(item.id as CozyTheme);localStorage.setItem("app_theme", item.id); }}
-                    className={`p-4 rounded-2xl border text-left flex items-start gap-4 transition-all ${
+                    onClick={() => { playSound("click"); setCozyTheme(item.id as CozyTheme); localStorage.setItem("app_theme", item.id); }}
+                    className={`p-4 rounded-2xl border text-left flex items-start gap-4 transition-all cursor-pointer ${
                       cozyTheme === item.id
                         ? "border-amber-500/40 bg-amber-500/5 shadow-md"
-                        : "border-stone-850 bg-stone-900/10 hover:bg-stone-900/30 hover:border-stone-800"
+                        : "border-stone-800 bg-stone-900/10 hover:bg-stone-900/30 hover:border-stone-700"
                     }`}
                   >
                     <span className="text-2xl pt-1">{item.emoji}</span>
@@ -218,7 +234,7 @@ export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
             </div>
           )}
 
-          {/* TAB 2: USTAWIENIA KONTA (Hasło i usuwanie) */}
+          {/* TAB 2: USTAWIENIA KONTA */}
           {activeTab === "account" && (
             <div className="flex flex-col gap-6 animate-slide-in">
               {/* Formularz zmiany hasła */}
@@ -229,18 +245,21 @@ export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
                 <div className="flex flex-col gap-3">
                   <input
                     type="password"
-                    placeholder="Wpisz stare hasło"
+                    placeholder="Wpisz obecne hasło"
                     value={oldPassword}
                     onChange={(e) => setOldPassword(e.target.value)}
                     required
+                    disabled={loading}
                     className="w-full bg-stone-950/80 border border-stone-800/80 rounded-xl py-2 px-4 text-xs text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60"
                   />
                   <input
                     type="password"
-                    placeholder="Wpisz nowe hasło (min. 6 znaków)"
+                    placeholder="Wpisz nowe hasło (min. 8 znaków, cyfra i litera)"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     required
+                    minLength={8}
+                    disabled={loading}
                     className="w-full bg-stone-950/80 border border-stone-800/80 rounded-xl py-2 px-4 text-xs text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60"
                   />
                   <input
@@ -249,14 +268,16 @@ export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
+                    minLength={8}
+                    disabled={loading}
                     className="w-full bg-stone-950/80 border border-stone-800/80 rounded-xl py-2 px-4 text-xs text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60"
                   />
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full py-2 bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold rounded-xl text-xs transition-all disabled:opacity-50"
+                    className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold rounded-xl text-xs transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
                   >
-                    {loading ? "Przetwarzanie..." : "Zatwierdź zmianę hasła"}
+                    {loading ? "Przetwarzanie..." : "Zatwierdź zmianę hasła 🔑"}
                   </button>
                 </div>
               </form>
@@ -267,7 +288,7 @@ export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
                   Strefa Zagrożenia: Usuń Konto
                 </h3>
                 <p className="text-[11px] text-stone-400 leading-relaxed">
-                  Usunięcie konta jest **trwałe i nieodwracalne**. Spowoduje natychmiastowe skasowanie Twoich postępów, tokenów oraz zapamiętanych cytatów.
+                  Usunięcie konta jest <strong>trwałe i nieodwracalne</strong>. Spowoduje natychmiastowe skasowanie Twoich postępów, tokenów oraz historii ocen.
                 </p>
                 <div className="flex flex-col gap-3 mt-1">
                   <input
@@ -276,21 +297,22 @@ export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
                     value={deleteConfirmText}
                     onChange={(e) => setDeleteConfirmText(e.target.value)}
                     required
+                    disabled={loading}
                     className="w-full bg-stone-950/80 border border-red-900/30 rounded-xl py-2 px-4 text-xs text-stone-200 placeholder-stone-500 focus:outline-none focus:border-red-900/60"
                   />
                   <button
                     type="submit"
-                    disabled={loading || deleteConfirmText !== "USUŃ"}
-                    className="w-full py-2 bg-red-950/20 border border-red-900/40 hover:bg-red-900 text-red-400 hover:text-white font-bold rounded-xl text-xs transition-all disabled:opacity-30"
+                    disabled={loading || deleteConfirmText.trim().toUpperCase() !== "USUŃ"}
+                    className="w-full py-2.5 bg-red-950/30 border border-red-900/50 hover:bg-red-900 text-red-300 hover:text-white font-bold rounded-xl text-xs transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                   >
-                    {loading ? "Usuwanie..." : "Trwale usuń moje konto"}
+                    {loading ? "Usuwanie konta..." : "Trwale usuń moje konto ⚠️"}
                   </button>
                 </div>
               </form>
             </div>
           )}
 
-          {/* TAB 3: DZIENNY CEL NAUKI (Ciekawa, nowa funkcja) */}
+          {/* TAB 3: DZIENNY CEL NAUKI */}
           {activeTab === "goal" && (
             <div className="flex flex-col gap-5 animate-slide-in">
               <div>
@@ -302,7 +324,7 @@ export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 {[
                   { time: 25, label: "25 minut (1 sesja Pomodoro)", desc: "Idealny na szybką, codzienną powtórkę lektury." },
                   { time: 50, label: "50 minut (2 sesje)", desc: "Optymalny czas dla systematycznej nauki." },
@@ -312,10 +334,10 @@ export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
                   <button
                     key={item.time}
                     onClick={() => handleSaveGoal(item.time)}
-                    className={`p-4 rounded-2xl border text-left flex flex-col gap-1 transition-all ${
+                    className={`p-4 rounded-2xl border text-left flex flex-col gap-1 transition-all cursor-pointer ${
                       studyGoal === item.time
-                        ? "border-amber-500/40 bg-amber-500/5 shadow-md"
-                        : "border-stone-850 bg-stone-900/10 hover:bg-stone-900/30 hover:border-stone-800"
+                        ? "border-amber-500/40 bg-amber-500/10 shadow-md"
+                        : "border-stone-800 bg-stone-900/10 hover:bg-stone-900/30 hover:border-stone-700"
                     }`}
                   >
                     <span className="text-xs font-bold text-stone-100 font-serif flex items-center gap-1.5">
@@ -334,7 +356,7 @@ export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
   );
 };
 
-// Pomocnicza funkcja do pobierania klas stylów (aby plik kompilował się bez błędów)
+// Pomocnicza funkcja motywów
 function getThemeClasses(theme: CozyTheme) {
   switch (theme) {
     case "rainy":
