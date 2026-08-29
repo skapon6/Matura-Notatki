@@ -13,6 +13,57 @@ interface Match {
   annotation: any;
 }
 
+// Baza oficjalnych tematów maturalnych CKE (2022–2026)
+const OFFICIAL_CKE_TOPICS = [
+  {
+    group: "Matura 2026 (Formuła 2023)",
+    topics: [
+      { label: "Maj - Temat 1", text: "Wpływ pracy na człowieka i na otaczającą go rzeczywistość." },
+      { label: "Maj - Temat 2", text: "Kiedy dla człowieka jest ważne, jak postrzegają go inni?" },
+      { label: "Sierpień - Temat 1", text: "Co sprawia, że człowiek poświęca się dla drugiego człowieka?" },
+      { label: "Sierpień - Temat 2", text: "Przeszłość jako inspiracja do działania." },
+    ]
+  },
+  {
+    group: "Matura 2025 (Formuła 2023)",
+    topics: [
+      { label: "Maj - Temat 1", text: "Źródło nadziei w czasach trudnych dla człowieka." },
+      { label: "Maj - Temat 2", text: "Jak błędna ocena sytuacji wpływa na życie człowieka?" },
+      { label: "Sierpień - Temat 1", text: "Co sprawia, że człowiekowi łatwiej jest mierzyć się z życiowymi problemami?" },
+      { label: "Sierpień - Temat 2", text: "Człowiek wobec upływu czasu i wobec śmierci." },
+    ]
+  },
+  {
+    group: "Matura 2024 (Formuła 2023)",
+    topics: [
+      { label: "Maj - Temat 1", text: "Bunt i jego konsekwencje dla człowieka." },
+      { label: "Maj - Temat 2", text: "Jak relacja z drugą osobą kształtuje człowieka?" },
+      { label: "Sierpień - Temat 1", text: "Co motywuje człowieka do przemiany?" },
+      { label: "Sierpień - Temat 2", text: "Człowiek w poszukiwaniu prawdy o sobie i o świecie, w którym żyje." },
+    ]
+  },
+  {
+    group: "Matura 2023 (Formuła 2023 & 2015)",
+    topics: [
+      { label: "Maj (F2023) - Temat 1", text: "Człowiek – istota pełna sprzeczności." },
+      { label: "Maj (F2023) - Temat 2", text: "Co sprawia, że człowiek staje się dla drugiego człowieka bohaterem?" },
+      { label: "Sierpień (F2023) - Temat 1", text: "Autentyczność i udawanie w relacjach międzyludzkich." },
+      { label: "Sierpień (F2023) - Temat 2", text: "Wolność – dar, ale również odpowiedzialność." },
+      { label: "Maj (F2015) - Temat 1", text: "Jak niespodziewane okoliczności wpływają na zachowanie człowieka? (na podstawie Pana Tadeusza)" },
+      { label: "Maj (F2015) - Temat 2", text: "Czy nieprzyjemne prawdy są lepsze od przyjemnych złudzeń? (na podstawie Przedwiośnia)" },
+    ]
+  },
+  {
+    group: "Matura 2022 (Formuła 2015)",
+    topics: [
+      { label: "Maj - Temat 1", text: "Czym dla człowieka może być tradycja? (na podstawie Pana Tadeusza oraz innych tekstów kultury)" },
+      { label: "Maj - Temat 2", text: "Kiedy relacja z drugim człowiekiem staje się źródłem szczęścia? (na podstawie Nocy i dni oraz innych tekstów kultury)" },
+      { label: "Sierpień - Temat 1", text: "Czy w życiu możliwe jest zadośćuczynienie za popełnione przewinienia? (na podstawie Pana Tadeusza oraz innych tekstów kultury)" },
+      { label: "Sierpień - Temat 2", text: "Czy człowiek marzy o piękniejszym świecie, czy stara się zmieniać ten, w którym żyje? (na podstawie Ludzi bezdomnych oraz innych tekstów kultury)" },
+    ]
+  }
+];
+
 // Funkcja pomocnicza: sprawdza, czy w tekście znajduje się pojedyncze słowo dłuższe niż 20 znaków (Zabezpieczenie przed Spamem)
 const isSpamText = (text: string) => {
   const words = text.split(/\s+/).filter(Boolean);
@@ -112,7 +163,7 @@ export default function OcenianieRozprawekPage() {
       return;
     }
 
-    // Walidacja limitu słów i spamu dla tematu rozprawki (Zabezpieczenie przed zapychaniem bazy danych / DoS)
+    // Walidacja limitu słów i spamu dla tematu rozprawki
     const topicWords = selectedTopic.split(/\s+/).filter(Boolean);
     const hasInvalidTopicWord = topicWords.some((word) => word.length > 20);
 
@@ -207,7 +258,6 @@ export default function OcenianieRozprawekPage() {
       return;
     }
 
-    // Walidacja limitu słów i spamu dla tematu rozprawki (Zabezpieczenie przed zapychaniem bazy danych / DoS)
     const topicWords = selectedTopic.split(/\s+/).filter(Boolean);
     const hasInvalidTopicWord = topicWords.some((word) => word.length > 20);
 
@@ -377,7 +427,7 @@ export default function OcenianieRozprawekPage() {
   const creditsRemaining = profile?.essay_credits ?? 0;
   const currentWordCount = essayText.split(/\s+/).filter(Boolean).length;
 
-  // DYNAMICZNE, NATYCHMIASTOWE OBLICZANIE BŁĘDÓW WALIDACYJNYCH (Reakcja na żywo przy każdym naciśnięciu klawisza)
+  // DYNAMICZNE, NATYCHMIASTOWE OBLICZANIE BŁĘDÓW WALIDACYJNYCH
   const isTopicSpam = isSpamText(selectedTopic);
   const isEssaySpam = isSpamText(essayText);
   
@@ -443,18 +493,48 @@ export default function OcenianieRozprawekPage() {
           {/* Lewa kolumna: Edytor i podgląd */}
           <div className="lg:col-span-8 flex flex-col gap-4">
             <div>
-              <label className="text-xs uppercase tracking-widest text-amber-500 font-semibold block mb-2">
-                Temat Twojej rozprawki (Maksymalnie 200 słów)
-              </label>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                <label className="text-xs uppercase tracking-widest text-amber-500 font-semibold">
+                  Temat Twojej rozprawki (Maksymalnie 200 słów)
+                </label>
+                
+                {/* SELECTOR Z OFICJALNYMI TEMATAMI CKE */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-stone-400 font-medium">📚 Sugerowane CKE:</span>
+                  <select
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        setSelectedTopic(e.target.value);
+                      }
+                    }}
+                    value=""
+                    disabled={isAnalyzing || isGenerating}
+                    className="bg-stone-950 border border-stone-800 rounded-lg py-1 px-2.5 text-[11px] text-[#c68a4c] font-semibold focus:outline-none focus:border-amber-700/60 max-w-[200px] sm:max-w-[240px] truncate cursor-pointer transition-all hover:border-stone-700"
+                  >
+                    <option value="" disabled>Wybierz oficjalny temat...</option>
+                    {OFFICIAL_CKE_TOPICS.map((group, gIdx) => (
+                      <optgroup key={gIdx} label={group.group} className="bg-stone-900 text-stone-300 font-normal">
+                        {group.topics.map((item, tIdx) => (
+                          <option key={tIdx} value={item.text} className="bg-stone-950 text-stone-200">
+                            {item.label}: {item.text}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <input 
                 type="text"
-                placeholder="Wpisz tutaj pełny temat swojej rozprawki..."
+                placeholder="Wpisz tutaj pełny temat swojej rozprawki lub wybierz z listy powyżej..."
                 value={selectedTopic}
                 onChange={(e) => setSelectedTopic(e.target.value)}
                 disabled={isAnalyzing || isGenerating}
                 className="w-full bg-stone-900 border border-stone-800 rounded-xl py-2.5 px-3.5 text-xs sm:text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-700/60 font-sans"
               />
-              {/* OSTRZEŻENIA DLA POLA TEMATU (Działanie na żywo) */}
+
+              {/* OSTRZEŻENIA DLA POLA TEMATU */}
               {isTopicSpam && (
                 <p className="text-[11px] text-red-400 font-semibold mt-1 animate-pulse">
                   ⚠️ Wykryto nieprawidłowe, zbyt długie słowo bez spacji (maksymalnie 20 znaków). Popraw temat, aby odblokować analizę!
@@ -528,7 +608,7 @@ export default function OcenianieRozprawekPage() {
                   rows={12}
                   placeholder={
                     isGenerationMode 
-                      ? "Opcja automatycznego generowania rozprawki przez AI jest włączona. Treść Twojego wypracowania jest zablokowana. Wpisz temat powyżej i kliknij przycisk generowania." 
+                      ? "Opcja automatycznego generowania rozprawki przez AI jest włączona. Treść Twojego wypracowania jest zablokowana. Wpisz lub wybierz temat powyżej i kliknij przycisk generowania." 
                       : "Wklej tutaj treść swojej rozprawki (minimum 50 słów)..."
                   }
                   value={essayText}
@@ -536,7 +616,7 @@ export default function OcenianieRozprawekPage() {
                   disabled={isAnalyzing || isGenerating || isGenerationMode}
                   className="w-full bg-stone-900/80 border border-stone-800 rounded-2xl p-4 text-xs sm:text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-700/60 leading-relaxed font-sans disabled:opacity-50 disabled:cursor-not-allowed"
                 />
-                {/* OSTRZEŻENIA DLA POLA TREŚCI (Działanie na żywo) */}
+                {/* OSTRZEŻENIA DLA POLA TREŚCI */}
                 {isEssaySpam && (
                   <p className="text-[11px] text-red-400 font-semibold mt-1 animate-pulse">
                     ⚠️ Wykryto nieprawidłowe, zbyt długie słowo bez spacji (maksymalnie 20 znaków). Popraw wypracowanie, aby odblokować analizę!
@@ -569,7 +649,7 @@ export default function OcenianieRozprawekPage() {
                 {isGenerationMode ? (
                   <button
                     onClick={handleGenerateEssay}
-                    disabled={isAnalyzing || isGenerating || isTopicSpam || isTopicLengthExceeded || isTopicWordsExceeded} // Zablokowany przy błędnym temacie
+                    disabled={isAnalyzing || isGenerating || isTopicSpam || isTopicLengthExceeded || isTopicWordsExceeded}
                     className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold transition-all text-xs sm:text-sm shadow-md disabled:bg-stone-800 disabled:text-stone-500"
                   >
                     {isGenerating ? "✍ Trwa generowanie rozprawki..." : "Generuj przykładową rozprawkę (1 kredyt)"}
@@ -577,14 +657,14 @@ export default function OcenianieRozprawekPage() {
                 ) : (
                   <button
                     onClick={handleAnalyze}
-                    disabled={isAnalyzing || isGenerating || hasValidationError} // Zablokowany przy dowolnym błędzie walidacji na żywo
+                    disabled={isAnalyzing || isGenerating || hasValidationError}
                     className="w-full py-3 rounded-xl bg-[#c68a4c] hover:bg-[#d99c5d] text-stone-950 font-bold transition-all text-xs sm:text-sm shadow-md disabled:bg-stone-800 disabled:text-stone-500"
                   >
                     {isAnalyzing ? "🤖 Trwa analiza tekstu..." : "Przeanalizuj rozprawkę (1 kredyt)"}
                   </button>
                 )}
 
-                {/* DYNAMICZNY OSTRZEGAWCZY BANER REASEKURACYJNY (WYMÓG UX) */}
+                {/* OSTRZEGAWCZY BANER REASEKURACYJNY */}
                 {(isAnalyzing || isGenerating) && (
                   <div className="p-4 rounded-2xl bg-amber-950/20 border border-amber-900/30 text-left text-[11px] text-amber-400/95 leading-relaxed font-sans mt-1 animate-pulse">
                     ⚠️ <strong className="text-amber-300 font-bold">Trwa analiza przez sztuczną inteligencję. Prosimy o cierpliwość i nieodświeżanie tej strony.</strong> Zamknięcie lub przeładowanie karty w tym momencie uniemożliwi wyświetlenie wyników. Twój kredyt jest bezpieczny – w przypadku wystąpienia jakiegokolwiek błędu połączenia sieciowego, pobrany token zostanie automatycznie zwrócony na Twoje konto.
@@ -593,7 +673,7 @@ export default function OcenianieRozprawekPage() {
               </div>
             ) : (
               <div className="text-center p-3.5 bg-red-950/20 border border-red-950/40 rounded-xl text-xs text-red-400">
-                Wykorzystałeś wszystkie darmowe oceny wypracowań. Kup pakiet Premium, aby natychmiant otrzymać kolejne próby! 🚀
+                Wykorzystałeś wszystkie darmowe oceny wypracowań. Kup pakiet Premium, aby natychmiast otrzymać kolejne próby! 🚀
               </div>
             )}
 
@@ -620,7 +700,7 @@ export default function OcenianieRozprawekPage() {
             )}
           </div>
 
-          {/* Prawa kolumna: Miejsce na wyniki (Raport AI) */}
+          {/* Prawa kolumna: Raport AI */}
           <div className="lg:col-span-4 flex flex-col gap-4">
             
             {isAnalyzing || isGenerating ? (
@@ -672,7 +752,6 @@ export default function OcenianieRozprawekPage() {
               </ul>
             </div>
 
-            {/* Przypis umieszczony na samym dole kolumny (zawsze widoczny, poza przewijalną kartą) */}
             {analysisResult && (
               <div className="text-[10px] text-stone-500 leading-relaxed font-sans px-1 animate-fade-in">
                 * Uwaga: Model AI dokonuje bardzo rygorystycznej i dosłownej oceny według wytycznych CKE (a zwłaszcza zasady dotyczące interpunkcji i gramatyki). Rzeczywista punktacja na egzaminie państwowym może różnić się na korzyść zdającego z uwagi na bardziej elastyczną i holistyczną ocenę ludzkiego egzaminatora.
@@ -727,12 +806,11 @@ export default function OcenianieRozprawekPage() {
 }
 
 // ==========================================================================
-// DOJEBANY ATMOSFERYCZNY KOMPONENT ŁADOWANIA (SUB-COMPONENT)
+// KOMPONENT ŁADOWANIA (SUB-COMPONENT)
 // ==========================================================================
 function AtmosphericEssayLoader({ mode }: { mode: "analyze" | "generate" }) {
   const [step, setStep] = useState(0);
 
-  // Dynamiczne, klimatyczne statusy w zależności od akcji
   const analyzeSteps = [
     "Zaparzanie świeżej herbaty i rozgrzewanie maszyn AI...",
     "Egzaminator CKE zakłada okulary i otwiera Twoje wypracowanie...",
