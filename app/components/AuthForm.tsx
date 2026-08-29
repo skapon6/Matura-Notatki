@@ -5,14 +5,14 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { translateAuthError } from "../lib/auth-utils";
 import { ThemeClasses } from "../lib/theme";
-import Link from "next/link"; // Import Link dla poprawnych i szybkich odnośników prawnych [4]
+import Link from "next/link";
 
 interface AuthFormProps {
   currentTheme: ThemeClasses;
   triggerNotification: (message: string, type?: "success" | "error" | "info") => void;
 }
 
-// Czarna lista najpopularniejszych domen z tymczasowymi, 10-minutowymi mailami [11.3]
+// Czarna lista domen z tymczasowymi mailami
 const BLOCKED_DOMAINS = [
   "temp-mail.org", "10minutemail.com", "yopmail.com", "guerrillamail.com",
   "mailinator.com", "trashmail.com", "dispostable.com", "getairmail.com",
@@ -27,7 +27,6 @@ const BLOCKED_DOMAINS = [
   "lidugw.com", "laoia.com", "dyleris.com", "gonrr.net", 
 ];
 
-// Funkcja weryfikująca czy domena maila nie należy do czarnej listy [11.3]
 const isDisposableEmail = (email: string): boolean => {
   const domain = email.split("@")[1]?.toLowerCase();
   return BLOCKED_DOMAINS.includes(domain);
@@ -36,8 +35,9 @@ const isDisposableEmail = (email: string): boolean => {
 export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotification }) => {
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState(""); // <-- NOWY STAN DLA POWTÓRZENIA HASŁA
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
   
   // Stany formularza
   const [isRegisterForm, setIsRegisterForm] = useState(false);
@@ -47,8 +47,18 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
   
   const [authFormLoading, setAuthFormLoading] = useState(false);
 
-  // Nasłuchiwanie na link resetujący z maila
+  // PANCERNE WYKRYWANIE LINKU RESETUJĄCEGO HASŁO
   useEffect(() => {
+    // 1. Sprawdzamy czy w adresie URL znajduje się token odzyskiwania hasła
+    if (typeof window !== "undefined") {
+      const hash = window.location.hash;
+      const search = window.location.search;
+      if (hash.includes("type=recovery") || search.includes("type=recovery")) {
+        setIsRecoveryMode(true);
+      }
+    }
+
+    // 2. Nasłuchujemy na oficjalne zdarzenie PASSWORD_RECOVERY od Supabase
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
         setIsRecoveryMode(true);
@@ -60,11 +70,11 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
     };
   }, []);
 
-  // Pomocnicza funkcja czyszcząca pola haseł przy przełączaniu formularzy
   const resetPasswordFields = () => {
     setAuthPassword("");
     setConfirmPassword("");
     setNewPassword("");
+    setConfirmNewPassword("");
   };
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
@@ -73,33 +83,46 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
     
     try {
       if (isRecoveryMode) {
-        // 1. Zmiana hasła po przejściu z linku e-mail
+        // 1. Walidacja zgodności nowych haseł
+        if (newPassword !== confirmNewPassword) {
+          triggerNotification("Nowe hasła nie są identyczne. Wpisz je poprawnie w obu polach.", "error");
+          setAuthFormLoading(false);
+          return;
+        }
+
+        // 2. Zmiana hasła w Supabase
         const { error } = await supabase.auth.updateUser({
           password: newPassword,
         });
+
         if (error) {
           triggerNotification(translateAuthError(error.message), "error");
         } else {
-          triggerNotification("Hasło zostało pomyślnie zaktualizowane!", "success");
+          triggerNotification("Twoje hasło zostało pomyślnie zaktualizowane! Możesz się zalogować.", "success");
           setIsRecoveryMode(false);
           setIsForgotPassword(false);
           setIsRegisterForm(false);
           resetPasswordFields();
+
+          // Czyścimy tokeny z paska adresu URL
+          if (typeof window !== "undefined") {
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
         }
       } else if (isForgotPassword) {
-        // 2. Wysyłanie prośby o reset hasła na e-mail
+        // 3. Wysłanie maila z linkiem resetującym
         const { error } = await supabase.auth.resetPasswordForEmail(authEmail, {
-          redirectTo: window.location.origin,
+          redirectTo: typeof window !== "undefined" ? window.location.origin : undefined,
         });
+
         if (error) {
           triggerNotification(translateAuthError(error.message), "error");
         } else {
-          triggerNotification("Link do resetowania hasła został wysłany na Twój e-mail!", "success");
+          triggerNotification("Link do zresetowania hasła został wysłany na Twój adres e-mail!", "success");
           setIsForgotPassword(false);
         }
       } else if (isRegisterForm) {
-        
-        // --- BLOKADA REJESTRACJI TYMCZASOWYCH MAILI (WYMÓG BEZPIECZEŃSTWA) --- [11.3]
+        // 4. Blokada tymczasowych maili
         if (isDisposableEmail(authEmail)) {
           triggerNotification(
             "Rejestracja za pomocą tymczasowych adresów e-mail jest zablokowana. Użyj prawdziwej skrzynki pocztowej (np. Gmail, Onet, WP).", 
@@ -109,7 +132,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
           return;
         }
 
-        // --- WALIDACJA POPRAWNOŚCI POWTÓRZONEGO HASŁA ---
+        // 5. Sprawdzenie powtórzonego hasła przy rejestracji
         if (authPassword !== confirmPassword) {
           triggerNotification(
             "Podane hasła nie są identyczne. Upewnij się, że wpisałeś je poprawnie w obu polach.", 
@@ -119,24 +142,26 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
           return;
         }
 
-        // 3. Rejestracja użytkownika
+        // 6. Rejestracja użytkownika
         const { error } = await supabase.auth.signUp({
           email: authEmail,
           password: authPassword,
         });
+
         if (error) {
           triggerNotification(translateAuthError(error.message), "error");
         } else {
-          triggerNotification("Konto zostało utworzone! Potwierdź rejestrację klikając link w wysłanym e-mailu.", "success");
+          triggerNotification("Konto zostało utworzone pomyślnie!", "success");
           setIsRegisterForm(false);
           resetPasswordFields();
         }
       } else {
-        // 4. Klasyczne logowanie
+        // 7. Klasyczne logowanie
         const { error } = await supabase.auth.signInWithPassword({
           email: authEmail,
           password: authPassword,
         });
+
         if (error) {
           triggerNotification(translateAuthError(error.message), "error");
         } else {
@@ -145,13 +170,12 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
         }
       }
     } catch (err) {
-      triggerNotification("Wystąpił nieoczekiwany błąd.", "error");
+      triggerNotification("Wystąpił nieoczekiwany błąd serwera.", "error");
     } finally {
       setAuthFormLoading(false);
     }
   };
 
-  // Funkcja określająca nagłówek formularza
   const getFormTitle = () => {
     if (isRecoveryMode) return "Ustaw nowe hasło";
     if (isForgotPassword) return "Przywracanie hasła";
@@ -168,18 +192,29 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
         
         <div className="flex flex-col gap-3 mt-2">
           {isRecoveryMode ? (
-            /* Tryb zmiany hasła */
-            <input
-              type="password"
-              placeholder="Nowe bezpieczne hasło"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              required
-              minLength={8}
-              className="w-full bg-stone-900 border border-stone-800 rounded-xl py-2 px-4 text-sm text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60"
-            />
+            /* Tryb zmiany hasła (po kliknięciu linku z maila) */
+            <>
+              <input
+                type="password"
+                placeholder="Wpisz nowe hasło"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+                minLength={6}
+                className="w-full bg-stone-900 border border-stone-800 rounded-xl py-2 px-4 text-sm text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60"
+              />
+              <input
+                type="password"
+                placeholder="Powtórz nowe hasło"
+                value={confirmNewPassword}
+                onChange={(e) => setConfirmNewPassword(e.target.value)}
+                required
+                minLength={6}
+                className="w-full bg-stone-900 border border-stone-800 rounded-xl py-2 px-4 text-sm text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60"
+              />
+            </>
           ) : isForgotPassword ? (
-            /* Tryb prośby o reset (tylko e-mail) */
+            /* Tryb wysyłania prośby o reset */
             <input
               type="email"
               placeholder="Wpisz swój adres e-mail"
@@ -196,7 +231,6 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
                 placeholder="Twój adres e-mail"
                 value={authEmail}
                 onChange={(e) => setAuthEmail(e.target.value)}
-                minLength={8}
                 required
                 className="w-full bg-stone-900 border border-stone-800 rounded-xl py-2 px-4 text-sm text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60"
               />
@@ -209,7 +243,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
                 className="w-full bg-stone-900 border border-stone-800 rounded-xl py-2 px-4 text-sm text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60"
               />
               
-              {/* NOWE POLE POWTÓRZENIA HASŁA: Widoczne wyłącznie przy zakładaniu konta */}
+              {/* Powtórz hasło (wyłącznie przy rejestracji) */}
               {isRegisterForm && (
                 <input
                   type="password"
@@ -223,7 +257,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
             </>
           )}
 
-          {/* Obowiązkowy checkbox zgody RODO/UOKiK wyłącznie podczas rejestracji */}
+          {/* Obowiązkowy checkbox przy rejestracji */}
           {isRegisterForm && !isForgotPassword && !isRecoveryMode && (
             <div className="flex items-start gap-2 px-1 text-left select-none my-1">
               <input
@@ -245,7 +279,6 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
           
           <button
             type="submit"
-            // Przyciski zablokowane i ze zmniejszoną przezroczystością, jeśli podczas rejestracji nie wybrano zgody
             disabled={authFormLoading || (isRegisterForm && !acceptTerms)}
             className={`w-full mt-2 py-2.5 rounded-xl ${currentTheme.accentBg} text-stone-950 font-bold ${currentTheme.accentHover} transition-all disabled:opacity-30 disabled:cursor-not-allowed`}
           >
@@ -262,7 +295,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
           </button>
         </div>
 
-        {/* Dolna nawigacja między stanami formularza */}
+        {/* Dolna nawigacja */}
         <div className="flex flex-col gap-2 mt-2 text-center">
           {isRecoveryMode ? (
             <button
@@ -271,6 +304,9 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
                 setIsRecoveryMode(false);
                 setIsForgotPassword(false);
                 resetPasswordFields();
+                if (typeof window !== "undefined") {
+                  window.history.replaceState({}, document.title, window.location.pathname);
+                }
               }}
               className="text-xs text-stone-500 hover:underline focus:outline-none"
             >
