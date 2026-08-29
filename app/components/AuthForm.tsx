@@ -90,7 +90,21 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
           return;
         }
 
-        // 2. Zmiana hasła w Supabase
+        // 2. Jeśli sesja nie jest aktywna, pobieramy tokeny bezpośrednio z paska adresu URL
+        if (typeof window !== "undefined" && window.location.hash) {
+          const hashParams = new URLSearchParams(window.location.hash.substring(1));
+          const accessToken = hashParams.get("access_token");
+          const refreshToken = hashParams.get("refresh_token");
+
+          if (accessToken && refreshToken) {
+            await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+          }
+        }
+
+        // 3. Bezpieczna zmiana hasła w Supabase
         const { error } = await supabase.auth.updateUser({
           password: newPassword,
         });
@@ -110,7 +124,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
           }
         }
       } else if (isForgotPassword) {
-        // 3. Wysłanie maila z linkiem resetującym
+        // 4. Wysłanie maila z linkiem resetującym
         const { error } = await supabase.auth.resetPasswordForEmail(authEmail, {
           redirectTo: typeof window !== "undefined" ? window.location.origin : undefined,
         });
@@ -122,7 +136,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
           setIsForgotPassword(false);
         }
       } else if (isRegisterForm) {
-        // 4. Blokada tymczasowych maili
+        // 5. Blokada tymczasowych maili
         if (isDisposableEmail(authEmail)) {
           triggerNotification(
             "Rejestracja za pomocą tymczasowych adresów e-mail jest zablokowana. Użyj prawdziwej skrzynki pocztowej (np. Gmail, Onet, WP).", 
@@ -132,7 +146,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
           return;
         }
 
-        // 5. Sprawdzenie powtórzonego hasła przy rejestracji
+        // 6. Sprawdzenie powtórzonego hasła przy rejestracji
         if (authPassword !== confirmPassword) {
           triggerNotification(
             "Podane hasła nie są identyczne. Upewnij się, że wpisałeś je poprawnie w obu polach.", 
@@ -142,7 +156,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
           return;
         }
 
-        // 6. Rejestracja użytkownika
+        // 7. Rejestracja użytkownika
         const { error } = await supabase.auth.signUp({
           email: authEmail,
           password: authPassword,
@@ -156,7 +170,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
           resetPasswordFields();
         }
       } else {
-        // 7. Klasyczne logowanie
+        // 8. Klasyczne logowanie
         const { error } = await supabase.auth.signInWithPassword({
           email: authEmail,
           password: authPassword,
