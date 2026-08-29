@@ -189,7 +189,7 @@ export default function KontaktPage() {
               <div className="flex flex-col gap-3">
                 {/* TikTok */}
                 <a
-                  href="https://www.tiktok.com/@wiedza_szyta_na_miare" 
+                  href="https://www.tiktok.com/@wiedzaszytanamiare" 
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => playSound("click")}
@@ -204,7 +204,7 @@ export default function KontaktPage() {
 
                 {/* Instagram */}
                 <a
-                  href="https://www.instagram.com/wiedza_szyta_na_miare" 
+                  href="https://www.instagram.com/wiedzaszytanamiare" 
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => playSound("click")}
