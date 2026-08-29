@@ -3,9 +3,9 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { getThemeClasses, CozyTheme } from "../lib/theme"; // 2 poziomy w górę do lib
-import { playSound } from "../lib/sounds"; // 2 poziomy w górę do lib
-import { CozyNotification } from "../components/CozyNotification"; // Importujemy Twoje ładne powiadomienie
+import { getThemeClasses, CozyTheme } from "../lib/theme";
+import { playSound } from "../lib/sounds";
+import { CozyNotification } from "../components/CozyNotification";
 
 export default function KontaktPage() {
   // 1. Lokalne zarządzanie motywem
@@ -39,7 +39,7 @@ export default function KontaktPage() {
     else if (type === "error") playSound("error");
     else playSound("click");
 
-    setTimeout(() => setCozyNotification(null), 6000); // Wyświetlanie przez 6 sekund
+    setTimeout(() => setCozyNotification(null), 6000);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,7 +49,7 @@ export default function KontaktPage() {
     playSound("click");
 
     try {
-      // Wywołujemy prawdziwe API wysyłania wiadomości
+      // Wywołujemy endpoint API Resend
       const response = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -60,14 +60,13 @@ export default function KontaktPage() {
 
       if (response.ok && data.success) {
         setSuccess(true);
-        triggerNotification("Wiadomość została dostarczona na Twoją skrzynkę e-mail! ✉️", "success");
+        triggerNotification("Dziękujemy! Twoja wiadomość dotarła do kącika ✉️", "success");
         
         // Czyścimy pola formularza po udanym wysłaniu
         setEmail("");
         setSubject("");
         setMessage("");
       } else {
-        // Zastąpiono brzydki alert() ładnym powiadomieniem systemowym CozyNotification [11.1]
         triggerNotification(data.error || "Nie udało się wysłać wiadomości. Spróbuj ponownie.", "error");
       }
     } catch (err) {
@@ -97,7 +96,7 @@ export default function KontaktPage() {
           </Link>
         </div>
 
-        {/* Dwukolumnowy układ (Formularz + Dane/Sociale) */}
+        {/* Dwukolumnowy układ */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-stretch">
           
           {/* Lewa kolumna: Formularz kontaktowy */}
@@ -162,22 +161,22 @@ export default function KontaktPage() {
             </form>
           </div>
 
-          {/* Prawa kolumna: Bezpośrednie dane + Sociale */}
+          {/* Prawa kolumna: Oficjalne dane kontaktowe + Social Media */}
           <div className="md:col-span-5 flex flex-col gap-6 justify-between border-t md:border-t-0 md:border-l border-stone-800/50 pt-6 md:pt-0 md:pl-8">
             
-            {/* Bezpośredni mail */}
+            {/* Oficjalny mail w domenie */}
             <div className="flex flex-col gap-3">
               <h3 className="text-xs uppercase tracking-widest text-stone-400 font-bold px-1">
                 Bezpośredni Kontakt
               </h3>
               <div className="p-4 rounded-2xl bg-stone-950/40 border border-stone-800/60 flex flex-col gap-1">
-                <span className="text-[9px] text-stone-500 font-bold uppercase tracking-wider">Adres e-mail:</span>
+                <span className="text-[9px] text-stone-500 font-bold uppercase tracking-wider">Oficjalny adres e-mail:</span>
                 <a 
-                  href="mailto:wiedzaszytanamiare@gmail.com" 
+                  href="mailto:kontakt@wiedzaszytanamiare.pl" 
                   onClick={() => playSound("click")}
                   className="text-xs sm:text-sm font-bold font-mono text-[#c68a4c] hover:text-[#d99c5d] transition-colors"
                 >
-                  wiedzaszytanamiare@gmail.com
+                  kontakt@wiedzaszytanamiare.pl
                 </a>
               </div>
             </div>
@@ -231,7 +230,7 @@ export default function KontaktPage() {
 
       </div>
 
-      {/* SYSTEM POWIADOMIEŃ SYSTEMOWYCH */}
+      {/* SYSTEM POWIADOMIEŃ */}
       <CozyNotification 
         notification={cozyNotification} 
         onClose={() => setCozyNotification(null)} 
