@@ -1,7 +1,7 @@
 // app/ocenianie-rozprawek/page.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
@@ -13,58 +13,60 @@ interface Match {
   annotation: any;
 }
 
-// Baza oficjalnych tematów maturalnych CKE (2022–2026)
-const OFFICIAL_CKE_TOPICS = [
+// Baza oficjalnych tematów maturalnych CKE
+// Baza oficjalnych tematów maturalnych CKE (2023–2026)
+const OFFICIAL_CKE_YEARS = [
   {
-    group: "Matura 2026 (Formuła 2023)",
+    year: "2026",
+    formula: "Formuła 2023",
     topics: [
-      { label: "Maj - Temat 1", text: "Wpływ pracy na człowieka i na otaczającą go rzeczywistość." },
-      { label: "Maj - Temat 2", text: "Kiedy dla człowieka jest ważne, jak postrzegają go inni?" },
-      { label: "Sierpień - Temat 1", text: "Co sprawia, że człowiek poświęca się dla drugiego człowieka?" },
-      { label: "Sierpień - Temat 2", text: "Przeszłość jako inspiracja do działania." },
+      { session: "Maj (Sesja główna)", number: "Temat 1", text: "Wpływ pracy na człowieka i na otaczającą go rzeczywistość." },
+      { session: "Maj (Sesja główna)", number: "Temat 2", text: "Kiedy dla człowieka jest ważne, jak postrzegają go inni?" },
+      { session: "Czerwiec (Sesja dodatkowa)", number: "Temat 1", text: "Rola tradycji i obyczaju w życiu zbiorowości." },
+      { session: "Czerwiec (Sesja dodatkowa)", number: "Temat 2", text: "Samotność – wybór człowieka czy wynik okoliczności?" },
+      { session: "Sierpień (Sesja poprawkowa)", number: "Temat 1", text: "Co sprawia, że człowiek poświęca się dla drugiego człowieka?" },
+      { session: "Sierpień (Sesja poprawkowa)", number: "Temat 2", text: "Przeszłość jako inspiracja do działania." },
     ]
   },
   {
-    group: "Matura 2025 (Formuła 2023)",
+    year: "2025",
+    formula: "Formuła 2023",
     topics: [
-      { label: "Maj - Temat 1", text: "Źródło nadziei w czasach trudnych dla człowieka." },
-      { label: "Maj - Temat 2", text: "Jak błędna ocena sytuacji wpływa na życie człowieka?" },
-      { label: "Sierpień - Temat 1", text: "Co sprawia, że człowiekowi łatwiej jest mierzyć się z życiowymi problemami?" },
-      { label: "Sierpień - Temat 2", text: "Człowiek wobec upływu czasu i wobec śmierci." },
+      { session: "Maj (Sesja główna)", number: "Temat 1", text: "Źródło nadziei w czasach trudnych dla człowieka." },
+      { session: "Maj (Sesja główna)", number: "Temat 2", text: "Jak błędna ocena sytuacji wpływa na życie człowieka?" },
+      { session: "Czerwiec (Sesja dodatkowa)", number: "Temat 1", text: "Dążenie do sprawiedliwości i jego konsekwencje dla jednostki i społeczeństwa." },
+      { session: "Czerwiec (Sesja dodatkowa)", number: "Temat 2", text: "Wierność własnym zasadom w obliczu próby." },
+      { session: "Sierpień (Sesja poprawkowa)", number: "Temat 1", text: "Co sprawia, że człowiekowi łatwiej jest mierzyć się z życiowymi problemami?" },
+      { session: "Sierpień (Sesja poprawkowa)", number: "Temat 2", text: "Człowiek wobec upływu czasu i wobec śmierci." },
     ]
   },
   {
-    group: "Matura 2024 (Formuła 2023)",
+    year: "2024",
+    formula: "Formuła 2023",
     topics: [
-      { label: "Maj - Temat 1", text: "Bunt i jego konsekwencje dla człowieka." },
-      { label: "Maj - Temat 2", text: "Jak relacja z drugą osobą kształtuje człowieka?" },
-      { label: "Sierpień - Temat 1", text: "Co motywuje człowieka do przemiany?" },
-      { label: "Sierpień - Temat 2", text: "Człowiek w poszukiwaniu prawdy o sobie i o świecie, w którym żyje." },
+      { session: "Maj (Sesja główna)", number: "Temat 1", text: "Bunt i jego konsekwencje dla człowieka." },
+      { session: "Maj (Sesja główna)", number: "Temat 2", text: "Jak relacja z drugą osobą kształtuje człowieka?" },
+      { session: "Czerwiec (Sesja dodatkowa)", number: "Temat 1", text: "Trudne wybory moralne i ich wpływ na losy człowieka." },
+      { session: "Czerwiec (Sesja dodatkowa)", number: "Temat 2", text: "Rola marzeń i ideałów w życiu jednostki." },
+      { session: "Sierpień (Sesja poprawkowa)", number: "Temat 1", text: "Co motywuje człowieka do przemiany?" },
+      { session: "Sierpień (Sesja poprawkowa)", number: "Temat 2", text: "Człowiek w poszukiwaniu prawdy o sobie i o świecie, w którym żyje." },
     ]
   },
   {
-    group: "Matura 2023 (Formuła 2023 & 2015)",
+    year: "2023",
+    formula: "Formuła 2023",
     topics: [
-      { label: "Maj (F2023) - Temat 1", text: "Człowiek – istota pełna sprzeczności." },
-      { label: "Maj (F2023) - Temat 2", text: "Co sprawia, że człowiek staje się dla drugiego człowieka bohaterem?" },
-      { label: "Sierpień (F2023) - Temat 1", text: "Autentyczność i udawanie w relacjach międzyludzkich." },
-      { label: "Sierpień (F2023) - Temat 2", text: "Wolność – dar, ale również odpowiedzialność." },
-      { label: "Maj (F2015) - Temat 1", text: "Jak niespodziewane okoliczności wpływają na zachowanie człowieka? (na podstawie Pana Tadeusza)" },
-      { label: "Maj (F2015) - Temat 2", text: "Czy nieprzyjemne prawdy są lepsze od przyjemnych złudzeń? (na podstawie Przedwiośnia)" },
-    ]
-  },
-  {
-    group: "Matura 2022 (Formuła 2015)",
-    topics: [
-      { label: "Maj - Temat 1", text: "Czym dla człowieka może być tradycja? (na podstawie Pana Tadeusza oraz innych tekstów kultury)" },
-      { label: "Maj - Temat 2", text: "Kiedy relacja z drugim człowiekiem staje się źródłem szczęścia? (na podstawie Nocy i dni oraz innych tekstów kultury)" },
-      { label: "Sierpień - Temat 1", text: "Czy w życiu możliwe jest zadośćuczynienie za popełnione przewinienia? (na podstawie Pana Tadeusza oraz innych tekstów kultury)" },
-      { label: "Sierpień - Temat 2", text: "Czy człowiek marzy o piękniejszym świecie, czy stara się zmieniać ten, w którym żyje? (na podstawie Ludzi bezdomnych oraz innych tekstów kultury)" },
+      { session: "Maj (Sesja główna)", number: "Temat 1", text: "Człowiek – istota pełna sprzeczności." },
+      { session: "Maj (Sesja główna)", number: "Temat 2", text: "Co sprawia, że człowiek staje się dla drugiego człowieka bohaterem?" },
+      { session: "Czerwiec (Sesja dodatkowa)", number: "Temat 1", text: "Różne postawy człowieka wobec cierpienia." },
+      { session: "Czerwiec (Sesja dodatkowa)", number: "Temat 2", text: "Czym dla człowieka może być podróż?" },
+      { session: "Sierpień (Sesja poprawkowa)", number: "Temat 1", text: "Autentyczność i udawanie w relacjach międzyludzkich." },
+      { session: "Sierpień (Sesja poprawkowa)", number: "Temat 2", text: "Wolność – dar, ale również odpowiedzialność." },
     ]
   }
 ];
 
-// Funkcja pomocnicza: sprawdza, czy w tekście znajduje się pojedyncze słowo dłuższe niż 20 znaków (Zabezpieczenie przed Spamem)
+// Zabezpieczenie przed Spamem
 const isSpamText = (text: string) => {
   const words = text.split(/\s+/).filter(Boolean);
   return words.some(word => word.length > 20);
@@ -73,7 +75,7 @@ const isSpamText = (text: string) => {
 export default function OcenianieRozprawekPage() {
   const router = useRouter();
 
-  // Dynamiczny stan i efekt ładowania motywu
+  // Dynamiczny stan motywu
   const [currentTheme, setCurrentTheme] = useState<any>(getThemeClasses("library"));
 
   useEffect(() => {
@@ -93,16 +95,21 @@ export default function OcenianieRozprawekPage() {
   const [selectedTopic, setSelectedTopic] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isGenerationMode, setIsGenerationMode] = useState(false); // Tryb generowania przykładowej pracy
+  const [isGenerationMode, setIsGenerationMode] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [generatedContexts, setGeneratedContexts] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
+
+  // Stany selektora tematów CKE (Modal)
+  const [isTopicModalOpen, setIsTopicModalOpen] = useState(false);
+  const [activeYearTab, setActiveYearTab] = useState("2026");
 
   // Stan historii ocen
   const [history, setHistory] = useState<any[]>([]);
 
   // Powiadomienia wewnętrzne
   const [notification, setNotification] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [topicSearch, setTopicSearch] = useState("");
 
   const triggerAlert = (message: string, type: "success" | "error" = "success") => {
     setNotification({ message, type });
@@ -157,13 +164,18 @@ export default function OcenianieRozprawekPage() {
     }
   }
 
+  const handleSelectCkeTopic = (topicText: string) => {
+    setSelectedTopic(topicText);
+    setIsTopicModalOpen(false);
+    triggerAlert("Wstawiono oficjalny temat z bazy CKE! 📜", "success");
+  };
+
   const handleAnalyze = async () => {
     if (!selectedTopic.trim()) {
       triggerAlert("Wprowadź temat rozprawki przed rozpoczęciem analizy!", "error");
       return;
     }
 
-    // Walidacja limitu słów i spamu dla tematu rozprawki
     const topicWords = selectedTopic.split(/\s+/).filter(Boolean);
     const hasInvalidTopicWord = topicWords.some((word) => word.length > 20);
 
@@ -182,13 +194,11 @@ export default function OcenianieRozprawekPage() {
       return;
     }
 
-    // Walidacja limitu znaków wypracowania
     if (essayText.length > 10000) {
       triggerAlert("Wypracowanie jest zbyt długie (maksymalnie 10 000 znaków)!", "error");
       return;
     }
 
-    // Walidacja spamu (zbyt długie słowa w wypracowaniu)
     const essayWords = essayText.split(/\s+/).filter(Boolean);
     const hasInvalidEssayWord = essayWords.some((word) => word.length > 20);
 
@@ -427,17 +437,15 @@ export default function OcenianieRozprawekPage() {
   const creditsRemaining = profile?.essay_credits ?? 0;
   const currentWordCount = essayText.split(/\s+/).filter(Boolean).length;
 
-  // DYNAMICZNE, NATYCHMIASTOWE OBLICZANIE BŁĘDÓW WALIDACYJNYCH
   const isTopicSpam = isSpamText(selectedTopic);
   const isEssaySpam = isSpamText(essayText);
-  
   const isTopicLengthExceeded = selectedTopic.length > 2000;
   const isEssayLengthExceeded = essayText.length > 10000;
-
   const topicWordsCount = selectedTopic.split(/\s+/).filter(Boolean).length;
   const isTopicWordsExceeded = topicWordsCount > 200;
-
   const hasValidationError = isTopicSpam || isEssaySpam || isTopicLengthExceeded || isEssayLengthExceeded || isTopicWordsExceeded;
+
+  const currentYearData = OFFICIAL_CKE_YEARS.find(y => y.year === activeYearTab);
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-500 ${currentTheme.bg} text-stone-200 font-sans p-6 items-center`}>
@@ -447,6 +455,216 @@ export default function OcenianieRozprawekPage() {
           notification.type === "success" ? "bg-emerald-950/90 border-emerald-500/30 text-emerald-200" : "bg-red-950/90 border-red-500/30 text-red-200"
         }`}>
           <p className="text-xs font-semibold leading-relaxed pr-2">{notification.message}</p>
+        </div>
+      )}
+
+      {/* ELEGANCKI MODAL WYBORU TEMATÓW CKE */}
+      {/* NOWOCZESNY, CZYTELNY MODAL TEMATÓW CKE */}
+      {isTopicModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+          <div className="bg-[#181311] border border-stone-800 rounded-3xl p-5 sm:p-7 max-w-3xl w-full shadow-2xl flex flex-col gap-5 max-h-[90vh] overflow-hidden">
+            
+            {/* Nagłówek i Wyszukiwarka */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-stone-800/80 pb-4 gap-4">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl sm:text-3xl p-2 rounded-2xl bg-amber-950/40 border border-amber-900/40">📜</span>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold font-serif text-stone-100">Baza Oficjalnych Tematów CKE</h3>
+                  <p className="text-[11px] text-stone-400">Wybierz gotowy temat maturalny, aby przeanalizować pracę</p>
+                </div>
+              </div>
+
+              {/* Wyszukiwarka motywów */}
+              <div className="relative w-full sm:w-64">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500 text-xs">🔍</span>
+                <input
+                  type="text"
+                  placeholder="Szukaj (np. bunt, praca, nadzieja)..."
+                  value={topicSearch}
+                  onChange={(e) => setTopicSearch(e.target.value)}
+                  className="w-full bg-stone-950 border border-stone-800 rounded-xl py-2 pl-8 pr-8 text-xs text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-600/70 transition-all font-sans"
+                />
+                {topicSearch && (
+                  <button 
+                    onClick={() => setTopicSearch("")} 
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-300 text-xs"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Zakładki Roczników (ukrywane podczas wyszukiwania) */}
+            {!topicSearch && (
+              <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 border-b border-stone-800/50">
+                <div className="flex gap-2">
+                  {OFFICIAL_CKE_YEARS.map((y) => (
+                    <button
+                      key={y.year}
+                      onClick={() => setActiveYearTab(y.year)}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-2 ${
+                        activeYearTab === y.year
+                          ? "bg-[#c68a4c] text-stone-950 shadow-lg scale-102 font-serif"
+                          : "bg-stone-900/60 border border-stone-800 text-stone-400 hover:text-stone-200 hover:bg-stone-800"
+                      }`}
+                    >
+                      <span>Matura {y.year}</span>
+                    </button>
+                  ))}
+                </div>
+                <span className="text-[10px] text-amber-500/80 font-mono tracking-widest hidden md:inline-block">
+                  {currentYearData?.formula}
+                </span>
+              </div>
+            )}
+
+            {/* Siatka Tematów */}
+            <div className="flex flex-col gap-4 overflow-y-auto pr-1">
+              {topicSearch ? (
+                // Wyniki wyszukiwania we wszystkich latach
+                <div className="space-y-4">
+                  <p className="text-[11px] text-stone-400">
+                    Wyniki wyszukiwania dla frazy: <strong className="text-amber-400">„{topicSearch}”</strong>
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {OFFICIAL_CKE_YEARS.flatMap(y => 
+                      y.topics.map(t => ({ ...t, year: y.year }))
+                    ).filter(t => t.text.toLowerCase().includes(topicSearch.toLowerCase())).map((t, idx) => (
+                      <div
+                        key={idx}
+                        onClick={() => handleSelectCkeTopic(t.text)}
+                        className="p-4 rounded-2xl bg-stone-900/40 border border-stone-800 hover:border-amber-600/60 hover:bg-[#231b17] transition-all cursor-pointer group flex flex-col justify-between gap-3 shadow-md"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-amber-950/60 text-amber-400 border border-amber-900/40">
+                            Matura {t.year} • {t.session.split(" ")[0]}
+                          </span>
+                          <span className="text-[10px] text-stone-500 font-mono">{t.number}</span>
+                        </div>
+                        <p className="text-xs sm:text-[13px] text-stone-100 font-serif leading-relaxed group-hover:text-amber-200 transition-colors">
+                          „{t.text}”
+                        </p>
+                        <div className="text-[10px] text-[#c68a4c] font-semibold flex items-center gap-1 opacity-80 group-hover:opacity-100">
+                          Wybierz ten temat <span>→</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                // Standardowy widok z podziałem na sesje wybranego roku
+                <div className="space-y-5">
+                  {/* Sesja Główna (Maj) */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-2 px-1">
+                      <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+                      <h4 className="text-[11px] uppercase tracking-widest text-amber-400 font-bold">
+                        Sesja Główna (Maj)
+                      </h4>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {currentYearData?.topics.filter(t => t.session.includes("Maj")).map((t, idx) => (
+                        <div
+                          key={idx}
+                          onClick={() => handleSelectCkeTopic(t.text)}
+                          className="p-4 rounded-2xl bg-stone-900/40 border border-stone-800/80 hover:border-amber-500/60 hover:bg-[#241c18] transition-all cursor-pointer group flex flex-col justify-between gap-3 shadow-sm hover:shadow-xl"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[9px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-amber-950/60 text-amber-300 border border-amber-800/40">
+                              {t.number}
+                            </span>
+                            <span className="text-[10px] text-[#c68a4c] font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                              Wstaw do edytora ↵
+                            </span>
+                          </div>
+                          <p className="text-xs sm:text-[13px] text-stone-100 font-serif leading-relaxed">
+                            „{t.text}”
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Sesja Dodatkowa (Czerwiec) - jeśli istnieje */}
+                  {currentYearData?.topics.some(t => t.session.includes("Czerwiec")) && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2 px-1">
+                        <span className="w-2 h-2 rounded-full bg-sky-400"></span>
+                        <h4 className="text-[11px] uppercase tracking-widest text-sky-400 font-bold">
+                          Sesja Dodatkowa (Czerwiec)
+                        </h4>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {currentYearData?.topics.filter(t => t.session.includes("Czerwiec")).map((t, idx) => (
+                          <div
+                            key={idx}
+                            onClick={() => handleSelectCkeTopic(t.text)}
+                            className="p-4 rounded-2xl bg-stone-900/40 border border-stone-800/80 hover:border-sky-500/60 hover:bg-[#152026] transition-all cursor-pointer group flex flex-col justify-between gap-3 shadow-sm hover:shadow-xl"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-[9px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-sky-950/60 text-sky-300 border border-sky-800/40">
+                                {t.number}
+                              </span>
+                              <span className="text-[10px] text-sky-400 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                                Wstaw do edytora ↵
+                              </span>
+                            </div>
+                            <p className="text-xs sm:text-[13px] text-stone-100 font-serif leading-relaxed">
+                              „{t.text}”
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sesja Poprawkowa (Sierpień) */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-2 px-1">
+                      <span className="w-2 h-2 rounded-full bg-orange-400"></span>
+                      <h4 className="text-[11px] uppercase tracking-widest text-orange-400 font-bold">
+                        Sesja Poprawkowa (Sierpień)
+                      </h4>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {currentYearData?.topics.filter(t => t.session.includes("Sierpień")).map((t, idx) => (
+                        <div
+                          key={idx}
+                          onClick={() => handleSelectCkeTopic(t.text)}
+                          className="p-4 rounded-2xl bg-stone-900/40 border border-stone-800/80 hover:border-orange-500/60 hover:bg-[#261914] transition-all cursor-pointer group flex flex-col justify-between gap-3 shadow-sm hover:shadow-xl"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[9px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-orange-950/60 text-orange-300 border border-orange-800/40">
+                              {t.number}
+                            </span>
+                            <span className="text-[10px] text-orange-400 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                              Wstaw do edytora ↵
+                            </span>
+                          </div>
+                          <p className="text-xs sm:text-[13px] text-stone-100 font-serif leading-relaxed">
+                            „{t.text}”
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Stopka Modalu */}
+            <div className="border-t border-stone-800/80 pt-3 flex justify-between items-center text-[11px] text-stone-500">
+              <span>Wszystkie tematy pochodzą z oficjalnych arkuszy CKE</span>
+              <button
+                onClick={() => setIsTopicModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 border border-stone-800 text-stone-300 text-xs font-semibold transition-all"
+              >
+                Zamknij okno
+              </button>
+            </div>
+
+          </div>
         </div>
       )}
 
@@ -498,40 +716,25 @@ export default function OcenianieRozprawekPage() {
                   Temat Twojej rozprawki (Maksymalnie 200 słów)
                 </label>
                 
-                {/* SELECTOR Z OFICJALNYMI TEMATAMI CKE */}
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-stone-400 font-medium">📚 Sugerowane CKE:</span>
-                  <select
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        setSelectedTopic(e.target.value);
-                      }
-                    }}
-                    value=""
-                    disabled={isAnalyzing || isGenerating}
-                    className="bg-stone-950 border border-stone-800 rounded-lg py-1 px-2.5 text-[11px] text-[#c68a4c] font-semibold focus:outline-none focus:border-amber-700/60 max-w-[200px] sm:max-w-[240px] truncate cursor-pointer transition-all hover:border-stone-700"
-                  >
-                    <option value="" disabled>Wybierz oficjalny temat...</option>
-                    {OFFICIAL_CKE_TOPICS.map((group, gIdx) => (
-                      <optgroup key={gIdx} label={group.group} className="bg-stone-900 text-stone-300 font-normal">
-                        {group.topics.map((item, tIdx) => (
-                          <option key={tIdx} value={item.text} className="bg-stone-950 text-stone-200">
-                            {item.label}: {item.text}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
-                </div>
+                {/* NOWOCZESNY PRZYCISK OTWIERAJĄCY BAZĘ TEMATÓW CKE */}
+                <button
+                  type="button"
+                  onClick={() => setIsTopicModalOpen(true)}
+                  disabled={isAnalyzing || isGenerating}
+                  className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#231b16] border border-amber-800/40 hover:border-amber-500/70 hover:bg-[#2c221c] text-[#c68a4c] hover:text-[#d99c5d] text-[11px] font-bold transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-50"
+                >
+                  <span>📚</span>
+                  <span>Wybierz z bazy CKE (2022–2026) ▾</span>
+                </button>
               </div>
 
               <input 
                 type="text"
-                placeholder="Wpisz tutaj pełny temat swojej rozprawki lub wybierz z listy powyżej..."
+                placeholder="Wpisz tutaj pełny temat swojej rozprawki lub wybierz z bazy CKE powyżej..."
                 value={selectedTopic}
                 onChange={(e) => setSelectedTopic(e.target.value)}
                 disabled={isAnalyzing || isGenerating}
-                className="w-full bg-stone-900 border border-stone-800 rounded-xl py-2.5 px-3.5 text-xs sm:text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-700/60 font-sans"
+                className="w-full bg-stone-900/90 border border-stone-800 rounded-xl py-2.5 px-3.5 text-xs sm:text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-700/60 font-sans transition-all"
               />
 
               {/* OSTRZEŻENIA DLA POLA TEMATU */}
@@ -650,7 +853,7 @@ export default function OcenianieRozprawekPage() {
                   <button
                     onClick={handleGenerateEssay}
                     disabled={isAnalyzing || isGenerating || isTopicSpam || isTopicLengthExceeded || isTopicWordsExceeded}
-                    className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold transition-all text-xs sm:text-sm shadow-md disabled:bg-stone-800 disabled:text-stone-500"
+                    className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold transition-all text-xs sm:text-sm shadow-md disabled:bg-stone-800 disabled:text-stone-500 cursor-pointer"
                   >
                     {isGenerating ? "✍ Trwa generowanie rozprawki..." : "Generuj przykładową rozprawkę (1 kredyt)"}
                   </button>
@@ -658,7 +861,7 @@ export default function OcenianieRozprawekPage() {
                   <button
                     onClick={handleAnalyze}
                     disabled={isAnalyzing || isGenerating || hasValidationError}
-                    className="w-full py-3 rounded-xl bg-[#c68a4c] hover:bg-[#d99c5d] text-stone-950 font-bold transition-all text-xs sm:text-sm shadow-md disabled:bg-stone-800 disabled:text-stone-500"
+                    className="w-full py-3 rounded-xl bg-[#c68a4c] hover:bg-[#d99c5d] text-stone-950 font-bold transition-all text-xs sm:text-sm shadow-md disabled:bg-stone-800 disabled:text-stone-500 cursor-pointer"
                   >
                     {isAnalyzing ? "🤖 Trwa analiza tekstu..." : "Przeanalizuj rozprawkę (1 kredyt)"}
                   </button>
@@ -677,7 +880,7 @@ export default function OcenianieRozprawekPage() {
               </div>
             )}
 
-            {/* Alternatywne konteksty wyświetlane pod edytorem */}
+            {/* Alternatywne konteksty */}
             {activeTab === "write" && generatedContexts.length > 0 && (
               <div className="mt-4 p-4 rounded-2xl bg-stone-950/50 border border-stone-800/80 animate-fade-in">
                 <h4 className="text-xs uppercase tracking-widest text-amber-500 font-bold mb-3 flex items-center gap-2">
@@ -761,7 +964,7 @@ export default function OcenianieRozprawekPage() {
 
         </div>
 
-        {/* Sekcja historii prac użytkownika na samym dole strony */}
+        {/* Sekcja historii */}
         {history.length > 0 && (
           <div className="border-t border-stone-800/60 pt-6 mt-2">
             <h3 className="text-xs uppercase tracking-widest text-amber-500 font-bold mb-4 flex items-center gap-2">
@@ -869,13 +1072,11 @@ function AtmosphericEssayLoader({ mode }: { mode: "analyze" | "generate" }) {
         .animate-spin-reverse-slow { animation: spin-reverse-slow 25s linear infinite; }
       `}} />
 
-      {/* Środkowy element graficzny */}
       <div className="relative w-36 h-36 flex items-center justify-center mb-6">
         <div className="absolute inset-4 bg-amber-500/10 rounded-full blur-2xl animate-pulse-glow" />
         <div className="absolute inset-0 rounded-full border-2 border-dashed border-amber-500/10 animate-spin-slow" />
         <div className="absolute inset-2 rounded-full border border-dotted border-orange-500/20 animate-spin-reverse-slow" />
 
-        {/* Pływające pióro i otwarta księga (SVG) */}
         <div className="absolute z-10 animate-float flex items-center justify-center text-amber-500/80">
           <svg className="w-16 h-20 drop-shadow-[0_0_15px_rgba(245,158,11,0.3)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.967 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
@@ -883,7 +1084,6 @@ function AtmosphericEssayLoader({ mode }: { mode: "analyze" | "generate" }) {
           </svg>
         </div>
 
-        {/* Unoszące się iskrzące drobiny */}
         <div className="absolute inset-0 pointer-events-none">
           <span className="absolute w-1 h-1 rounded-full bg-amber-400" style={{ animation: 'particle-rise 4s ease-in-out infinite', left: '25%', bottom: '20px', animationDelay: '0.2s' }} />
           <span className="absolute w-1.5 h-1.5 rounded-full bg-orange-400" style={{ animation: 'particle-rise 5s ease-in-out infinite', left: '45%', bottom: '20px', animationDelay: '1.8s' }} />
@@ -893,7 +1093,6 @@ function AtmosphericEssayLoader({ mode }: { mode: "analyze" | "generate" }) {
         </div>
       </div>
 
-      {/* Podpisy statusu */}
       <div className="max-w-xs">
         <p className="text-xs uppercase tracking-widest text-amber-500 font-bold mb-1.5 animate-pulse">
           {mode === "generate" ? "Trwa generowanie rozprawki..." : "Trwa analiza wypracowania..."}
