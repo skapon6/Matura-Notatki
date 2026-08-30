@@ -1,4 +1,3 @@
-// app/notes/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -46,11 +45,14 @@ export default function WszystkieNotatkiPage() {
   const [notes, setNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Stany wyszukiwania i filtrowania epok oraz typu (Wszystkie | Same Epoki | Same Lektury | Inne)
+  // Stany wyszukiwania i filtrowania epok oraz typu
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEra, setSelectedEra] = useState("Wszystkie");
   const [selectedType, setSelectedType] = useState<"all" | "epoka" | "lektura" | "inne">("all");
-  const [showOnlyFree, setShowOnlyFree] = useState(false); // Nowy stan filtra darmowych notatek
+  const [showOnlyFree, setShowOnlyFree] = useState(false);
+
+  // NOWOŚĆ: Stan zapisanych (przeczytanych) notatek
+  const [readNotes, setReadNotes] = useState<number[]>([]);
 
   // System przytulnych powiadomień
   const [cozyNotification, setCozyNotification] = useState<{
@@ -81,6 +83,16 @@ export default function WszystkieNotatkiPage() {
     "Wojna i Okupacja",
     "Współczesność",
   ];
+
+  // Odczyt z LocalStorage przy starcie
+  useEffect(() => {
+    const stored = localStorage.getItem("read_notes");
+    if (stored) {
+      try {
+        setReadNotes(JSON.parse(stored));
+      } catch (e) {}
+    }
+  }, []);
 
   // Monitorowanie sesji, profilu i wczytywanie notatek z bazy
   useEffect(() => {
@@ -137,12 +149,30 @@ export default function WszystkieNotatkiPage() {
     fetchUserDataAndNotes();
   }, []);
 
+  // NOWOŚĆ: Funkcja do oznaczania notatki jako przeczytanej
+  const toggleReadNote = (noteId: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const isCurrentlyRead = readNotes.includes(noteId);
+    let updatedReads;
+
+    if (isCurrentlyRead) {
+      updatedReads = readNotes.filter((id) => id !== noteId);
+    } else {
+      updatedReads = [...readNotes, noteId];
+      playSound("success"); // Dodajemy miły dźwięk przy zaznaczeniu
+    }
+
+    setReadNotes(updatedReads);
+    localStorage.setItem("read_notes", JSON.stringify(updatedReads));
+  };
+
   // Bezpieczne pobieranie opisu i parsowanie z tablicy JSONB z bazy danych
   const getNoteDescription = (note: any) => {
     const content = note.content;
     if (!content) return "";
     
-    // Jeśli to czysty string
     if (typeof content === "string") {
       if (content.startsWith('["') && content.endsWith('"]')) {
         try {
@@ -153,7 +183,6 @@ export default function WszystkieNotatkiPage() {
       return content;
     }
     
-    // Jeśli to tablica (JSONB array)
     if (Array.isArray(content)) {
       const first = content[0];
       if (typeof first === "string") return first;
@@ -185,7 +214,7 @@ export default function WszystkieNotatkiPage() {
     }
     
     if (note.type === "epoka") {
-      return "📜 Kontekst epoki"; // Zmiana klepsydry na zwój pisma
+      return "📜 Kontekst epoki"; 
     }
     
     return "💡 Pomocnik naukowy";
@@ -193,12 +222,10 @@ export default function WszystkieNotatkiPage() {
 
   // Filtrowanie notatek na podstawie wyszukiwarki, kafelków epok oraz typu
   const filteredNotes = notes.filter((note) => {
-    // 0. Filtrowanie po "Tylko darmowe" (wyświetlane i aktywne tylko gdy brak pełnego dostępu)
     if (!hasAccess && showOnlyFree && !note.is_free) {
       return false;
     }
 
-    // 1. Filtrowanie po wybranej epoce
     if (selectedEra !== "Wszystkie") {
       const eraMatch = note.era?.toLowerCase() === selectedEra.toLowerCase();
       const specialMatch = 
@@ -208,7 +235,6 @@ export default function WszystkieNotatkiPage() {
       if (!eraMatch && !specialMatch) return false;
     }
 
-    // 2. Filtrowanie po rodzaju notatki (lektura vs epoka vs pomocniki)
     if (selectedType !== "all") {
       if (selectedType === "inne") {
         if (note.type === "epoka" || note.type === "lektura") {
@@ -219,7 +245,6 @@ export default function WszystkieNotatkiPage() {
       }
     }
 
-    // 3. Filtrowanie po wpisanej frazie
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const titleMatch = note.title?.toLowerCase().includes(query);
@@ -247,9 +272,7 @@ export default function WszystkieNotatkiPage() {
         if (isInteractive) {
           playSound("click");
         }
-      } catch (err) {
-        // Ignorujemy cicho błędy
-      }
+      } catch (err) {}
     };
 
     window.addEventListener("click", handleGlobalClick);
@@ -259,7 +282,6 @@ export default function WszystkieNotatkiPage() {
     };
   }, []);
 
-  // Obsługa kliknięcia w notatkę (zabezpieczenie Premium)
   const handleOpenNote = (note: any) => {
     if (!user) {
       triggerNotification("🔑 Zaloguj się na stronie głównej, aby czytać notatki!", "info");
@@ -360,7 +382,6 @@ export default function WszystkieNotatkiPage() {
               Rodzaj notatek:
             </span>
             <div className="flex gap-1.5 flex-wrap">
-              {/* NOWY PRZYCISK: Szybki filtr darmowych notatek (wyświetlany wyłącznie gdy użytkownik NIE ma pełnego dostępu) */}
               {!hasAccess && (
                 <button
                   onClick={() => {
@@ -379,7 +400,7 @@ export default function WszystkieNotatkiPage() {
 
               {[
                 { id: "all" as const, label: "Wszystkie" },
-                { id: "epoka" as const, label: "📜 Same Epoki" }, // Zmiana klepsydry na zwój pisma
+                { id: "epoka" as const, label: "📜 Same Epoki" },
                 { id: "lektura" as const, label: "📖 Same Lektury" },
                 { id: "inne" as const, label: "📝 Pomocniki / Inne" },
               ].map((typeItem) => (
@@ -446,7 +467,8 @@ export default function WszystkieNotatkiPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredNotes.map((note) => {
               const isLocked = !note.is_free && !hasAccess;
-              const isFreeNoteStyle = !hasAccess && note.is_free; // Wyświetlane tylko gdy darmowe konto i darmowa notatka
+              const isFreeNoteStyle = !hasAccess && note.is_free;
+              const isRead = readNotes.includes(note.id); // Odczytanie statusu przeczytania
               
               const cardBorderClass = isFreeNoteStyle ? "border-emerald-800/40" : currentTheme.cardBorder;
               const cardBgClass = isFreeNoteStyle ? "bg-emerald-950/10 shadow-emerald-950/20" : currentTheme.cardBg;
@@ -464,7 +486,6 @@ export default function WszystkieNotatkiPage() {
                           📍 {note.era || "Pomocnik"}
                         </span>
                         
-                        {/* Dynamiczny badge typu merytorycznego z bazy danych */}
                         <span className={`text-[9px] uppercase tracking-widest font-extrabold px-2 py-0.5 rounded border ${
                           note.type === "epoka" 
                             ? "bg-purple-950/40 border-purple-900/50 text-purple-400" 
@@ -475,7 +496,6 @@ export default function WszystkieNotatkiPage() {
                           {note.type === "epoka" ? "📜 Epoka" : note.type === "lektura" ? "📖 Lektura" : "📝 Pomocnik"}
                         </span>
 
-                        {/* ZIELONY BADGE DARMOWEJ NOTATKI (wyświetlany wyłącznie gdy darmowe konto i darmowa notatka) */}
                         {isFreeNoteStyle && (
                           <span className="bg-emerald-950/80 text-emerald-400 border border-emerald-800/40 text-[9px] uppercase font-bold px-2 py-0.5 rounded-md tracking-wide animate-pulse">
                             🎁 Darmowa
@@ -483,7 +503,6 @@ export default function WszystkieNotatkiPage() {
                         )}
                       </div>
                       
-                      {/* Trudność notatki ze zmienionymi kolorami (Łatwy -> zielony, Średni -> pomarańczowy, Trudny -> czerwony) */}
                       <span className={`text-[9px] uppercase tracking-widest font-extrabold px-2 py-0.5 rounded border shrink-0 ${
                         ["łatwy", "latwy", "easy"].includes((note.difficulty || "Średni").toLowerCase())
                           ? "bg-emerald-950/50 border-emerald-900/40 text-emerald-400"
@@ -499,14 +518,12 @@ export default function WszystkieNotatkiPage() {
                       {note.title}
                     </h2>
 
-                    {/* Poprawiony opis pobierany bezpośrednio z bazy danych i wyświetlany w całości */}
                     <p className="text-xs text-stone-400 leading-relaxed font-sans">
                       {getNoteDescription(note)}
                     </p>
                   </div>
 
                   <div className="flex flex-col gap-3 mt-2">
-                   {/* Lista tagów (chips) */}
                     {Array.isArray(note.chips) && (
                       <div className="flex flex-wrap gap-1.5">
                         {note.chips.map((chip: string) => (
@@ -520,30 +537,43 @@ export default function WszystkieNotatkiPage() {
                       </div>
                     )}
 
-                    {/* DYNAMICZNY ZNACZNIK DATY / MATURA HINT ORAZ CZAS CZYTANIA */}
                     <div className="flex items-center justify-between text-[11px] text-stone-500 font-sans px-1">
                       <span>{getBottomLeftMetadata(note)}</span>
                       <span>⏱️ {note.read_time || note.readTime || (Math.max(2, Math.round((String(note.content || "")).split(/\s+/).length / 150)) + " min")}</span>
                     </div>
 
-                    {/* Przycisk otwierania (z kłódką dla zablokowanych lektur) */}
-                   {isLocked ? (
+                    {/* NOWOŚĆ: Dwa obok siebie przyciski: Otwórz i Przeczytano */}
+                    <div className="flex items-center gap-2 mt-1">
                       <button
-                        onClick={() => handleOpenNote(note)}
-                        className="w-full py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 bg-stone-950 border border-stone-800 text-stone-500 hover:bg-stone-900/40"
+                        onClick={(e) => toggleReadNote(note.id, e)}
+                        className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border ${
+                          isRead
+                            ? "bg-emerald-950/40 border-emerald-900/50 text-emerald-400 hover:bg-emerald-900/40"
+                            : "bg-stone-900/40 border-stone-800/60 text-stone-400 hover:bg-stone-800/60 hover:text-stone-200"
+                        }`}
                       >
-                        <span>🔒</span> Zablokowane (Wymaga pakietu)
+                        {isRead ? "✔️ Przeczytane" : "✔️ Zaznacz"}
                       </button>
-                    ) : (
-                      <a
-                        href={`/notes/${note.slug}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 bg-amber-500 text-stone-950 hover:bg-amber-400 shadow-md"
-                      >
-                        Otwórz notatkę 📖
-                      </a>
-                    )}
+
+                      {isLocked ? (
+                        <button
+                          onClick={() => handleOpenNote(note)}
+                          className="flex-[2] py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 bg-stone-950 border border-stone-800 text-stone-500 hover:bg-stone-900/40"
+                        >
+                          <span>🔒</span> Zablokowane
+                        </button>
+                      ) : (
+                        <a
+                          href={`/notes/${note.slug}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-[2] py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 bg-amber-500 text-stone-950 hover:bg-amber-400 shadow-md"
+                        >
+                          Otwórz notatkę 📖
+                        </a>
+                      )}
+                    </div>
+
                   </div>
                 </CozyGlowCard>
               );
@@ -552,7 +582,6 @@ export default function WszystkieNotatkiPage() {
         )}
       </main>
 
-      {/* SYSTEM POWIADOMIEŃ */}
       <CozyNotification 
         notification={cozyNotification} 
         onClose={() => setCozyNotification(null)} 
