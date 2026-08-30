@@ -313,6 +313,49 @@ export default function Home() {
         handlePremiumNavigation={handlePremiumNavigation}
       />
 
+      
+      {/* --- NOWOŚĆ: POWIADOMIENIE O REGULAMINIE --- */}
+      {user && (() => {
+        // Sprawdzamy lokalnie, czy uczeń ukrył już powiadomienie
+        // UWAGA: Używamy useState i useEffect, aby nie wywołać błędu Hydratacji w Next.js
+        const [showTosBanner, setShowTosBanner] = useState(false);
+
+        useEffect(() => {
+          // Unikalny klucz dla tej konkretnej aktualizacji.
+          // Jeśli znowu zmienisz regulamin np. w 2027, zmieniasz tu nazwę na "tos_accepted_v2"
+          const hasAccepted = localStorage.getItem("tos_accepted_v1"); 
+          if (!hasAccepted) {
+            setShowTosBanner(true);
+          }
+        }, []);
+
+        const acceptTos = () => {
+          localStorage.setItem("tos_accepted_v1", "true");
+          setShowTosBanner(false);
+          playSound("success");
+        };
+
+        if (!showTosBanner) return null;
+
+        return (
+          <div className="w-full bg-amber-500/10 border-b border-amber-500/30 px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-4 animate-slide-in relative z-30">
+            <div className="flex items-center gap-3">
+              <span className="text-xl">📜</span>
+              <p className="text-xs text-stone-300 font-sans">
+                Zaktualizowaliśmy <Link href="/regulamin" className="text-amber-500 hover:text-amber-400 font-semibold underline underline-offset-2">Regulamin Serwisu</Link> oraz Politykę Prywatności. Zmiany obejmują m.in. doprecyzowanie zasad korzystania z nowych pakietów i mechanizmu powiadomień. Dalsze korzystanie z serwisu po 14 dniach oznacza akceptację zmian.
+              </p>
+            </div>
+            <button
+              onClick={acceptTos}
+              className="shrink-0 px-4 py-1.5 rounded-xl bg-amber-500 text-stone-950 font-bold text-xs hover:bg-amber-400 transition-all shadow-md active:scale-95"
+            >
+              Rozumiem
+            </button>
+          </div>
+        );
+      })()}
+      {/* --- KONIEC POWIADOMIENIA --- */}
+
       {/* RENDEROWANIE GŁÓWNEGO WIDOKU */}
       {!user ? (
         <main className="max-w-4xl mx-auto w-full p-6 flex flex-col md:flex-row items-center justify-center gap-12 flex-1">
