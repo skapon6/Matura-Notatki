@@ -9,7 +9,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 // FLAGA BLOKADY PŁATNOŚCI (Zmień na false, gdy przejdziesz na Stripe Live)
-const PAYMENTS_TEMPORARILY_DISABLED = true;
+const PAYMENTS_TEMPORARILY_DISABLED = false;
 
 export async function POST(request: Request) {
   // 1. Bezpieczna blokada na czas prac technicznych
@@ -105,7 +105,7 @@ export async function POST(request: Request) {
 
     // Tworzenie sesji płatniczej Stripe Checkout
     const checkoutSession = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
+      payment_method_types: ['card', 'blik', 'p24'],
       line_items: lineItems,
       mode: mode,
       success_url: `${request.headers.get('origin')}/?payment=success`,
