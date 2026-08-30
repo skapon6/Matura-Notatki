@@ -1,228 +1,189 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { playSound } from "../lib/sounds";
-
-interface ConceptMindMapProps {
-  currentTheme: any;
-  triggerNotification: (message: string, type?: "success" | "error" | "info") => void;
-}
 
 interface MindMapNode {
   id: string;
   label: string;
   icon: string;
   description: string;
-  subConcepts: { term: string; definition: string }[];
+  sub_concepts: { term: string; definition: string }[];
 }
 
-const DEFAULT_FALLBACK_DATA: Record<string, MindMapNode> = {
-  epoki: {
-    id: "epoki",
-    label: "Epoki & Prądy (Lokalne)",
-    icon: "⏳",
-    description: "Kluczowe ramy czasowe i światopoglądowe niezbędne do kontekstualizacji utworów.",
-    subConcepts: [
-      { term: "Romantyzm", definition: "Indywidualizm, bunt, prymat uczucia nad rozumem, irracjonalizm." }
-    ]
-  }
-};
-
-export function ConceptMindMap({ currentTheme, triggerNotification }: ConceptMindMapProps) {
-  const [mindMapData, setMindMapData] = useState<Record<string, MindMapNode>>(DEFAULT_FALLBACK_DATA);
-  const [activeNode, setActiveNode] = useState<string>("epoki");
-  const [dbLoading, setDbLoading] = useState<boolean>(true);
+export function ConceptMindMap({ 
+  currentTheme, 
+  triggerNotification 
+}: { 
+  currentTheme: any; 
+  triggerNotification: (msg: string, type?: "success" | "error" | "info") => void;
+}) {
+  const [nodes, setNodes] = useState<MindMapNode[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"epoka" | "motyw" | "archetypy" | "teoria">("epoka");
+  const [selectedNode, setSelectedNode] = useState<MindMapNode | null>(null);
 
   useEffect(() => {
-    async function fetchMindMapFromSupabase() {
-      setDbLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from("mind_map_nodes")
-          .select("*");
-
-        if (error) throw error;
-
-        if (data && data.length > 0) {
-          const formattedData: Record<string, MindMapNode> = {};
-          data.forEach((row: any) => {
-            formattedData[row.id] = {
-              id: row.id,
-              label: row.label,
-              icon: row.icon,
-              description: row.description,
-              subConcepts: Array.isArray(row.sub_concepts) 
-                ? row.sub_concepts 
-                : JSON.parse(row.sub_concepts || "[]")
-            };
-          });
-          setMindMapData(formattedData);
-          
-          const firstKey = Object.keys(formattedData)[0];
-          if (firstKey) setActiveNode(firstKey);
-        }
-      } catch (err) {
-        console.error("Błąd pobierania mapy myśli, załadowano dane zapasowe:", err);
-      } finally {
-        setDbLoading(false);
+    async function fetchNodes() {
+      setLoading(true);
+      const { data, error } = await supabase.from("mind_map_nodes").select("*");
+      
+      if (error) {
+        triggerNotification("Błąd pobierania bazy wiedzy.", "error");
+      } else if (data) {
+        setNodes(data);
+        // Automatycznie wybierz pierwszy element z domyślnej zakładki
+        const initialNode = data.find(n => n.id.startsWith("epoka"));
+        if (initialNode) setSelectedNode(initialNode);
       }
+      setLoading(false);
     }
-
-    fetchMindMapFromSupabase();
+    fetchNodes();
   }, []);
 
-  const handleNodeClick = (nodeId: string) => {
-    setActiveNode(nodeId);
+  // Grupowanie węzłów na podstawie prefiksu ID, który dodaliśmy w SQL
+  const filteredNodes = nodes.filter(node => {
+    if (activeTab === "epoka") return node.id.startsWith("epoka");
+    if (activeTab === "motyw") return node.id.startsWith("motyw");
+    if (activeTab === "archetypy") return node.id.startsWith("archetypy") || node.id.startsWith("konteksty");
+    if (activeTab === "teoria") return node.id.startsWith("teoria");
+    return true;
+  });
+
+  const handleTabChange = (tab: "epoka" | "motyw" | "archetypy" | "teoria") => {
     playSound("click");
-    if (mindMapData[nodeId]) {
-      triggerNotification(`Wybrano obszar: ${mindMapData[nodeId].label}`, "info");
-    }
+    setActiveTab(tab);
+    // Po zmianie zakładki wybierz pierwszy element z nowej listy
+    const firstNode = nodes.find(n => {
+      if (tab === "archetypy") return n.id.startsWith("archetypy") || n.id.startsWith("konteksty");
+      return n.id.startsWith(tab);
+    });
+    setSelectedNode(firstNode || null);
   };
 
-  const selectedNodeData = mindMapData[activeNode];
+  const handleNodeSelect = (node: MindMapNode) => {
+    playSound("click");
+    setSelectedNode(node);
+  };
 
-  // Pobieramy klucze elementów do dynamicznego rozmieszczenia
-  const nodeKeys = Object.keys(mindMapData);
-  const totalNodes = nodeKeys.length;
-
-  // Promień bazowy okręgu (w procentach)
-  const radiusX = 36; 
-  const radiusY = 35;
-
-  if (dbLoading) {
+  if (loading) {
     return (
-      <div className={`rounded-3xl p-8 border ${currentTheme.cardBorder} ${currentTheme.cardBg} flex flex-col items-center justify-center min-h-[300px]`}>
-        <div className="text-2xl animate-spin mb-3">🌀</div>
-        <p className="text-xs text-stone-400">Pobieranie mapy myśli z bazy danych...</p>
-      </div>
-    );
-  }
-
-  if (!selectedNodeData) {
-    return (
-      <div className={`rounded-3xl p-8 border ${currentTheme.cardBorder} ${currentTheme.cardBg} text-center`}>
-        <p className="text-xs text-stone-400">Brak dostępnych danych mapy myśli.</p>
+      <div className={`w-full p-8 rounded-2xl ${currentTheme.cardBg} border ${currentTheme.cardBorder} flex justify-center items-center h-64`}>
+        <span className="animate-pulse text-stone-500 font-serif">Układanie notatek... ☕</span>
       </div>
     );
   }
 
   return (
-    <div className={`relative rounded-3xl p-6 border ${currentTheme.cardBorder} ${currentTheme.cardBg} transition-all duration-500 shadow-xl ${currentTheme.glow} flex flex-col gap-6 overflow-hidden`}>
-      <div className="absolute top-0 right-0 w-36 h-36 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
+    <div className="flex flex-col lg:flex-row gap-6 w-full animate-fade-in">
       
-      {/* Header sekcji */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-stone-800/60 pb-4">
+      {/* LEWA KOLUMNA: Nawigacja i Grid */}
+      <div className="flex-1 flex flex-col gap-6">
+        
+        {/* Nagłówek (usunięto napis "Dane z chmury") */}
         <div>
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-amber-500 bg-amber-500/10 px-2.5 py-1 rounded-md border border-amber-500/20">
-            Kącik Naukowy (Dane z Chmury)
-          </span>
-          <h3 className="text-xl font-bold text-stone-100 mt-2 font-serif">Kompaktowa Mapa Myśli 🧠</h3>
+          <h2 className="text-2xl font-serif text-stone-100 flex items-center gap-2 mb-1">
+            Baza Motywów i Kontekstów 🧠
+          </h2>
+          <p className="text-sm text-stone-400">
+            Wybierz kategorię, aby odkryć najważniejsze zagadnienia maturalne.
+          </p>
+        </div>
+
+        {/* Zakładki (Tabs) */}
+        <div className="flex flex-wrap gap-2 pb-2 border-b border-stone-800/50">
+          {[
+            { id: "epoka", label: "Epoki ⏳" },
+            { id: "motyw", label: "Główne Motywy 📚" },
+            { id: "archetypy", label: "Konteksty i Typy 🎭" },
+            { id: "teoria", label: "Teoria Literatury 📖" },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => handleTabChange(tab.id as any)}
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
+                activeTab === tab.id
+                  ? "bg-amber-900/40 text-amber-500 border border-amber-900/50 shadow-inner"
+                  : `bg-stone-900/30 text-stone-400 border border-transparent hover:bg-stone-900/50 hover:text-stone-300`
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Kafelki (Grid) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+          {filteredNodes.map((node) => (
+            <button
+              key={node.id}
+              onClick={() => handleNodeSelect(node)}
+              className={`flex flex-col items-start text-left p-4 rounded-xl border transition-all duration-300 ${
+                selectedNode?.id === node.id
+                  ? "bg-stone-800/60 border-amber-700/50 ring-1 ring-amber-700/30"
+                  : `${currentTheme.cardBg} ${currentTheme.cardBorder} hover:border-stone-600 hover:bg-stone-800/40`
+              }`}
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-2xl">{node.icon}</span>
+                <h3 className="font-serif font-medium text-stone-200">{node.label}</h3>
+              </div>
+              <p className="text-xs text-stone-500 line-clamp-2 leading-relaxed">
+                {node.description}
+              </p>
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Główny układ: Mapa i Szczegóły */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        
-        {/* LEWA KOLUMNA: Interaktywna Mapa (UKŁAD NAPRZEMIENNY) */}
-        <div className="lg:col-span-6 flex flex-col items-center justify-center relative min-h-[480px] bg-stone-950/20 rounded-2xl border border-stone-800/40 p-4 overflow-hidden select-none">
-          
-          {/* DYNAMICZNE LINIE SVG DOSTOSOWANE DO PROMIENIA */}
-          <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-30" xmlns="http://www.w3.org/2000/svg">
-            {nodeKeys.map((key, idx) => {
-              const angle = (idx * (2 * Math.PI)) / totalNodes - Math.PI / 2;
-              
-              // Co drugi element jest bliżej środka (naprzemienny promień)
-              const factor = idx % 2 === 0 ? 1.15 : 0.72;
-              const x = 50 + (radiusX * factor) * Math.cos(angle);
-              const y = 50 + (radiusY * factor) * Math.sin(angle);
-
-              return (
-                <line 
-                  key={`line-${key}`}
-                  x1="50%" 
-                  y1="50%" 
-                  x2={`${x}%`} 
-                  y2={`${y}%`} 
-                  stroke="#d97706" 
-                  strokeWidth="1.5" 
-                  strokeDasharray="4 4" 
-                />
-              );
-            })}
-          </svg>
-
-          {/* Centralny punkt */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 w-22 h-22 rounded-full bg-stone-900 border-2 border-amber-500 flex flex-col items-center justify-center text-center p-2 shadow-2xl select-none">
-            <span className="text-lg">📚</span>
-            <span className="text-[9px] font-bold text-amber-500 uppercase tracking-wider mt-1 leading-none">Matura</span>
-            <span className="text-[8px] text-stone-400">J. Polski</span>
-          </div>
-
-          {/* DYNAMICZNE ROZMIESZCZANIE PRZYCISKÓW */}
-          {nodeKeys.map((key, idx) => {
-            const node = mindMapData[key];
-            const angle = (idx * (2 * Math.PI)) / totalNodes - Math.PI / 2;
-            
-            // Współczynnik odległości (naprzemienny)
-            const factor = idx % 2 === 0 ? 1.15 : 0.72;
-            const x = 50 + (radiusX * factor) * Math.cos(angle);
-            const y = 50 + (radiusY * factor) * Math.sin(angle);
-
-            // Programowe oczyszczanie etykiety ze zbędnego słowa "Motyw"
-            let displayLabel = node.label.replace(/Motyw\s+/i, "");
-            displayLabel = displayLabel.charAt(0).toUpperCase() + displayLabel.slice(1);
-
-            return (
-              <div
-                key={node.id}
-                className="absolute -translate-x-1/2 -translate-y-1/2 z-10"
-                style={{ left: `${x}%`, top: `${y}%` }}
-              >
-                <button
-                  onClick={() => handleNodeClick(node.id)}
-                  className={`px-2.5 py-1.5 rounded-xl border transition-all duration-300 flex items-center gap-1.5 shadow-lg hover:scale-105 active:scale-95 ${
-                    activeNode === node.id
-                      ? "bg-amber-500/20 border-amber-500 text-stone-100 ring-2 ring-amber-500/20"
-                      : "bg-stone-900/90 border-stone-800 text-stone-300 hover:border-stone-700"
-                  }`}
-                >
-                  <span className="text-sm shrink-0">{node.icon}</span>
-                  <span className="text-[10px] font-medium tracking-wide whitespace-nowrap">{displayLabel}</span>
-                </button>
+      {/* PRAWA KOLUMNA: Szczegóły wybranego kafelka (Sub-concepts) */}
+      <div className="w-full lg:w-[45%] xl:w-[40%] flex flex-col">
+        {selectedNode ? (
+          <div className={`p-6 rounded-2xl border ${currentTheme.cardBorder} bg-stone-900/40 shadow-lg sticky top-6`}>
+            <div className="flex items-center gap-4 mb-4 pb-4 border-b border-stone-800/60">
+              <div className="text-4xl bg-stone-950 p-3 rounded-2xl shadow-inner border border-stone-800/50">
+                {selectedNode.icon}
               </div>
-            );
-          })}
-        </div>
-
-        {/* PRAWA KOLUMNA: Szczegóły aktywnego węzła */}
-        <div className="lg:col-span-6 flex flex-col justify-between bg-stone-900/40 rounded-2xl border border-stone-800/40 p-5">
-          <div>
-            <div className="flex items-center gap-2.5 mb-2">
-              <span className="text-2xl">{selectedNodeData.icon}</span>
-              <h4 className="text-lg font-bold text-stone-100 font-serif">{selectedNodeData.label}</h4>
+              <div>
+                <h3 className="text-xl font-serif text-amber-500 mb-1">{selectedNode.label}</h3>
+                <span className="text-xs uppercase tracking-widest text-stone-500 font-semibold">
+                  Podgląd notatki
+                </span>
+              </div>
             </div>
-            <p className="text-xs text-stone-400 leading-relaxed mb-4">
-              {selectedNodeData.description}
+
+            <p className="text-sm text-stone-300 mb-6 leading-relaxed italic">
+              {selectedNode.description}
             </p>
 
-            <div className="space-y-3 max-h-[340px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-stone-800">
-              {selectedNodeData.subConcepts?.map((item, idx) => (
-                <div key={idx} className="p-3 rounded-xl bg-stone-950/30 border border-stone-800/50 hover:bg-stone-950/50 transition-colors">
-                  <span className="text-xs font-bold text-amber-400 block mb-1">{item.term}</span>
-                  <p className="text-xs text-stone-300 leading-relaxed">{item.definition}</p>
+            <div className="space-y-4 max-h-[450px] overflow-y-auto pr-2 custom-scrollbar">
+              {selectedNode.sub_concepts?.map((concept, idx) => (
+                <div 
+                  key={idx} 
+                  className="bg-stone-950/50 border border-stone-800/50 p-4 rounded-xl hover:border-stone-700/60 transition-colors"
+                >
+                  <h4 className="text-amber-600/90 font-serif font-medium mb-1 text-sm flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-amber-600/50 rounded-full"></span>
+                    {concept.term}
+                  </h4>
+                  <p className="text-xs text-stone-400 leading-relaxed ml-3.5">
+                    {concept.definition}
+                  </p>
                 </div>
               ))}
             </div>
           </div>
-          
-          <div className="mt-4 pt-4 border-t border-stone-800/40 text-[11px] text-stone-500 italic flex items-center justify-between">
-            <span>* Klikaj na gałęzie mapy, by przełączać działy.</span>
-            <span>Powodzenia! ☕</span>
+        ) : (
+          <div className={`h-full min-h-[300px] flex flex-col items-center justify-center p-8 rounded-2xl border ${currentTheme.cardBorder} bg-stone-900/20 border-dashed`}>
+            <span className="text-4xl mb-3 opacity-50 grayscale">📚</span>
+            <p className="text-sm text-stone-500 font-serif text-center">
+              Wybierz temat z listy po lewej stronie,<br/> aby rozwinąć szczegóły.
+            </p>
           </div>
-        </div>
-
+        )}
       </div>
+
     </div>
   );
 }

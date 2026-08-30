@@ -176,10 +176,10 @@ export default function MapaMysliPage() {
       />
 
       {/* OBSZAR GŁÓWNY MAPY */}
-      <main className="max-w-6xl mx-auto w-full p-6 flex flex-col gap-6 flex-1 animate-slide-in">
+      <main className="max-w-7xl mx-auto w-full p-6 flex flex-col gap-6 flex-1 animate-slide-in">
         
         {/* Przycisk powrotu na stronę główną */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-2">
           <Link 
             href="/" 
             onClick={() => playSound("click")}
@@ -187,7 +187,6 @@ export default function MapaMysliPage() {
           >
             ← Wróć do Panelu Głównego
           </Link>
-          <span className="text-xs text-stone-500 font-medium font-serif">Kącik nauki i skupienia</span>
         </div>
 
         {/* Dynamiczny komponent mapy myśli */}
