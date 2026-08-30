@@ -9,6 +9,10 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 export async function POST(request: Request) {
+  return NextResponse.json(
+    { error: "Płatności online zostaną uruchomione wkrótce! Trwają ostatnie prace techniczne." },
+    { status: 503 }
+  );
   const cookieStore = await cookies();
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
