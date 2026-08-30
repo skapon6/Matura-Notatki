@@ -74,7 +74,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, currentTh
             )}
           </div>
 
-          {/* NOWA SEKCJA 2: POSTĘPY I ZAZNACZANIE NOTATEK */}
+          {/* SEKCJA 2: POSTĘPY I ZAZNACZANIE NOTATEK */}
           <div className="border border-stone-800/60 rounded-xl overflow-hidden bg-stone-950/20 shrink-0">
             <button
               onClick={() => toggleSection("progress")}
@@ -94,7 +94,6 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, currentTh
                   Swoje globalne statystyki znajdziesz wchodząc w <strong className="text-stone-100 font-semibold">Moje Postępy</strong>.
                 </p>
                 
-                {/* Wyróżnione ostrzeżenie o pamięci podręcznej przeglądarki */}
                 <div className="p-3 rounded-xl bg-stone-950/50 border border-stone-800 flex items-start gap-2.5 text-[11px] leading-relaxed font-sans text-stone-400">
                   <span className="shrink-0 text-base">ℹ️</span>
                   <span>
@@ -204,6 +203,9 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, currentTh
                 </p>
                 <p>
                   Zaznacz dany tekst myszką bezpośrednio w notatce, kliknij na złotą gwiazdkę (⭐), która się pojawi, a cytat natychmiast trafi do Twojego podręcznego notesu na stronie głównej, do którego masz dostęp w każdej chwili.
+                </p>
+                <p className="mt-2 text-[11px] text-amber-500/90 font-medium italic border-l-2 border-amber-500/30 pl-2.5">
+                  Wskazówka: Złota gwiazdka pojawi się tylko wtedy, gdy zaznaczony fragment nie jest ani za krótki, ani za długi (od 5 do 400 znaków). Dzięki temu system dba o to, byś zapisywał samą „esencję”, idealną do wykorzystania w rozprawce!
                 </p>
               </div>
             )}
