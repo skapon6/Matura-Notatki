@@ -63,7 +63,7 @@ export const PersonalNotesList: React.FC<PersonalNotesListProps> = ({
         <span className="text-xl block mb-1">⭐</span>
         <p className="text-[11px] leading-relaxed">Twoja kieszeń na cytaty jest pusta.</p>
         <p className="text-[9px] text-stone-600 mt-1 leading-relaxed">
-          Zaznacz ważny fragment podczas czytania lektury i kliknij gwiazdkę, aby go tu zapisać.
+          Zaznacz ważny fragment podczas czytania notatki i kliknij gwiazdkę pojawiającą się nad tekstem, aby go tu zapisać.
         </p>
       </div>
     );
