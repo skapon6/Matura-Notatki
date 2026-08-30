@@ -61,7 +61,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: countError.message }, { status: 500 });
     }
 
-    const MAX_CYTATOW = 50; // Twój limit na użytkownika
+    const MAX_CYTATOW = 100; // Twój limit na użytkownika
     if (count !== null && count >= MAX_CYTATOW) {
       return NextResponse.json({ 
         error: `Osiągnąłeś maksymalny limit ${MAX_CYTATOW} zapamiętanych cytatów. Usuń niepotrzebne wpisy w swoim Zeszycie na stronie głównej, aby móc dodać nowe!` 
