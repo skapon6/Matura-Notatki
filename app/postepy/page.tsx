@@ -244,42 +244,52 @@ export default function MojePostepyPage() {
 
       <main className="max-w-5xl mx-auto w-full p-6 flex flex-col gap-6 flex-1 select-none animate-slide-in">
         
-        {/* PIĘĆ DYNAMICZNYCH KAFELKÓW STATYSTYK */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 w-full">
-          
-          <CozyGlowCard currentTheme={currentTheme} className="p-5 flex flex-col items-center justify-center text-center gap-2">
-            <div className="text-xl sm:text-2xl">📚</div>
-            <div className="text-xl sm:text-2xl font-black font-mono text-stone-100 leading-normal flex items-baseline gap-1">
-              <span className="text-emerald-400">{readNotesCount}</span> 
-              <span className="text-[13px] font-sans font-medium text-stone-500">/ {totalNotesCount}</span>
-            </div>
-            <div className="text-[10px] uppercase tracking-wider text-stone-500 font-extrabold leading-normal">Przeczytane Notatki</div>
-          </CozyGlowCard>
+       {/* PIĘĆ DYNAMICZNYCH KAFELKÓW STATYSTYK */}
+        <div className="flex flex-col gap-3 w-full">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 w-full">
+            
+            <CozyGlowCard currentTheme={currentTheme} className="p-5 flex flex-col items-center justify-center text-center gap-2">
+              <div className="text-xl sm:text-2xl">📚</div>
+              <div className="text-xl sm:text-2xl font-black font-mono text-stone-100 leading-normal flex items-baseline gap-1">
+                <span className="text-emerald-400">{readNotesCount}</span> 
+                <span className="text-[13px] font-sans font-medium text-stone-500">/ {totalNotesCount}</span>
+              </div>
+              <div className="text-[10px] uppercase tracking-wider text-stone-500 font-extrabold leading-normal">Przeczytane Notatki</div>
+            </CozyGlowCard>
 
-          <CozyGlowCard currentTheme={currentTheme} className="p-5 flex flex-col items-center justify-center text-center gap-2">
-            <div className="text-xl sm:text-2xl">⭐</div>
-            <div className="text-xl sm:text-2xl font-black font-mono text-stone-100 leading-normal">{quotesCount}</div>
-            <div className="text-[10px] uppercase tracking-wider text-stone-500 font-extrabold leading-normal">Zapisane cytaty</div>
-          </CozyGlowCard>
+            <CozyGlowCard currentTheme={currentTheme} className="p-5 flex flex-col items-center justify-center text-center gap-2">
+              <div className="text-xl sm:text-2xl">⭐</div>
+              <div className="text-xl sm:text-2xl font-black font-mono text-stone-100 leading-normal">{quotesCount}</div>
+              <div className="text-[10px] uppercase tracking-wider text-stone-500 font-extrabold leading-normal">Zapisane cytaty</div>
+            </CozyGlowCard>
 
-          <CozyGlowCard currentTheme={currentTheme} className="p-5 flex flex-col items-center justify-center text-center gap-2">
-            <div className="text-xl sm:text-2xl">🪙</div>
-            <div className="text-xl sm:text-2xl font-black font-mono text-stone-100 leading-normal">{credits}</div>
-            <div className="text-[10px] uppercase tracking-wider text-stone-500 font-extrabold leading-normal">Kredyty AI</div>
-          </CozyGlowCard>
+            <CozyGlowCard currentTheme={currentTheme} className="p-5 flex flex-col items-center justify-center text-center gap-2">
+              <div className="text-xl sm:text-2xl">🪙</div>
+              <div className="text-xl sm:text-2xl font-black font-mono text-stone-100 leading-normal">{credits}</div>
+              <div className="text-[10px] uppercase tracking-wider text-stone-500 font-extrabold leading-normal">Kredyty AI</div>
+            </CozyGlowCard>
 
-          <CozyGlowCard currentTheme={currentTheme} className="p-5 flex flex-col items-center justify-center text-center gap-2">
-            <div className="text-xl sm:text-2xl">✍️</div>
-            <div className="text-xl sm:text-2xl font-black font-mono text-stone-100 leading-normal">{essaysCount}</div>
-            <div className="text-[10px] uppercase tracking-wider text-stone-500 font-extrabold leading-normal">Ocenione rozprawki</div>
-          </CozyGlowCard>
+            <CozyGlowCard currentTheme={currentTheme} className="p-5 flex flex-col items-center justify-center text-center gap-2">
+              <div className="text-xl sm:text-2xl">✍️</div>
+              <div className="text-xl sm:text-2xl font-black font-mono text-stone-100 leading-normal">{essaysCount}</div>
+              <div className="text-[10px] uppercase tracking-wider text-stone-500 font-extrabold leading-normal">Ocenione rozprawki</div>
+            </CozyGlowCard>
 
-          <CozyGlowCard currentTheme={currentTheme} className="p-5 flex flex-col items-center justify-center text-center gap-2 md:col-span-1 lg:col-span-1 col-span-2">
-            <div className="text-xl sm:text-2xl">⏱️</div>
-            <div className="text-xl sm:text-2xl font-black font-mono text-stone-100 leading-normal">{studyTime} min</div>
-            <div className="text-[10px] uppercase tracking-wider text-stone-500 font-extrabold leading-normal">Łączny czas nauki</div>
-          </CozyGlowCard>
+            <CozyGlowCard currentTheme={currentTheme} className="p-5 flex flex-col items-center justify-center text-center gap-2 md:col-span-1 lg:col-span-1 col-span-2">
+              <div className="text-xl sm:text-2xl">⏱️</div>
+              <div className="text-xl sm:text-2xl font-black font-mono text-stone-100 leading-normal">{studyTime} min</div>
+              <div className="text-[10px] uppercase tracking-wider text-stone-500 font-extrabold leading-normal">Łączny czas nauki</div>
+            </CozyGlowCard>
 
+          </div>
+
+          {/* DYSKRETNY PRZYPIS INFORMACYJNY */}
+          <div className="flex items-start gap-2 px-2 opacity-80 mt-1">
+            <span className="text-stone-500 text-[11px] mt-0.5 select-none">ℹ️</span>
+            <p className="text-[10px] text-stone-500 leading-relaxed font-sans">
+              <strong className="text-stone-400">Ważne:</strong> Twój <span className="text-stone-400">łączny czas nauki</span> oraz <span className="text-stone-400">status przeczytanych notatek</span> są zapisywane tylko na tym urządzeniu (w pamięci Twojej przeglądarki). Jeśli wyczyścisz historię przeglądania, te dwie statystyki znikną, ponieważ nie wysyłamy ich do chmury. Pozostałe postępy są bezpieczne!
+            </p>
+          </div>
         </div>
 
         {essaysCount > 0 && (
