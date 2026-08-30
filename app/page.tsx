@@ -1,4 +1,3 @@
-// app/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -43,26 +42,43 @@ export default function Home() {
   const [notes, setNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Osobiste notatki (gwiazdki) pobierane z bazy
+  // Osobiste notatki (gwiazdki)
   const [personalNotes, setPersonalNotes] = useState<any[]>([]);
   const [personalNotesLoading, setPersonalNotesLoading] = useState(false);
-
-  // Stany otwarcia szczegółowego notesu z cytatami
   const [isPersonalNotesOpen, setIsPersonalNotesOpen] = useState(false);
   const [selectedPersonalNote, setSelectedPersonalNote] = useState<any | null>(null);
 
-  // Stan otwarcia modalu doładowań tokenów
   const [isTokenModalOpen, setIsTokenModalOpen] = useState(false);
 
   // AUTH, PROFILE LOADING & STRIPE STATES
   const [user, setUser] = useState<any>(null);
-  const [profileLoading, setProfileLoading] = useState(true); // <--- DODANY STAN ŁADOWANIA PROFILU
+  const [profileLoading, setProfileLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [activePaymentTier, setActivePaymentTier] = useState<string | null>(null);
 
-  // System przytulnych powiadomień
+  // ===== POPRAWKA: STAN BANNERA REGULAMINU =====
+  const [showTosBanner, setShowTosBanner] = useState(false);
+
+  // ===== POPRAWKA: LOGIKA BANNERA REGULAMINU =====
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const hasAccepted = localStorage.getItem("tos_accepted_v1");
+      if (!hasAccepted) {
+        setShowTosBanner(true);
+      }
+    }
+  }, []);
+
+  const acceptTos = () => {
+    localStorage.setItem("tos_accepted_v1", "true");
+    setShowTosBanner(false);
+    playSound("success");
+  };
+  // =============================================
+
+  // Powiadomienia
   const [cozyNotification, setCozyNotification] = useState<{
     message: string;
     type: "success" | "error" | "info";
@@ -73,11 +89,10 @@ export default function Home() {
     if (type === "success") playSound("success");
     else if (type === "error") playSound("error");
     else playSound("click");
-
     setTimeout(() => setCozyNotification(null), 4500);
   };
 
-  // 1. Monitorowanie sesji i logowania
+  // 1. Monitorowanie sesji
   useEffect(() => {
     async function checkInitialSession() {
       setAuthLoading(true);
@@ -101,11 +116,11 @@ export default function Home() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // 2. Pobieranie danych profilu (zabezpieczone stanem ładowania)
+  // 2. Pobieranie danych profilu
   useEffect(() => {
     async function fetchUserProfile() {
       if (user) {
-        setProfileLoading(true); // <--- ROZPOCZYNAMY POBIERANIE PROFILU
+        setProfileLoading(true);
         const { data: profileData } = await supabase
           .from('profiles')
           .select('subscription_status, essay_credits, expires_at')
@@ -129,11 +144,11 @@ export default function Home() {
           setProfile(null);
           setHasAccess(false);
         }
-        setProfileLoading(false); // <--- ZAKOŃCZYLIŚMY POBIERANIE PROFILU
+        setProfileLoading(false);
       } else {
         setProfile(null);
         setHasAccess(false);
-        setProfileLoading(false); // <--- ZAKOŃCZYLIŚMY ŁADOWANIE (brak usera)
+        setProfileLoading(false);
       }
     }
     fetchUserProfile();
@@ -172,7 +187,7 @@ export default function Home() {
     fetchNotes();
   }, [hasAccess]);
 
-  // 5. Pobieranie osobistych notatek (gwiazdek)
+  // 5. Pobieranie osobistych notatek
   useEffect(() => {
     async function fetchPersonalNotes() {
       if (!user) {
@@ -195,7 +210,7 @@ export default function Home() {
     fetchPersonalNotes();
   }, [user]);
 
-  // 6. INTELIGENTNE WYKRYWANIE I CZYSZCZENIE URL PO ZAKUPIE STRIPE
+  // 6. URL CLEANUP
   useEffect(() => {
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
@@ -210,7 +225,7 @@ export default function Home() {
     }
   }, []);
 
-  // Wczytywanie zapisanego motywu przy załadowaniu strony
+  // Wczytywanie motywu
   useEffect(() => {
     const savedTheme = localStorage.getItem("app_theme") as CozyTheme;
     if (savedTheme) {
@@ -218,11 +233,10 @@ export default function Home() {
     }
   }, []);
 
-  // 7. GLOBALNY INTELIGENTNY NASŁUCHIWAĆ KLIKNIĘĆ (DLA DŹWIĘKU CLICK)
+  // Dźwięk kliknięcia
   useEffect(() => {
     const handleGlobalClick = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-
       const isInteractive = 
         target.closest("button") || 
         target.closest("a") || 
@@ -233,15 +247,10 @@ export default function Home() {
         playSound("click");
       }
     };
-
     window.addEventListener("click", handleGlobalClick);
-
-    return () => {
-      window.removeEventListener("click", handleGlobalClick);
-    };
+    return () => window.removeEventListener("click", handleGlobalClick);
   }, []);
 
-  // Inicjalizacja transakcji Stripe
   const handlePaymentInit = async (tier: 'mini' | 'medium' | 'premium') => {
     setPaymentLoading(true);
     setActivePaymentTier(tier);
@@ -263,13 +272,12 @@ export default function Home() {
     }
   };
 
-  // Bezpieczna nawigacja
   const handlePremiumNavigation = (path: string) => {
     if (!user) {
       triggerNotification("🔑 Aby skorzystać z tej funkcji, najpierw się zaloguj!", "info");
       return;
     }
-    if (path === "/ocenianie-rozprawek" || path === "/matura-ustna" || path === "/notes") {
+    if (path === "/ocenianie-rozprawek" || path === "/matura-ustna" || path === "/notes" || path === "/mapa-mysli") {
       router.push(path);
     } else if (!hasAccess) {
       triggerNotification("🔒 Ta funkcja wymaga kupna jednego z pakietów.", "error");
@@ -300,7 +308,7 @@ export default function Home() {
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-500 ${currentTheme.bg} text-stone-200 font-sans`}>
       
-      {/* WYDZIELONY KOMPONENT HEADER */}
+      {/* HEADER */}
       <Header 
         currentTheme={currentTheme}
         user={user}
@@ -313,48 +321,23 @@ export default function Home() {
         handlePremiumNavigation={handlePremiumNavigation}
       />
 
-      
-      {/* --- NOWOŚĆ: POWIADOMIENIE O REGULAMINIE --- */}
-      {user && (() => {
-        // Sprawdzamy lokalnie, czy uczeń ukrył już powiadomienie
-        // UWAGA: Używamy useState i useEffect, aby nie wywołać błędu Hydratacji w Next.js
-        const [showTosBanner, setShowTosBanner] = useState(false);
-
-        useEffect(() => {
-          // Unikalny klucz dla tej konkretnej aktualizacji.
-          // Jeśli znowu zmienisz regulamin np. w 2027, zmieniasz tu nazwę na "tos_accepted_v2"
-          const hasAccepted = localStorage.getItem("tos_accepted_v1"); 
-          if (!hasAccepted) {
-            setShowTosBanner(true);
-          }
-        }, []);
-
-        const acceptTos = () => {
-          localStorage.setItem("tos_accepted_v1", "true");
-          setShowTosBanner(false);
-          playSound("success");
-        };
-
-        if (!showTosBanner) return null;
-
-        return (
-          <div className="w-full bg-amber-500/10 border-b border-amber-500/30 px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-4 animate-slide-in relative z-30">
-            <div className="flex items-center gap-3">
-              <span className="text-xl">📜</span>
-              <p className="text-xs text-stone-300 font-sans">
-                Zaktualizowaliśmy <Link href="/regulamin" className="text-amber-500 hover:text-amber-400 font-semibold underline underline-offset-2">Regulamin Serwisu</Link> oraz Politykę Prywatności. Zmiany obejmują m.in. doprecyzowanie zasad korzystania z nowych pakietów i mechanizmu powiadomień. Dalsze korzystanie z serwisu po 14 dniach oznacza akceptację zmian.
-              </p>
-            </div>
-            <button
-              onClick={acceptTos}
-              className="shrink-0 px-4 py-1.5 rounded-xl bg-amber-500 text-stone-950 font-bold text-xs hover:bg-amber-400 transition-all shadow-md active:scale-95"
-            >
-              Rozumiem
-            </button>
+      {/* ===== BEZPIECZNE WYŚWIETLANIE BANNERA REGULAMINU ===== */}
+      {user && showTosBanner && (
+        <div className="w-full bg-amber-500/10 border-b border-amber-500/30 px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-4 animate-slide-in relative z-30">
+          <div className="flex items-center gap-3">
+            <span className="text-xl">📜</span>
+            <p className="text-xs text-stone-300 font-sans">
+              Zaktualizowaliśmy <Link href="/regulamin" className="text-amber-500 hover:text-amber-400 font-semibold underline underline-offset-2">Regulamin Serwisu</Link> oraz Politykę Prywatności. Zmiany obejmują m.in. doprecyzowanie zasad korzystania z nowych pakietów i mechanizmu powiadomień. Dalsze korzystanie z serwisu po 14 dniach oznacza akceptację zmian.
+            </p>
           </div>
-        );
-      })()}
-      {/* --- KONIEC POWIADOMIENIA --- */}
+          <button
+            onClick={acceptTos}
+            className="shrink-0 px-4 py-1.5 rounded-xl bg-amber-500 text-stone-950 font-bold text-xs hover:bg-amber-400 transition-all shadow-md active:scale-95"
+          >
+            Rozumiem
+          </button>
+        </div>
+      )}
 
       {/* RENDEROWANIE GŁÓWNEGO WIDOKU */}
       {!user ? (
@@ -383,21 +366,18 @@ export default function Home() {
               <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl z-0 pointer-events-none" />
               <div className="absolute bottom-0 left-0 w-80 h-80 bg-orange-600/5 rounded-full blur-3xl z-0 pointer-events-none" />
 
-              {/* ZNAK WODNY */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden z-0">
                 <span className="text-xl sm:text-2xl md:text-[3.5vw] font-black uppercase tracking-[0.18em] text-amber-500/[0.04] whitespace-nowrap leading-none font-serif -rotate-6">
                   Wiedza Szyta na Miarę
                 </span>
               </div>
 
-              {/* LEWA KOLUMNA (Z TREŚCIĄ - CHRONIONA STANEM ŁADOWANIA) */}
               <div className="max-w-xl text-center md:text-left relative z-10 w-full">
                 <span className="text-xs font-semibold uppercase tracking-widest text-amber-500 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
                   {profileLoading ? "Weryfikacja..." : hasAccess ? "Dostęp Aktywny 🎉" : "Matura 2026 🔑"}
                 </span>
                 
                 {profileLoading ? (
-                  /* Delikatny, pulsujący szkielet blokujący migotanie */
                   <div className="animate-pulse space-y-3.5 mt-4">
                     <div className="h-8 bg-stone-800/60 rounded-xl w-3/4"></div>
                     <div className="h-4 bg-stone-800/40 rounded-lg w-5/6"></div>
@@ -429,7 +409,6 @@ export default function Home() {
                 )}
               </div>
 
-              {/* PRAWA KOLUMNA (Z PLANEM - CHRONIONA STANEM ŁADOWANIA) */}
               <div className="flex flex-col items-center md:items-end justify-center text-center md:text-right border-t md:border-t-0 md:border-l border-stone-800/80 pt-4 md:pt-0 md:pl-8 relative z-10 shrink-0">
                 {profileLoading ? (
                   <div className="animate-pulse flex flex-col items-center md:items-end gap-2.5">
@@ -461,19 +440,14 @@ export default function Home() {
             </div>
           </div>
 
-          {/* MAIN CONTENT DASHBOARD GRID */}
           <main className="max-w-7xl mx-auto w-full p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1">
             
-            {/* COLUMN 1: NAVIGATION & AI ESSAY INFO */}
             <section className="lg:col-span-3 flex flex-col gap-6">
               <MaturaCountdown currentTheme={currentTheme} />
 
-              {/* NAWIGACJA */}
               <CozyGlowCard currentTheme={currentTheme} className="p-4">
                 <h3 className="text-xs uppercase tracking-widest text-amber-500 font-semibold mb-3 px-1">Nawigacja</h3>
                 <nav className="flex flex-col gap-1">
-                  
-                  {/* Przycisk: Przejście do Wszystkich Notatek */}
                   <Link href="/notes" className="flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-900/60 group transition-all">
                     <div className="flex items-center gap-3">
                       <span className="text-lg">📚</span>
@@ -481,25 +455,13 @@ export default function Home() {
                     </div>
                     <span className="text-xs bg-stone-900 border border-stone-800 text-amber-500/80 px-2 py-0.5 rounded-full">{notes.length}</span>
                   </Link>
-
-                  {/* Przycisk: Przejście do Mapy Myśli */}
-                  <button 
-                    onClick={() => handlePremiumNavigation("/mapa-mysli")} 
-                    className="flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-900/60 group transition-all text-left w-full"
-                  >
+                  <button onClick={() => handlePremiumNavigation("/mapa-mysli")} className="flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-900/60 group transition-all text-left w-full">
                     <div className="flex items-center gap-3">
                       <span className="text-lg">🧠</span>
                       <span className="text-sm font-medium group-hover:text-amber-400 transition-colors">Mapa Myśli</span>
                     </div>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
-                      hasAccess 
-                        ? 'bg-amber-950/50 border-amber-900/60 text-amber-400 font-semibold' 
-                        : 'bg-stone-900/60 border-stone-800 text-stone-500'
-                    }`}>
-                      {hasAccess ? "Wejdź 🧠" : "Brak dostępu 🔒"}
-                    </span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full border ${hasAccess ? 'bg-amber-950/50 border-amber-900/60 text-amber-400 font-semibold' : 'bg-stone-900/60 border-stone-800 text-stone-500'}`}>{hasAccess ? "Wejdź 🧠" : "Brak dostępu 🔒"}</span>
                   </button>
-
                   <button onClick={() => handlePremiumNavigation("/postepy")} className="flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-900/60 group transition-all text-left w-full">
                     <div className="flex items-center gap-3">
                       <span className="text-lg">📈</span>
@@ -507,7 +469,6 @@ export default function Home() {
                     </div>
                     <span className={`text-[10px] px-2 py-0.5 rounded-full border ${hasAccess ? 'bg-emerald-950/50 border-emerald-900/60 text-emerald-400' : 'bg-stone-900/60 border-stone-800 text-stone-500'}`}>{hasAccess ? "Wejdź ✨" : "Brak dostępu 🔒"}</span>
                   </button>
-
                   <button onClick={() => handlePremiumNavigation("/fiszki")} className="flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-900/60 group transition-all text-left w-full">
                     <div className="flex items-center gap-3">
                       <span className="text-lg">⚡</span>
@@ -530,47 +491,30 @@ export default function Home() {
 
               <CozyGlowCard currentTheme={currentTheme} className="p-5 group">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-purple-600/5 rounded-full blur-2xl group-hover:bg-purple-600/10 transition-all duration-500" />
-                
                 <div className="flex justify-between items-start">
-                <span className="text-xs font-semibold uppercase tracking-widest text-purple-400 bg-purple-950/60 px-2.5 py-1 rounded-md border border-purple-800/40">
-                  Sztuczna Inteligencja
-                </span>
-                
-                {/* DYNAMICZNY BADGE: Pokazuje zielony badge tylko, gdy użytkownik ma > 0 tokenów */}
-                {!hasAccess ? (
-                  (profile?.essay_credits ?? 0) > 0 ? (
-                    <span className="bg-emerald-950/80 text-emerald-400 border border-emerald-800/40 text-[9px] uppercase font-bold px-2 py-0.5 rounded-md tracking-wide animate-pulse">
-                      🎁 Wypróbuj za darmo
-                    </span>
+                  <span className="text-xs font-semibold uppercase tracking-widest text-purple-400 bg-purple-950/60 px-2.5 py-1 rounded-md border border-purple-800/40">Sztuczna Inteligencja</span>
+                  {!hasAccess ? (
+                    (profile?.essay_credits ?? 0) > 0 ? (
+                      <span className="bg-emerald-950/80 text-emerald-400 border border-emerald-800/40 text-[9px] uppercase font-bold px-2 py-0.5 rounded-md tracking-wide animate-pulse">🎁 Wypróbuj za darmo</span>
+                    ) : (
+                      <span className="bg-red-950/20 text-red-400 border border-red-900/30 text-[9px] uppercase font-bold px-2 py-0.5 rounded-md tracking-wide">🔒 Brak tokenów</span>
+                    )
                   ) : (
-                    <span className="bg-red-950/20 text-red-400 border border-red-900/30 text-[9px] uppercase font-bold px-2 py-0.5 rounded-md tracking-wide">
-                      🔒 Brak tokenów
-                    </span>
-                  )
-                ) : (
-                  <span className="text-stone-500 text-lg">🤖</span>
-                )}
-              </div>
-                
+                    <span className="text-stone-500 text-lg">🤖</span>
+                  )}
+                </div>
                 <h3 className="text-base font-bold text-stone-100 mt-4 font-serif">Strefa Nauka AI 🤖</h3>
-                <p className="text-xs text-stone-400 mt-2 leading-relaxed">
-                  Wirtualni asystenci pomogą sprawdzić Twoje wypracowanie lub przeprowadzić próbny egzamin ustny na żywo według kryteriów CKE!
-                </p>
+                <p className="text-xs text-stone-400 mt-2 leading-relaxed">Wirtualni asystenci pomogą sprawdzić Twoje wypracowanie lub przeprowadzić próbny egzamin ustny na żywo według kryteriów CKE!</p>
 
-                {/* DYNAMICZNY PANEL: Zmienia kolor i treść w zależności od tego, czy użytkownik ma jeszcze jakieś tokeny */}
                   {!hasAccess && (
                     (profile?.essay_credits ?? 0) > 0 ? (
-                      // Stan A: Użytkownik ma darmowe lub dokupione tokeny -> Zielony panel
                       <div className="mt-3.5 px-3.5 py-2.5 bg-emerald-950/40 border border-emerald-800/30 rounded-xl flex items-center gap-2">
                         <span className="text-base shrink-0">🪙</span>
                         <p className="text-[11px] font-sans font-semibold text-emerald-400 leading-snug text-left">
-                          {!user 
-                            ? "Załóż darmowe konto i przetestuj jedną rozprawkę za darmo! Otrzymasz 1 token na start."
-                            : "Masz wolne tokeny! Wykorzystaj je powyżej na analizę rozprawki lub symulację matury ustnej."}
+                          {!user ? "Załóż darmowe konto i przetestuj jedną rozprawkę za darmo! Otrzymasz 1 token na start." : "Masz wolne tokeny! Wykorzystaj je powyżej na analizę rozprawki lub symulację matury ustnej."}
                         </p>
                       </div>
                     ) : (
-                      // Stan B: Użytkownik wyczerpał darmowe tokeny (ma 0) -> Czerwony panel informujący o konieczności zakupu
                       <div className="mt-3.5 px-3.5 py-2.5 bg-red-950/20 border border-red-900/30 rounded-xl flex items-center gap-2">
                         <span className="text-base shrink-0">🔒</span>
                         <p className="text-[11px] font-sans font-semibold text-red-400 leading-snug text-left">
@@ -581,37 +525,17 @@ export default function Home() {
                   )}
 
                 <div className="flex flex-col gap-2.5 mt-4">
-                  {/* Pierwszy przycisk - Nasycony Fioletowy Gradient */}
-                  <button 
-                    onClick={() => handlePremiumNavigation("/ocenianie-rozprawek")} 
-                    className="w-full py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-extrabold rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-violet-500/20 active:scale-[0.98]"
-                  >
-                    ✍️ Edytor Rozprawek AI (1 Token)
-                  </button>
-
-                  {/* Drugi przycisk - Fioletowy z efektem "Glassmorphism" */}
-                  <button 
-                    onClick={() => handlePremiumNavigation("/matura-ustna")} 
-                    className="w-full py-2.5 bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 hover:text-violet-200 font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2 border border-violet-500 hover:border-violet-400 shadow-lg shadow-violet-500/10 active:scale-[0.98]"
-                  >
-                    🎙️ Matura Ustna AI (3 Tokeny)
-                  </button>
+                  <button onClick={() => handlePremiumNavigation("/ocenianie-rozprawek")} className="w-full py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-extrabold rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-violet-500/20 active:scale-[0.98]">✍️ Edytor Rozprawek AI (1 Token)</button>
+                  <button onClick={() => handlePremiumNavigation("/matura-ustna")} className="w-full py-2.5 bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 hover:text-violet-200 font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2 border border-violet-500 hover:border-violet-400 shadow-lg shadow-violet-500/10 active:scale-[0.98]">🎙️ Matura Ustna AI (3 Tokeny)</button>
                 </div>
 
                 {user && (
                   <div className="mt-4 pt-4 border-t border-stone-800/60 flex flex-col gap-3">
                     <div className="flex justify-between items-center bg-purple-950/20 border border-purple-900/30 px-3 py-2 rounded-xl">
-                      <span className="text-[10px] text-purple-300 font-semibold uppercase tracking-wider">
-                        Pozostałe tokeny:
-                      </span>
+                      <span className="text-[10px] text-purple-300 font-semibold uppercase tracking-wider">Pozostałe tokeny:</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold font-mono text-purple-400 bg-stone-900 px-2 py-0.5 rounded-md border border-purple-900/40">
-                          {profile?.essay_credits ?? 0} tokeny
-                        </span>
-                        <button 
-                          onClick={() => setIsTokenModalOpen(true)} 
-                          className="text-[9px] uppercase tracking-wider font-extrabold bg-gradient-to-br from-amber-300 to-amber-500 text-stone-950 px-2 py-1 rounded-md hover:from-amber-200 hover:to-amber-400 transition-all shadow-md shadow-amber-500/20 flex items-center gap-1.5"
-                        >
+                        <span className="text-xs font-bold font-mono text-purple-400 bg-stone-900 px-2 py-0.5 rounded-md border border-purple-900/40">{profile?.essay_credits ?? 0} tokeny</span>
+                        <button onClick={() => setIsTokenModalOpen(true)} className="text-[9px] uppercase tracking-wider font-extrabold bg-gradient-to-br from-amber-300 to-amber-500 text-stone-950 px-2 py-1 rounded-md hover:from-amber-200 hover:to-amber-400 transition-all shadow-md shadow-amber-500/20 flex items-center gap-1.5">
                           Doładuj <span className="text-[11px]">🪙</span>
                         </button>
                       </div>
@@ -621,7 +545,6 @@ export default function Home() {
               </CozyGlowCard>
             </section>
 
-            {/* COLUMN 2: CENTRAL NOTES BROWSER */}
             <section className="lg:col-span-6 flex flex-col gap-5">
               <NotesBrowser notes={notes} loading={loading} hasAccess={hasAccess} limit={5} currentTheme={currentTheme} triggerNotification={triggerNotification} />
               
@@ -635,7 +558,6 @@ export default function Home() {
               )}
             </section>
 
-            {/* COLUMN 3: STUDY CORNER SIDEBAR */}
             <section className="lg:col-span-3 flex flex-col gap-6">
               <CozyMug currentTheme={currentTheme} />
               <PomodoroTimer currentTheme={currentTheme} triggerNotification={triggerNotification} />
