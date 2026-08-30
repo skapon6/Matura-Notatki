@@ -12,14 +12,9 @@ import { CozyGlowCard } from "../components/CozyGlowCard";
 
 export default function WszystkieNotatkiPage() {
   const router = useRouter();
-
-  // 1. Zostawiamy tylko jeden główny stan dla motywu
   const [cozyTheme, setCozyTheme] = useState<CozyTheme>("library");
-
-  // 2. Wyliczamy klasy CSS dynamicznie
   const currentTheme = getThemeClasses(cozyTheme);
 
-  // 3. Wczytujemy zapisany motyw z pamięci przy wejściu na stronę
   useEffect(() => {
     const savedTheme = localStorage.getItem("app_theme") as CozyTheme;
     if (savedTheme) {
@@ -27,7 +22,6 @@ export default function WszystkieNotatkiPage() {
     }
   }, []);
 
-  // Globalny odtwarzacz Lo-Fi
   const {
     lofiActive,
     currentTrackIndex,
@@ -45,19 +39,18 @@ export default function WszystkieNotatkiPage() {
   const [notes, setNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Stany wyszukiwania i filtrowania epok oraz typu
+  // Stany filtrów
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEra, setSelectedEra] = useState("Wszystkie");
   const [selectedType, setSelectedType] = useState<"all" | "epoka" | "lektura" | "inne">("all");
+  
+  // Stany dostępu i przerobienia
   const [showOnlyFree, setShowOnlyFree] = useState(false);
-
-  // NOWOŚĆ: Stan zapisanych (przeczytanych) notatek
+  const [readFilter, setReadFilter] = useState<"all" | "read" | "unread">("all");
   const [readNotes, setReadNotes] = useState<number[]>([]);
 
-  // System przytulnych powiadomień
   const [cozyNotification, setCozyNotification] = useState<{
-    message: string;
-    type: "success" | "error" | "info";
+    message: string; type: "success" | "error" | "info";
   } | null>(null);
 
   const triggerNotification = (message: string, type: "success" | "error" | "info" = "info") => {
@@ -65,37 +58,19 @@ export default function WszystkieNotatkiPage() {
     if (type === "success") playSound("success");
     else if (type === "error") playSound("error");
     else playSound("click");
-
     setTimeout(() => setCozyNotification(null), 4500);
   };
 
   const eras = [
-    "Wszystkie",
-    "Antyk",
-    "Średniowiecze",
-    "Renesans",
-    "Barok",
-    "Oświecenie",
-    "Romantyzm",
-    "Pozytywizm",
-    "Młoda Polska",
-    "Dwudziestolecie",
-    "Wojna i Okupacja",
-    "Współczesność",
+    "Wszystkie", "Antyk", "Średniowiecze", "Renesans", "Barok", "Oświecenie", "Romantyzm", "Pozytywizm", "Młoda Polska", "Dwudziestolecie", "Wojna i Okupacja", "Współczesność",
   ];
 
-  // Odczyt z LocalStorage przy starcie
   useEffect(() => {
     const stored = localStorage.getItem("read_notes");
     if (stored) {
-      try {
-        setReadNotes(JSON.parse(stored));
-      } catch (e) {}
+      try { setReadNotes(JSON.parse(stored)); } catch (e) {}
     }
-  }, []);
 
-  // Monitorowanie sesji, profilu i wczytywanie notatek z bazy
-  useEffect(() => {
     async function fetchUserDataAndNotes() {
       setLoading(true);
       try {
@@ -121,25 +96,14 @@ export default function WszystkieNotatkiPage() {
             let isExpired = false;
             if (profileData.expires_at) {
               const expirationTime = new Date(profileData.expires_at).getTime();
-              const currentTime = new Date().getTime();
-              isExpired = currentTime > expirationTime;
+              isExpired = new Date().getTime() > expirationTime;
             }
-            
-            if (isStatusActive && !isExpired) {
-              setHasAccess(true);
-            }
+            if (isStatusActive && !isExpired) setHasAccess(true);
           }
         }
 
-        // Pobranie wszystkich notatek z Twojej tabeli public.notes
-        const { data: notesData, error: notesError } = await supabase
-          .from("notes")
-          .select("*")
-          .order("id", { ascending: true });
-
-        if (!notesError && notesData) {
-          setNotes(notesData);
-        }
+        const { data: notesData, error: notesError } = await supabase.from("notes").select("*").order("id", { ascending: true });
+        if (!notesError && notesData) setNotes(notesData);
       } catch (err) {
         console.error("Błąd pobierania danych:", err);
       } finally {
@@ -149,7 +113,6 @@ export default function WszystkieNotatkiPage() {
     fetchUserDataAndNotes();
   }, []);
 
-  // NOWOŚĆ: Funkcja do oznaczania notatki jako przeczytanej
   const toggleReadNote = (noteId: number, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -161,18 +124,16 @@ export default function WszystkieNotatkiPage() {
       updatedReads = readNotes.filter((id) => id !== noteId);
     } else {
       updatedReads = [...readNotes, noteId];
-      playSound("success"); // Dodajemy miły dźwięk przy zaznaczeniu
+      playSound("success");
     }
 
     setReadNotes(updatedReads);
     localStorage.setItem("read_notes", JSON.stringify(updatedReads));
   };
 
-  // Bezpieczne pobieranie opisu i parsowanie z tablicy JSONB z bazy danych
   const getNoteDescription = (note: any) => {
     const content = note.content;
     if (!content) return "";
-    
     if (typeof content === "string") {
       if (content.startsWith('["') && content.endsWith('"]')) {
         try {
@@ -182,69 +143,53 @@ export default function WszystkieNotatkiPage() {
       }
       return content;
     }
-    
     if (Array.isArray(content)) {
       const first = content[0];
       if (typeof first === "string") return first;
       if (first && (first.content || first.text)) return first.content || first.text;
     }
-    
     return "";
   };
 
-  // Inteligentne wyliczanie metadanych na dole po lewej stronie karty
   const getBottomLeftMetadata = (note: any) => {
     if (note.updated_at || note.created_at) {
       try {
         const date = new Date(note.updated_at || note.created_at);
-        return `Aktualizacja: ${date.toLocaleDateString("pl-PL", {
-          day: "numeric",
-          month: "short",
-          year: "numeric"
-        })}`;
+        return `Aktualizacja: ${date.toLocaleDateString("pl-PL", { day: "numeric", month: "short", year: "numeric" })}`;
       } catch (_) {}
     }
-
     const titleLower = (note.title || "").toLowerCase();
-    
     if (note.type === "lektura") {
       const pewniaki = ["lalka", "wesele", "dziady", "kordian", "potop", "przedwiośnie", "treny", "makbet", "skąpiec", "granica"];
-      const isPewniak = pewniaki.some(p => titleLower.includes(p));
-      return isPewniak ? "🎯 Pewniak maturalny" : "📖 Lektura obowiązkowa";
+      return pewniaki.some(p => titleLower.includes(p)) ? "🎯 Pewniak maturalny" : "📖 Lektura obowiązkowa";
     }
-    
-    if (note.type === "epoka") {
-      return "📜 Kontekst epoki"; 
-    }
-    
+    if (note.type === "epoka") return "📜 Kontekst epoki";
     return "💡 Pomocnik naukowy";
   };
 
-  // Filtrowanie notatek na podstawie wyszukiwarki, kafelków epok oraz typu
   const filteredNotes = notes.filter((note) => {
-    if (!hasAccess && showOnlyFree && !note.is_free) {
-      return false;
-    }
+    // Filtr darmowych
+    if (!hasAccess && showOnlyFree && !note.is_free) return false;
+    
+    // Filtr statusu (przeczytane / nieprzeczytane)
+    if (readFilter === "read" && !readNotes.includes(note.id)) return false;
+    if (readFilter === "unread" && readNotes.includes(note.id)) return false;
 
+    // Filtry merytoryczne
     if (selectedEra !== "Wszystkie") {
       const eraMatch = note.era?.toLowerCase() === selectedEra.toLowerCase();
       const specialMatch = 
         (selectedEra === "Dwudziestolecie" && note.era?.toLowerCase().includes("międzywojenne")) ||
         (selectedEra === "Współczesność" && note.era?.toLowerCase().includes("współczesność"));
-      
       if (!eraMatch && !specialMatch) return false;
     }
-
     if (selectedType !== "all") {
       if (selectedType === "inne") {
-        if (note.type === "epoka" || note.type === "lektura") {
-          return false;
-        }
-      } else if (note.type !== selectedType) {
-        return false;
-      }
+        if (note.type === "epoka" || note.type === "lektura") return false;
+      } else if (note.type !== selectedType) return false;
     }
-
+    
+    // Wyszukiwarka tekstowa
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const titleMatch = note.title?.toLowerCase().includes(query);
@@ -252,34 +197,20 @@ export default function WszystkieNotatkiPage() {
       const chipsMatch = Array.isArray(note.chips) && note.chips.some((chip: string) => chip.toLowerCase().includes(query));
       return titleMatch || eraMatch || chipsMatch;
     }
-
     return true;
   });
 
-  // BEZPIECZNY NASŁUCHIWAĆ KLIKNIĘĆ
   useEffect(() => {
     const handleGlobalClick = (event: MouseEvent) => {
       try {
         const target = event.target as HTMLElement;
         if (!target) return;
-
-        const isInteractive = 
-          target.closest("button") || 
-          target.closest("a") || 
-          target.closest("[role='button']") ||
-          (target.style && window.getComputedStyle(target).cursor === "pointer");
-
-        if (isInteractive) {
-          playSound("click");
-        }
+        const isInteractive = target.closest("button") || target.closest("a") || target.closest("[role='button']") || (target.style && window.getComputedStyle(target).cursor === "pointer");
+        if (isInteractive) playSound("click");
       } catch (err) {}
     };
-
     window.addEventListener("click", handleGlobalClick);
-
-    return () => {
-      window.removeEventListener("click", handleGlobalClick);
-    };
+    return () => window.removeEventListener("click", handleGlobalClick);
   }, []);
 
   const handleOpenNote = (note: any) => {
@@ -287,15 +218,11 @@ export default function WszystkieNotatkiPage() {
       triggerNotification("🔑 Zaloguj się na stronie głównej, aby czytać notatki!", "info");
       return;
     }
-    
     if (note.is_free || hasAccess) {
       playSound("success");
       router.push(`/notes/${note.slug}`);
     } else {
-      triggerNotification(
-        "🔒 Ta notatka wymaga kupna jednego z pakietów. Odblokuj pełny pakiet na stronie głównej!", 
-        "error"
-      );
+      triggerNotification("🔒 Ta notatka wymaga kupna jednego z pakietów. Odblokuj pełny pakiet na stronie głównej!", "error");
     }
   };
 
@@ -309,20 +236,12 @@ export default function WszystkieNotatkiPage() {
         .animate-slide-in { animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
       `}} />
 
-      {/* HEADER SECTION */}
       <header className={`border-b ${currentTheme.cardBorder} px-4 sm:px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 backdrop-blur-md sticky top-0 z-40 transition-colors duration-500`}>
         <div className="flex w-full md:w-auto items-center justify-between md:justify-start gap-4">
-          <button
-            onClick={() => {
-              playSound("click"); 
-              router.push("/");
-            }}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 transition-all text-xs font-medium ${currentTheme.subText} hover:text-stone-100`}
-          >
+          <button onClick={() => { playSound("click"); router.push("/"); }} className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 transition-all text-xs font-medium ${currentTheme.subText} hover:text-stone-100`}>
             ← Wróć do kącika
           </button>
         </div>
-
         <div className="hidden md:flex flex-col items-center select-none">
           <div className="flex items-center gap-2">
             <span className="text-2xl">📚</span>
@@ -331,208 +250,119 @@ export default function WszystkieNotatkiPage() {
             </h1>
           </div>
         </div>
-
-        {/* Globalny Odtwarzacz Lofi */}
         <div className="flex w-full md:w-auto items-center justify-between md:justify-end gap-3 sm:gap-4 border-t md:border-t-0 border-stone-800/40 pt-3 md:pt-0">
           <div className={`flex items-center gap-2 sm:gap-3 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} transition-all duration-300 select-none shadow-md hover:border-amber-500/20 hover:bg-stone-900/30 hover:shadow-lg hover:shadow-amber-500/5`}>
             <button type="button" onClick={handlePrevTrack} className="text-stone-400 hover:text-amber-400 p-1 rounded-xl hover:bg-stone-800/40 transition-colors">
-              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.334 4zM4.066 11.2a1 1 0 01-14 0 7 7 0 0114 0z" />
-              </svg>
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.334 4zM4.066 11.2a1 1 0 01-14 0 7 7 0 0114 0z" /></svg>
             </button>
-            <button 
-              onClick={toggleLofi}
-              className={`text-xs px-4 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} ${currentTheme.subText} hover:text-stone-100 font-semibold transition-all`}
-            >
+            <button onClick={toggleLofi} className={`text-xs px-4 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} ${currentTheme.subText} hover:text-stone-100 font-semibold transition-all`}>
               {currentTrackIndex !== null ? lofiTracks[currentTrackIndex].name : "Włącz Lofi"}
             </button>
             <button type="button" onClick={handleNextTrack} className="text-stone-400 hover:text-amber-400 p-1 rounded-xl hover:bg-stone-800/40 transition-colors">
-              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 005 8v8a1 1 0 001.6.8l5.334-4zM19.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.334-4z" />
-              </svg>
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 005 8v8a1 1 0 001.6.8l5.334-4zM19.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.334-4z" /></svg>
             </button>
             <div className="hidden sm:flex items-center gap-2 sm:gap-2.5 ml-1 border-l border-stone-800/80 pl-2 sm:pl-3">
-              <svg className="w-4 h-4 text-stone-500" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 12H3a1 1 0 01-1-1V9a1 1 0 011-1h1.586l3.707-3.707a1 1 0 011.09-.217z" clipRule="evenodd" />
-              </svg>
-              <input 
-                type="range" 
-                min="0" 
-                max="1" 
-                step="0.05" 
-                value={lofiVolume} 
-                onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-                className="w-14 sm:w-16 md:w-20 h-1 bg-stone-850 rounded-lg appearance-none cursor-pointer accent-amber-500 focus:outline-none"
-                style={{ WebkitAppearance: "none" }}
-              />
+              <svg className="w-4 h-4 text-stone-500" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 12H3a1 1 0 01-1-1V9a1 1 0 011-1h1.586l3.707-3.707a1 1 0 011.09-.217z" clipRule="evenodd" /></svg>
+              <input type="range" min="0" max="1" step="0.05" value={lofiVolume} onChange={(e) => handleVolumeChange(parseFloat(e.target.value))} className="w-14 sm:w-16 md:w-20 h-1 bg-stone-850 rounded-lg appearance-none cursor-pointer accent-amber-500 focus:outline-none" style={{ WebkitAppearance: "none" }} />
             </div>
           </div>
         </div>
       </header>
 
-      {/* RENDEROWANIE ZAWARTOŚCI */}
       <main className="max-w-7xl mx-auto w-full p-6 flex flex-col gap-6 flex-1 select-none animate-slide-in">
-        
-        {/* PANEL WYSZUKIWANIA I FILTROWANIA */}
         <div className={`p-6 rounded-3xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} shadow-md flex flex-col gap-4`}>
           
-          {/* Wybór typu: Wszystkie | Epoki | Lektury | Inne */}
+          {/* NOWY WIERSZ: STATUS PRZEROBIENIA */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 border-b border-stone-800/40 pb-3 mb-1">
-            <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider pl-1 select-none">
-              Rodzaj notatek:
-            </span>
+            <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider pl-1 select-none">Status nauki:</span>
             <div className="flex gap-1.5 flex-wrap">
               {!hasAccess && (
-                <button
-                  onClick={() => {
-                    playSound("click");
-                    setShowOnlyFree(!showOnlyFree);
-                  }}
-                  className={`text-[10px] px-3.5 py-1.5 rounded-xl border font-bold uppercase transition-all flex items-center gap-1.5 ${
-                    showOnlyFree
-                      ? "bg-emerald-950/80 text-emerald-400 border-emerald-500/40 shadow-md shadow-emerald-950/30"
-                      : "bg-emerald-950/10 text-emerald-400 border-emerald-900/30 hover:text-stone-300"
-                  }`}
-                >
-                  🎁 Pokaż tylko darmowe
-                </button>
+                <button onClick={() => { playSound("click"); setShowOnlyFree(!showOnlyFree); }} className={`text-[10px] px-3.5 py-1.5 rounded-xl border font-bold uppercase transition-all flex items-center gap-1.5 ${showOnlyFree ? "bg-emerald-950/80 text-emerald-400 border-emerald-500/40 shadow-md shadow-emerald-950/30" : "bg-emerald-950/10 text-emerald-400 border-emerald-900/30 hover:text-stone-300"}`}>🎁 Pokaż tylko darmowe</button>
               )}
+              {[
+                { id: "all" as const, label: "Wszystkie" },
+                { id: "read" as const, label: "✔️ Przeczytane" },
+                { id: "unread" as const, label: "⏳ Do nauki" },
+              ].map((status) => (
+                <button 
+                  key={status.id} 
+                  onClick={() => { playSound("click"); setReadFilter(status.id); }} 
+                  className={`text-[10px] px-3.5 py-1.5 rounded-xl border font-bold uppercase transition-all ${readFilter === status.id ? `${currentTheme.accentBg || "bg-amber-500/20 text-amber-400"} font-bold border-transparent` : "border-stone-800/60 bg-stone-950/40 text-stone-400 hover:border-stone-700 hover:text-stone-200"}`}
+                >
+                  {status.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 border-b border-stone-800/40 pb-3 mb-1">
+            <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider pl-1 select-none">Rodzaj notatek:</span>
+            <div className="flex gap-1.5 flex-wrap">
               {[
                 { id: "all" as const, label: "Wszystkie" },
                 { id: "epoka" as const, label: "📜 Same Epoki" },
                 { id: "lektura" as const, label: "📖 Same Lektury" },
                 { id: "inne" as const, label: "📝 Pomocniki / Inne" },
               ].map((typeItem) => (
-                <button
-                  key={typeItem.id}
-                  onClick={() => {
-                    playSound("click");
-                    setSelectedType(typeItem.id);
-                  }}
-                  className={`text-[10px] px-3.5 py-1.5 rounded-xl border font-bold uppercase transition-all ${
-                    selectedType === typeItem.id
-                      ? `${currentTheme.accentBg || "bg-amber-500/20 text-amber-400"} font-bold border-transparent`
-                      : "border-stone-800/60 bg-stone-950/40 text-stone-400 hover:border-stone-700 hover:text-stone-200"
-                  }`}
-                >
-                  {typeItem.label}
-                </button>
+                <button key={typeItem.id} onClick={() => { playSound("click"); setSelectedType(typeItem.id); }} className={`text-[10px] px-3.5 py-1.5 rounded-xl border font-bold uppercase transition-all ${selectedType === typeItem.id ? `${currentTheme.accentBg || "bg-amber-500/20 text-amber-400"} font-bold border-transparent` : "border-stone-800/60 bg-stone-950/40 text-stone-400 hover:border-stone-700 hover:text-stone-200"}`}>{typeItem.label}</button>
               ))}
             </div>
           </div>
-
           <div className="flex flex-wrap gap-2 pt-1">
             {eras.map((era) => (
-              <button
-                key={era}
-                onClick={() => setSelectedEra(era)}
-                className={`text-xs px-3 py-1.5 rounded-xl border transition-all ${
-                  selectedEra === era
-                    ? `${currentTheme.accentBg || "bg-amber-500/20 text-amber-400"} font-bold border-transparent`
-                    : "border-stone-800/60 bg-stone-950/40 text-stone-400 hover:border-stone-700 hover:text-stone-200"
-                }`}
-              >
-                {era}
-              </button>
+              <button key={era} onClick={() => setSelectedEra(era)} className={`text-xs px-3 py-1.5 rounded-xl border transition-all ${selectedEra === era ? `${currentTheme.accentBg || "bg-amber-500/20 text-amber-400"} font-bold border-transparent` : "border-stone-800/60 bg-stone-950/40 text-stone-400 hover:border-stone-700 hover:text-stone-200"}`}>{era}</button>
             ))}
           </div>
-
-          {/* Input Wyszukiwarki */}
           <div className="relative">
-            <input 
-              type="text"
-              placeholder="Wyszukaj lekturę, motyw lub epokę..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-stone-950/80 border border-stone-800/80 rounded-2xl py-3 px-5 text-sm text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60"
-            />
+            <input type="text" placeholder="Wyszukaj lekturę, motyw lub epokę..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-stone-950/80 border border-stone-800/80 rounded-2xl py-3 px-5 text-sm text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60" />
             <span className="absolute right-5 top-3.5 text-stone-500 text-sm">🔍</span>
           </div>
-
         </div>
 
-        {/* SIATKA KART Z NOTATKAMI */}
         {loading ? (
-          <div className="text-center py-16 text-stone-500 text-sm">
-            Wczytywanie pełnej bazy notatek...
-          </div>
+          <div className="text-center py-16 text-stone-500 text-sm">Wczytywanie pełnej bazy notatek...</div>
         ) : filteredNotes.length === 0 ? (
           <div className="text-center py-20 border border-dashed border-stone-800 rounded-3xl text-stone-500">
             <span className="text-3xl block mb-2">📚</span>
             <p className="text-sm font-semibold">Nie znaleźliśmy notatek spełniających wybrane kryteria.</p>
-            <p className="text-xs text-stone-600 mt-1">Spróbuj zmienić wpisane słowo kluczowe, wybrany rodzaj lub epokę.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredNotes.map((note) => {
               const isLocked = !note.is_free && !hasAccess;
               const isFreeNoteStyle = !hasAccess && note.is_free;
-              const isRead = readNotes.includes(note.id); // Odczytanie statusu przeczytania
+              const isRead = readNotes.includes(note.id);
               
               const cardBorderClass = isFreeNoteStyle ? "border-emerald-800/40" : currentTheme.cardBorder;
               const cardBgClass = isFreeNoteStyle ? "bg-emerald-950/10 shadow-emerald-950/20" : currentTheme.cardBg;
 
               return (
-                <CozyGlowCard 
-                  key={note.id}
-                  currentTheme={currentTheme}
-                  className={`p-6 flex flex-col justify-between gap-4 shadow-lg border ${cardBorderClass} ${cardBgClass} hover:scale-[1.01] transition-all duration-300`}
-                >
+                <CozyGlowCard key={note.id} currentTheme={currentTheme} className={`p-6 flex flex-col justify-between gap-4 shadow-lg border ${cardBorderClass} ${cardBgClass} hover:scale-[1.01] transition-all duration-300`}>
                   <div className="flex flex-col gap-3">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[9px] uppercase tracking-widest text-amber-500 font-extrabold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                          📍 {note.era || "Pomocnik"}
-                        </span>
-                        
-                        <span className={`text-[9px] uppercase tracking-widest font-extrabold px-2 py-0.5 rounded border ${
-                          note.type === "epoka" 
-                            ? "bg-purple-950/40 border-purple-900/50 text-purple-400" 
-                            : note.type === "lektura"
-                              ? "bg-amber-950/40 border-amber-900/50 text-amber-400"
-                              : "bg-blue-950/40 border-blue-900/50 text-blue-300"
-                        }`}>
+                        <span className="text-[9px] uppercase tracking-widest text-amber-500 font-extrabold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">📍 {note.era || "Pomocnik"}</span>
+                        <span className={`text-[9px] uppercase tracking-widest font-extrabold px-2 py-0.5 rounded border ${note.type === "epoka" ? "bg-purple-950/40 border-purple-900/50 text-purple-400" : note.type === "lektura" ? "bg-amber-950/40 border-amber-900/50 text-amber-400" : "bg-blue-950/40 border-blue-900/50 text-blue-300"}`}>
                           {note.type === "epoka" ? "📜 Epoka" : note.type === "lektura" ? "📖 Lektura" : "📝 Pomocnik"}
                         </span>
-
                         {isFreeNoteStyle && (
-                          <span className="bg-emerald-950/80 text-emerald-400 border border-emerald-800/40 text-[9px] uppercase font-bold px-2 py-0.5 rounded-md tracking-wide animate-pulse">
-                            🎁 Darmowa
-                          </span>
+                          <span className="bg-emerald-950/80 text-emerald-400 border border-emerald-800/40 text-[9px] uppercase font-bold px-2 py-0.5 rounded-md tracking-wide animate-pulse">🎁 Darmowa</span>
                         )}
                       </div>
-                      
-                      <span className={`text-[9px] uppercase tracking-widest font-extrabold px-2 py-0.5 rounded border shrink-0 ${
-                        ["łatwy", "latwy", "easy"].includes((note.difficulty || "Średni").toLowerCase())
-                          ? "bg-emerald-950/50 border-emerald-900/40 text-emerald-400"
-                          : ["średni", "sredni", "medium"].includes((note.difficulty || "Średni").toLowerCase())
-                            ? "bg-orange-950/50 border-orange-900/40 text-orange-400"
-                            : "bg-red-950/50 border-red-900/40 text-red-400"
-                      }`}>
+                      <span className={`text-[9px] uppercase tracking-widest font-extrabold px-2 py-0.5 rounded border shrink-0 ${["łatwy", "latwy", "easy"].includes((note.difficulty || "Średni").toLowerCase()) ? "bg-emerald-950/50 border-emerald-900/40 text-emerald-400" : ["średni", "sredni", "medium"].includes((note.difficulty || "Średni").toLowerCase()) ? "bg-orange-950/50 border-orange-900/40 text-orange-400" : "bg-red-950/50 border-red-900/40 text-red-400"}`}>
                         {note.difficulty || "Średni"}
                       </span>
                     </div>
 
-                    <h2 className="text-lg font-bold text-stone-100 font-serif leading-snug">
-                      {note.title}
-                    </h2>
-
-                    <p className="text-xs text-stone-400 leading-relaxed font-sans">
-                      {getNoteDescription(note)}
-                    </p>
+                    <h2 className="text-lg font-bold text-stone-100 font-serif leading-snug">{note.title}</h2>
+                    <p className="text-xs text-stone-400 leading-relaxed font-sans">{getNoteDescription(note)}</p>
                   </div>
 
                   <div className="flex flex-col gap-3 mt-2">
                     {Array.isArray(note.chips) && (
                       <div className="flex flex-wrap gap-1.5">
                         {note.chips.map((chip: string) => (
-                          <span 
-                            key={chip}
-                            className="text-xs text-stone-400 bg-stone-950 px-2.5 py-1 rounded-md border border-stone-900 transition-colors hover:text-stone-200"
-                          >
-                            #{chip}
-                          </span>
+                          <span key={chip} className="text-xs text-stone-400 bg-stone-950 px-2.5 py-1 rounded-md border border-stone-900 transition-colors hover:text-stone-200">#{chip}</span>
                         ))}
                       </div>
                     )}
@@ -542,7 +372,6 @@ export default function WszystkieNotatkiPage() {
                       <span>⏱️ {note.read_time || note.readTime || (Math.max(2, Math.round((String(note.content || "")).split(/\s+/).length / 150)) + " min")}</span>
                     </div>
 
-                    {/* NOWOŚĆ: Dwa obok siebie przyciski: Otwórz i Przeczytano */}
                     <div className="flex items-center gap-2 mt-1">
                       <button
                         onClick={(e) => toggleReadNote(note.id, e)}
@@ -573,7 +402,6 @@ export default function WszystkieNotatkiPage() {
                         </a>
                       )}
                     </div>
-
                   </div>
                 </CozyGlowCard>
               );
@@ -582,10 +410,7 @@ export default function WszystkieNotatkiPage() {
         )}
       </main>
 
-      <CozyNotification 
-        notification={cozyNotification} 
-        onClose={() => setCozyNotification(null)} 
-      />
+      <CozyNotification notification={cozyNotification} onClose={() => setCozyNotification(null)} />
     </div>
   );
 }

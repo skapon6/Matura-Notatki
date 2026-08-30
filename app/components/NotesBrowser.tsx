@@ -105,7 +105,6 @@ export interface NotesBrowserProps {
   limit?: number;
 }
 
-// Zabezpieczony eksport nazwany (rozwiązuje błąd Vercela)
 export const NotesBrowser: React.FC<NotesBrowserProps> = ({
   notes,
   loading,
@@ -116,22 +115,21 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("Wszystkie");
-  const [showOnlyFree, setShowOnlyFree] = useState(false);
   
-  // STAN PRZECZYTANYCH NOTATEK (Zapis do LocalStorage)
+  // Stany filtrów dodatkowych
+  const [showOnlyFree, setShowOnlyFree] = useState(false);
+  const [readFilter, setReadFilter] = useState<"all" | "read" | "unread">("all");
   const [readNotes, setReadNotes] = useState<number[]>([]);
 
   useEffect(() => {
     const stored = localStorage.getItem("read_notes");
     if (stored) {
-      try {
-        setReadNotes(JSON.parse(stored));
-      } catch (e) {}
+      try { setReadNotes(JSON.parse(stored)); } catch (e) {}
     }
   }, []);
 
   const toggleReadNote = (noteId: number, e: React.MouseEvent) => {
-    e.preventDefault(); // Zatrzymuje kliknięcie przed przeniesieniem na stronę notatki
+    e.preventDefault();
     e.stopPropagation();
 
     const isCurrentlyRead = readNotes.includes(noteId);
@@ -173,25 +171,28 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
     if (note.updated_at || note.created_at) {
       try {
         const date = new Date(note.updated_at || note.created_at);
-        return `Aktualizacja: ${date.toLocaleDateString("pl-PL", {
-          day: "numeric", month: "short", year: "numeric"
-        })}`;
+        return `Aktualizacja: ${date.toLocaleDateString("pl-PL", { day: "numeric", month: "short", year: "numeric" })}`;
       } catch (_) {}
     }
 
     const titleLower = (note.title || "").toLowerCase();
     if (note.type === "lektura") {
       const pewniaki = ["lalka", "wesele", "dziady", "kordian", "potop", "przedwiośnie", "treny", "makbet", "skąpiec", "granica"];
-      const isPewniak = pewniaki.some(p => titleLower.includes(p));
-      return isPewniak ? "🎯 Pewniak maturalny" : "📖 Lektura obowiązkowa";
+      return pewniaki.some(p => titleLower.includes(p)) ? "🎯 Pewniak maturalny" : "📖 Lektura obowiązkowa";
     }
-    
     if (note.type === "epoka") return "📜 Kontekst epoki";
     return "💡 Pomocnik naukowy";
   };
 
   const filteredNotes = notes.filter((note) => {
+    // 1. Filtr darmowych
     if (!hasAccess && showOnlyFree && !note.is_free) return false;
+    
+    // 2. Filtr przeczytanych
+    if (readFilter === "read" && !readNotes.includes(note.id)) return false;
+    if (readFilter === "unread" && readNotes.includes(note.id)) return false;
+
+    // 3. Wyszukiwarka tekstowa
     const titleLower = (note.title || "").toLowerCase();
     const contentString = typeof note.content === 'string' ? note.content : JSON.stringify(note.content || "");
     const contentLower = contentString.toLowerCase();
@@ -201,14 +202,16 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
     const textToSearch = `${titleLower} ${contentLower} ${chipsString.toLowerCase()} ${eraLower} ${typeLower}`;
     
     const matchesSearch = textToSearch.includes(searchQuery.toLowerCase());
-    let matchesSubject = true;
     
+    // 4. Filtr przedmiotu / epoki
+    let matchesSubject = true;
     if (selectedSubject === "Inne (Pomocniki)") {
       matchesSubject = note.type !== "epoka" && note.type !== "lektura";
     } else if (selectedSubject !== "Wszystkie") {
       const keywords = epochKeywords[selectedSubject] || [selectedSubject.toLowerCase()];
       matchesSubject = keywords.some(keyword => textToSearch.includes(keyword));
     }
+    
     return matchesSearch && matchesSubject;
   });
 
@@ -235,20 +238,43 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
           )}
         </div>
 
-        <div className="flex flex-wrap gap-2 pt-1 border-t border-stone-800/40">
-          {!hasAccess && (
-            <button
-              onClick={() => setShowOnlyFree(!showOnlyFree)}
-              className={`text-xs px-3.5 py-1.5 rounded-xl border transition-all flex items-center gap-1.5 ${
-                showOnlyFree
-                  ? "bg-emerald-950/80 text-emerald-400 border-emerald-500 text-emerald-300 shadow-md shadow-emerald-950/30"
-                  : "border-stone-800/80 bg-stone-900/40 text-stone-400 hover:text-stone-200"
-              }`}
-            >
-              🎁 Pokaż tylko darmowe
-            </button>
-          )}
+        {/* FILTRY STATUSU I DOSTĘPU */}
+        <div className="flex flex-col sm:flex-row gap-3 pt-2 mt-1 border-t border-stone-800/40">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider mr-1">Status:</span>
+            {!hasAccess && (
+              <button
+                onClick={() => setShowOnlyFree(!showOnlyFree)}
+                className={`text-xs px-3 py-1.5 rounded-xl border transition-all flex items-center gap-1.5 ${
+                  showOnlyFree ? "bg-emerald-950/80 text-emerald-400 border-emerald-500 text-emerald-300" : "border-stone-800/80 bg-stone-900/40 text-stone-400 hover:text-stone-200"
+                }`}
+              >
+                🎁 Pokaż tylko darmowe
+              </button>
+            )}
+            {[
+              { id: "all", label: "Wszystkie" },
+              { id: "read", label: "✔️ Przeczytane" },
+              { id: "unread", label: "⏳ Do nauki" }
+            ].map(status => (
+              <button
+                key={status.id}
+                onClick={() => setReadFilter(status.id as any)}
+                className={`text-xs px-3 py-1.5 rounded-xl border transition-all ${
+                  readFilter === status.id
+                    ? `${currentTheme.accentBg || "bg-amber-500/20 text-amber-400"} font-bold border-transparent`
+                    : "border-stone-800/60 bg-stone-950/40 text-stone-400 hover:border-stone-700 hover:text-stone-200"
+                }`}
+              >
+                {status.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
+        {/* FILTRY EPOK LITERACKICH */}
+        <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-stone-800/40">
+          <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider mr-1">Kategoria:</span>
           {[
             "Wszystkie", "Antyk", "Średniowiecze", "Renesans", "Barok", "Oświecenie", "Romantyzm", "Pozytywizm", "Młoda Polska", "Dwudziestolecie", "Wojna i okupacja", "Współczesność", "Inne (Pomocniki)"
           ].map((subject) => (
@@ -299,7 +325,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
               return "💡";
             };
 
-            const isRead = readNotes.includes(note.id); // Sprawdzenie, czy przeczytane
+            const isRead = readNotes.includes(note.id);
 
             return (
               <CozyGlowLinkCard
@@ -355,7 +381,6 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
                   </p>
                 </div>
                 
-                {/* ZAKTUALIZOWANA DOLNA SEKCJA Z PRZYCISKIEM PRZECZYTANO */}
                 <div className="border-t border-stone-800/40 mt-4 pt-3 flex flex-col gap-3 w-full">
                   <div className="flex items-center justify-between text-[11px] text-stone-500 w-full">
                     <span>{getBottomLeftMetadata(note)}</span>
