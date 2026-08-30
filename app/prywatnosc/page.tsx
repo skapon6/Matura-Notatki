@@ -29,14 +29,14 @@ export default function PolitykaPrywatnosciPage() {
         {/* Content */}
         <div className="text-xs sm:text-sm text-stone-300 space-y-6 leading-relaxed text-left font-sans">
           <p className="italic text-stone-400">
-            Ostatnia aktualizacja: 26 czerwca 2026 r. Dbamy o Twoją prywatność. Poniższy dokument wyjaśnia, jak zbieramy, przetwarzamy i chronimy Twoje dane osobowe w ramach naszej platformy edukacyjnej, zgodnie z Rozporządzeniem Parlamentu Europejskiego i Rady (UE) 2016/679 z dnia 27 kwietnia 2016 r. (RODO).
+            Ostatnia aktualizacja: 30 sierpnia 2026 r. Dbamy o Twoją prywatność. Poniższy dokument wyjaśnia, jak zbieramy, przetwarzamy i chronimy Twoje dane osobowe w ramach naszej platformy edukacyjnej, zgodnie z Rozporządzeniem Parlamentu Europejskiego i Rady (UE) 2016/679 z dnia 27 kwietnia 2016 r. (RODO).
           </p>
 
           {/* 1 */}
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-[#c68a4c] uppercase tracking-wider font-serif">1. Administrator Danych Osobowych</h3>
             <p>
-              Administratorem Twoich danych osobowych jest właściciel platformy edukacyjnej: <strong className="text-stone-100">Kacper Leś</strong>, zamieszkały pod adresem: <strong className="text-stone-100">39-206 Pustków-Osiedle</strong>, prowadzący działalność nierejestrowaną. W sprawach związanych z przetwarzaniem danych oraz realizacją Twoich praw możesz kontaktować się z nami pod adresem e-mail: <strong className="text-stone-100">wiedzaszytanamiare@kontakt.pl</strong>.
+              Administratorem Twoich danych osobowych jest właściciel platformy edukacyjnej: <strong className="text-stone-100">Kacper Leś</strong>, zamieszkały pod adresem: <strong className="text-stone-100">39-206 Pustków-Osiedle</strong>, prowadzący działalność nierejestrowaną. W sprawach związanych z przetwarzaniem danych oraz realizacją Twoich praw możesz kontaktować się z nami pod adresem e-mail: <strong className="text-stone-100">kontakt@wiedzaszytanamiare.pl</strong>.
             </p>
           </section>
 
@@ -98,14 +98,15 @@ export default function PolitykaPrywatnosciPage() {
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-[#c68a4c] uppercase tracking-wider font-serif">6. Pliki Cookies (Ciasteczka) i Pamięć Lokalna</h3>
             <p>
-              Nasza strona wykorzystuje technologię cookies oraz pamięć lokalną przeglądarki (Local Storage) wyłącznie w celach technicznych i funkcjonalnych:
+              Nasza strona wykorzystuje technologię cookies oraz pamięć lokalną przeglądarki (Local Storage) w celach technicznych, funkcjonalnych oraz analitycznych:
             </p>
             <ul className="list-disc pl-5 space-y-1">
               <li><strong>Cookies niezbędne (sesyjne):</strong> do bezpiecznego utrzymania sesji zalogowanego użytkownika (tokeny autoryzacyjne Supabase Auth). Bez nich bezpieczne zalogowanie i korzystanie z Serwisu nie jest możliwe.</li>
-              <li><strong>Local Storage:</strong> zapamiętywanie Twoich osobistych preferencji interfejsu, takich jak odtwarzacz muzyki Lo-Fi, wybrany motyw graficzny platformy czy stan zwinięcia sekcji.</li>
+              <li><strong>Local Storage:</strong> zapamiętywanie Twoich osobistych preferencji interfejsu (np. odtwarzacz Lo-Fi, wybrany motyw graficzny platformy).</li>
+              <li><strong>Prywatne śledzenie postępów:</strong> w celu zapewnienia maksymalnej prywatności, informacje o Twoim <strong>łącznym czasie nauki</strong> oraz <strong>statusach przeczytanych notatek</strong> zapisywane są wyłącznie w pamięci Local Storage Twojej przeglądarki. Dane te nie są przesyłane na nasze serwery.</li>
             </ul>
             <p>
-              Nie stosujemy cookies o charakterze reklamowym, śledzącym ani marketingowym. Możesz w każdej chwili zablokować lub usunąć pliki cookies w ustawieniach swojej przeglądarki internetowej, jednak może to uniemożliwić prawidłowe działanie kluczowych funkcji platformy.
+              Nie stosujemy cookies o charakterze reklamowym, śledzącym ani zewnętrznym marketingowym. Możesz w każdej chwili zablokować lub usunąć pliki cookies w ustawieniach swojej przeglądarki, jednak może to uniemożliwić prawidłowe działanie platformy oraz zresetować Twój czas nauki.
             </p>
           </section>
 
@@ -132,7 +133,7 @@ export default function PolitykaPrywatnosciPage() {
               <li><strong>Wniesienia skargi</strong> do organu nadzorczego – Prezesa Urzędu Ochrony Danych Osobowych (UODO), ul. Stawki 2, 00-193 Warszawa, jeśli uznasz, że przetwarzamy Twoje dane niezgodnie z prawem.</li>
             </ul>
             <p>
-              Aby skorzystać ze swoich praw, skontaktuj się z nami pod adresem: <strong className="text-stone-100">wiedzaszytanamiare@kontakt.pl</strong>. Odpowiemy na Twoje zgłoszenie bez zbędnej zwłoki, nie później niż w terminie 30 dni od jego otrzymania.
+              Aby skorzystać ze swoich praw, skontaktuj się z nami pod adresem: <strong className="text-stone-100">kontakt@wiedzaszytanamiare.pl</strong>. Odpowiemy na Twoje zgłoszenie bez zbędnej zwłoki, nie później niż w terminie 30 dni od jego otrzymania.
             </p>
           </section>
 
@@ -155,7 +156,10 @@ export default function PolitykaPrywatnosciPage() {
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-[#c68a4c] uppercase tracking-wider font-serif">10. Zmiany Polityki Prywatności</h3>
             <p>
-              Administrator zastrzega prawo do aktualizacji niniejszej polityki prywatności. O każdej istotnej zmianie Użytkownicy posiadający aktywne konto zostaną poinformowani drogą e-mailową z co najmniej <strong>14-dniowym wyprzedzeniem</strong>. Aktualna wersja polityki jest zawsze dostępna pod adresem <strong className="text-stone-100">wiedzaszytanamiare.pl/prywatnosc</strong>.
+              Administrator zastrzega prawo do aktualizacji niniejszej polityki prywatności. O każdej istotnej zmianie Użytkownicy posiadający aktywne konto zostaną poinformowani z co najmniej <strong>14-dniowym wyprzedzeniem</strong> w formie komunikatu elektronicznego (np. wyraźnego powiadomienia wyświetlanego po zalogowaniu do panelu Użytkownika w Serwisie lub wiadomości e-mail).
+            </p>
+            <p>
+              Aktualna wersja polityki jest zawsze dostępna pod adresem <strong className="text-stone-100">wiedzaszytanamiare.pl/prywatnosc</strong>.
             </p>
           </section>
 
