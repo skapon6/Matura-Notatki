@@ -104,7 +104,6 @@ export async function POST(request: Request) {
                     Przejdź do Asystenta Rozprawek →
                   </a>
 
-                  <!-- OFICJALNE POTWIERDZENIE ZAWARCIA UMOWY (WYMÓG PRAWNY ART. 38 PKT 13) -->
                   <div style="border-top: 1px solid #332b27; padding-top: 15px; font-size: 11px; line-height: 1.5; color: #8c7f76; font-family: sans-serif;">
                     <p style="margin: 4px 0;"><strong style="color: #b5a498;">Potwierdzenie zawarcia umowy o dostarczenie treści cyfrowych:</strong></p>
                     <p style="margin: 4px 0;">• <strong>Przedmiot:</strong> Paczka ${tokenAmount} tokenów AI</p>
@@ -159,12 +158,12 @@ export async function POST(request: Request) {
 
           const newCredits = currentCredits + tokenIncrement;
 
+          // UŻYWAMY DOKŁADNIE TWOJEJ KOLUMNY: expires_at
           const { error: subUpdateError } = await supabase
             .from('profiles')
             .update({
               subscription_status: tier,
-              plan_type: tier,
-              access_expires_at: expirationDate.toISOString(),
+              expires_at: expirationDate.toISOString(),
               essay_credits: newCredits,
             })
             .eq('id', userId);
@@ -203,7 +202,6 @@ export async function POST(request: Request) {
                     Wejdź do Kącika Maturalnego →
                   </a>
 
-                  <!-- OFICJALNE POTWIERDZENIE ZAWARCIA UMOWY (WYMÓG PRAWNY ART. 38 PKT 13) -->
                   <div style="border-top: 1px solid #332b27; padding-top: 15px; font-size: 11px; line-height: 1.5; color: #8c7f76; font-family: sans-serif;">
                     <p style="margin: 4px 0;"><strong style="color: #b5a498;">Potwierdzenie zawarcia umowy o dostarczenie treści cyfrowych:</strong></p>
                     <p style="margin: 4px 0;">• <strong>Usługa:</strong> ${displayTierName}</p>
