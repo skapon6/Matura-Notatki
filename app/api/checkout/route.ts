@@ -8,11 +8,18 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16' as any,
 });
 
+// FLAGA BLOKADY PŁATNOŚCI (Zmień na false, gdy przejdziesz na Stripe Live)
+const PAYMENTS_TEMPORARILY_DISABLED = true;
+
 export async function POST(request: Request) {
-  return NextResponse.json(
-    { error: "Płatności online zostaną uruchomione wkrótce! Trwają ostatnie prace techniczne." },
-    { status: 503 }
-  );
+  // 1. Bezpieczna blokada na czas prac technicznych
+  if (PAYMENTS_TEMPORARILY_DISABLED) {
+    return NextResponse.json(
+      { error: "Płatności online zostaną uruchomione wkrótce! Trwają ostatnie prace techniczne." },
+      { status: 503 }
+    );
+  }
+
   const cookieStore = await cookies();
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -26,7 +33,7 @@ export async function POST(request: Request) {
     }
   );
 
-  // 1. Bezpiecznie sprawdzamy sesję użytkownika przez getUser() (Zabezpieczenie przed konsolą i oszustwami)
+  // 2. Bezpiecznie sprawdzamy sesję użytkownika przez getUser()
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) {
     return NextResponse.json({ error: 'Niezalogowany użytkownik' }, { status: 401 });
@@ -34,15 +41,15 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { type, tier, pack } = body; // type może być: 'subscription' lub 'tokens'
+    const { type, tier, pack } = body;
 
     let lineItems: any[] = [];
-    let metadata: any = {
-      userId: user.id, // Przekazujemy bezpiecznie zweryfikowane ID użytkownika
+    const metadata: Record<string, string> = {
+      userId: user.id, // Bezpiecznie zweryfikowane ID użytkownika
     };
     let mode: 'payment' | 'subscription' = 'payment';
 
-    // 2. OBSŁUGA JEDNORAZOWYCH PAKIETÓW TOKENÓW (Działa w locie)
+    // 3. OBSŁUGA JEDNORAZOWYCH PAKIETÓW TOKENÓW
     if (type === 'tokens') {
       mode = 'payment';
       let amountInCents = 0;
@@ -67,7 +74,6 @@ export async function POST(request: Request) {
             currency: 'pln',
             product_data: {
               name: `Pakiet ${tokenCount} Tokenów AI`,
-              // ZAKTUALIZOWANY, UNIWERSALNY OPIS PRODUKTU DLA STRIPE (Zadania pisemne + ustne)
               description: `Jednorazowe doładowanie o ${tokenCount} kredytów do wykorzystania we wszystkich funkcjach AI (asystent rozprawek oraz próbne egzaminy ustne na żywo).`,
             },
             unit_amount: amountInCents,
@@ -76,12 +82,11 @@ export async function POST(request: Request) {
         }
       ];
 
-      // Przekazujemy metadane do Webhooka
       metadata.purchaseType = 'tokens';
       metadata.tokenAmount = tokenCount.toString();
 
     } else {
-      // 3. KLASYCZNA SUBSKRYPCJA (Używa stałych Price ID z .env)
+      // 4. KLASYCZNA SUBSKRYPCJA
       mode = 'payment';
       let priceId = '';
 
