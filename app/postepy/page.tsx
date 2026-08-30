@@ -1,4 +1,3 @@
-// app/postepy/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -13,13 +12,9 @@ import Link from "next/link";
 export default function MojePostepyPage() {
   const router = useRouter();
 
-  // 1. Zostawiamy tylko jeden główny stan dla motywu
   const [cozyTheme, setCozyTheme] = useState<CozyTheme>("library");
-
-  // 2. Wyliczamy klasy CSS dynamicznie (bez osobnego stanu!)
   const currentTheme = getThemeClasses(cozyTheme);
 
-  // 3. Wczytujemy zapisany motyw z pamięci przy wejściu na stronę
   useEffect(() => {
     const savedTheme = localStorage.getItem("app_theme") as CozyTheme;
     if (savedTheme) {
@@ -27,7 +22,6 @@ export default function MojePostepyPage() {
     }
   }, []);
 
-  // Globalny odtwarzacz Lo-Fi
   const {
     lofiActive,
     currentTrackIndex,
@@ -42,19 +36,21 @@ export default function MojePostepyPage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // Stany dla statystyk pobieranych z bazy danych
+  // Stany dla statystyk
   const [quotesCount, setQuotesCount] = useState(0);
   const [credits, setCredits] = useState(0);
   const [essaysCount, setEssaysCount] = useState(0);
-  const [essayAverage, setEssayAverage] = useState(0); // <--- DODANY STAN ŚREDNIEJ OCEN
-  const [essaySuccessRate, setEssaySuccessRate] = useState(0); // <--- DODANY STAN SKUTECZNOŚCI
+  const [essayAverage, setEssayAverage] = useState(0); 
+  const [essaySuccessRate, setEssaySuccessRate] = useState(0); 
   const [studyTime, setStudyTime] = useState(0);
+  
+  // NOWOŚĆ: Stany dla przeczytanych notatek
+  const [readNotesCount, setReadNotesCount] = useState(0);
+  const [totalNotesCount, setTotalNotesCount] = useState(0);
 
-  // Stany dla dynamicznego wyliczania postępu fiszek
   const [flashcards, setFlashcards] = useState<any[]>([]);
   const [progress, setProgress] = useState<Record<string, string>>({});
 
-  // Monitorowanie sesji i ładowanie wszystkich statystyk z Supabase
   useEffect(() => {
     async function fetchStats() {
       setLoading(true);
@@ -62,46 +58,44 @@ export default function MojePostepyPage() {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session?.user) {
-          router.push("/"); // Brak sesji -> powrót na główną
+          router.push("/");
           return;
         }
         setUser(session.user);
         const userId = session.user.id;
 
-        // Pobieramy dane równolegle (Promise.all) dla maksymalnej szybkości ładowania
+        // Pobieramy dane równolegle (Promise.all) dodając zapytanie o łączną liczbę notatek
         const [
           profileRes,
           quotesRes,
           essaysRes,
           flashcardsRes,
-          progressRes
+          progressRes,
+          notesCountRes // <--- Zapytanie typu HEAD, zlicza rekordy bez pobierania danych!
         ] = await Promise.all([
           supabase.from("profiles").select("essay_credits").eq("id", userId).single(),
-          supabase.from("personal_notes").select("id", { count: "exact" }),
+          supabase.from("personal_notes").select("id", { count: "exact", head: true }),
           supabase.from("essay_evaluations").select("score").eq("user_id", userId),
           supabase.from("flashcards").select("id, era, note_slug, front, back"),
-          supabase.from("flashcard_progress").select("flashcard_id, status").eq("user_id", userId)
+          supabase.from("flashcard_progress").select("flashcard_id, status").eq("user_id", userId),
+          supabase.from("notes").select("id", { count: "exact", head: true }) // Zliczanie bazy notatek
         ]);
 
-        // A. Tokeny
-        if (profileRes.data) {
-          setCredits(profileRes.data.essay_credits || 0);
+        if (profileRes.data) setCredits(profileRes.data.essay_credits || 0);
+        if (quotesRes.count !== null) setQuotesCount(quotesRes.count);
+        
+        // Zapis całkowitej liczby notatek w bazie
+        if (notesCountRes.count !== null) {
+          setTotalNotesCount(notesCountRes.count);
         }
 
-        // B. Cytaty
-        if (quotesRes.count !== null) {
-          setQuotesCount(quotesRes.count);
-        }
-
-        // C. Rozprawki i ich statystyki
         if (essaysRes.data) {
           setEssaysCount(essaysRes.data.length);
-
           let totalScoreNumerator = 0;
           let parsedCount = 0;
 
           essaysRes.data.forEach((row: any) => {
-            const scoreStr = row.score; // np. "21/35"
+            const scoreStr = row.score; 
             if (scoreStr && typeof scoreStr === "string") {
               const numerator = parseInt(scoreStr.split("/")[0], 10);
               if (!isNaN(numerator)) {
@@ -116,10 +110,7 @@ export default function MojePostepyPage() {
           setEssaySuccessRate(Math.round((average / 35) * 100));
         }
 
-        // D. Fiszki i ich postęp
-        if (flashcardsRes.data) {
-          setFlashcards(flashcardsRes.data);
-        }
+        if (flashcardsRes.data) setFlashcards(flashcardsRes.data);
         if (progressRes.data) {
           const progressMap: Record<string, string> = {};
           progressRes.data.forEach((row) => {
@@ -128,10 +119,22 @@ export default function MojePostepyPage() {
           setProgress(progressMap);
         }
 
-        // E. Czas nauki wczytywany z pamięci lokalnej
+        // Błyskawiczne zliczanie przeczytanych notatek i czasu z pamięci lokalnej (cache)
         if (typeof window !== "undefined") {
+          // 1. Czas nauki
           const savedTime = localStorage.getItem("cozy_study_time_total") || "0";
-          setStudyTime(Math.round(parseInt(savedTime) / 60)); // Przeliczamy sekundy na minuty
+          setStudyTime(Math.round(parseInt(savedTime) / 60));
+          
+          // 2. Przeczytane notatki
+          const savedReadNotes = localStorage.getItem("read_notes");
+          if (savedReadNotes) {
+            try {
+              const parsedNotes = JSON.parse(savedReadNotes);
+              if (Array.isArray(parsedNotes)) {
+                setReadNotesCount(parsedNotes.length);
+              }
+            } catch (e) {}
+          }
         }
 
       } catch (err) {
@@ -144,7 +147,6 @@ export default function MojePostepyPage() {
     fetchStats();
   }, [router]);
 
-  // Pomocnicza funkcja do upiększania slugów notatek na kafelkach fiszek
   const prettifySlug = (slug: string) => {
     if (!slug) return "";
     const preMapped: Record<string, string> = {
@@ -162,17 +164,12 @@ export default function MojePostepyPage() {
     return slug.split("-").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
   };
 
-  // Matematyczne wyprowadzenie dynamicznych procentów opanowania epok na podstawie bazy fiszek
   const calculateGroupProgress = (erasInGroup: string[]) => {
     const cardsInGroup = flashcards.filter((c) =>
       erasInGroup.some((era) => c.era?.toLowerCase() === era.toLowerCase())
     );
     if (cardsInGroup.length === 0) return 0;
-
-    const masteredInGroup = cardsInGroup.filter(
-      (c) => progress[c.id] === "mastered"
-    );
-
+    const masteredInGroup = cardsInGroup.filter((c) => progress[c.id] === "mastered");
     return Math.round((masteredInGroup.length / cardsInGroup.length) * 100);
   };
 
@@ -181,7 +178,6 @@ export default function MojePostepyPage() {
   const romantyzmProgress = calculateGroupProgress(["romantyzm", "pozytywizm"]);
   const wspolczesnoscProgress = calculateGroupProgress(["dwudziestolecie", "wojna i okupacja", "współczesność"]);
 
-  // Ekstrakcja wszystkich opanowanych fiszek z bazy danych
   const masteredFlashcards = flashcards
     .filter((c) => progress[c.id] === "mastered")
     .map((c) => ({
@@ -206,16 +202,9 @@ export default function MojePostepyPage() {
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-500 ${currentTheme.bg} text-stone-200 font-sans`}>
       
-      {/* HEADER SECTION */}
       <header className={`border-b ${currentTheme.cardBorder} px-4 sm:px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 backdrop-blur-md sticky top-0 z-40 transition-colors duration-500`}>
         <div className="flex w-full md:w-auto items-center justify-between md:justify-start gap-4">
-          <button
-            onClick={() => {
-              playSound("click");
-              router.push("/");
-            }}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 transition-all text-xs font-medium ${currentTheme.subText} hover:text-stone-100`}
-          >
+          <button onClick={() => { playSound("click"); router.push("/"); }} className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 transition-all text-xs font-medium ${currentTheme.subText} hover:text-stone-100`}>
             ← Wróć do kącika
           </button>
         </div>
@@ -229,59 +218,44 @@ export default function MojePostepyPage() {
           </div>
         </div>
 
-        {/* Globalny Odtwarzacz Lofi */}
         <div className="flex w-full md:w-auto items-center justify-between md:justify-end gap-3 sm:gap-4 border-t md:border-t-0 border-stone-800/40 pt-3 md:pt-0">
           <div className={`flex items-center gap-3 sm:gap-4 px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} transition-all select-none shadow-md`}>
             <button type="button" onClick={handlePrevTrack} className="text-stone-400 hover:text-amber-400 p-1 rounded-xl hover:bg-stone-800/40 transition-colors">
-              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.334 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z" />
-              </svg>
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.334 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z" /></svg>
             </button>
             <button type="button" onClick={toggleLofi} className="flex items-center gap-1.5 sm:gap-2 px-3 py-1 sm:px-4 sm:py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 hover:text-amber-400 border border-amber-500/20 transition-all font-semibold text-xs active:scale-95">
               {lofiActive ? (
-                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               ) : (
-                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 001.555-.832l3.197-2.132a1 1 0 000-1.664z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 001.555-.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               )}
-              <span className="hidden md:inline text-[10px] sm:text-xs tracking-wide">
-                {lofiTracks[currentTrackIndex].name}
-              </span>
+              <span className="hidden md:inline text-[10px] sm:text-xs tracking-wide">{lofiTracks[currentTrackIndex].name}</span>
             </button>
             <button type="button" onClick={handleNextTrack} className="text-stone-400 hover:text-amber-400 p-1 rounded-xl hover:bg-stone-800/40 transition-colors">
-              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 005 8v8a1 1 0 001.6.8l5.334-4zM19.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.334-4z" />
-              </svg>
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 005 8v8a1 1 0 001.6.8l5.334-4zM19.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.334-4z" /></svg>
             </button>
             <div className="hidden sm:flex items-center gap-2 sm:gap-2.5 ml-1 border-l border-stone-800/80 pl-2 sm:pl-3">
-              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-stone-500" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 12H3a1 1 0 01-1-1V9a1 1 0 011-1h1.586l3.707-3.707a1 1 0 011.09-.217z" clipRule="evenodd" />
-              </svg>
-              <input 
-                type="range" 
-                min="0" 
-                max="1" 
-                step="0.05" 
-                value={lofiVolume} 
-                onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-                className="w-14 sm:w-16 md:w-20 h-1 bg-stone-850 rounded-lg appearance-none cursor-pointer accent-amber-500 focus:outline-none"
-                style={{ WebkitAppearance: "none" }}
-              />
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-stone-500" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 12H3a1 1 0 01-1-1V9a1 1 0 011-1h1.586l3.707-3.707a1 1 0 011.09-.217z" clipRule="evenodd" /></svg>
+              <input type="range" min="0" max="1" step="0.05" value={lofiVolume} onChange={(e) => handleVolumeChange(parseFloat(e.target.value))} className="w-14 sm:w-16 md:w-20 h-1 bg-stone-850 rounded-lg appearance-none cursor-pointer accent-amber-500 focus:outline-none" style={{ WebkitAppearance: "none" }} />
             </div>
           </div>
         </div>
       </header>
 
-      {/* RENDEROWANIE ZAWARTOŚCI */}
-      <main className="max-w-4xl mx-auto w-full p-6 flex flex-col gap-6 flex-1 select-none animate-slide-in">
+      <main className="max-w-5xl mx-auto w-full p-6 flex flex-col gap-6 flex-1 select-none animate-slide-in">
         
-        {/* CZTERY DYNAMICZNE KAFELKI STATYSTYK */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+        {/* PIĘĆ DYNAMICZNYCH KAFELKÓW STATYSTYK */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 w-full">
           
+          <CozyGlowCard currentTheme={currentTheme} className="p-5 flex flex-col items-center justify-center text-center gap-2">
+            <div className="text-xl sm:text-2xl">📚</div>
+            <div className="text-xl sm:text-2xl font-black font-mono text-stone-100 leading-normal flex items-baseline gap-1">
+              <span className="text-emerald-400">{readNotesCount}</span> 
+              <span className="text-[13px] font-sans font-medium text-stone-500">/ {totalNotesCount}</span>
+            </div>
+            <div className="text-[10px] uppercase tracking-wider text-stone-500 font-extrabold leading-normal">Przeczytane Notatki</div>
+          </CozyGlowCard>
+
           <CozyGlowCard currentTheme={currentTheme} className="p-5 flex flex-col items-center justify-center text-center gap-2">
             <div className="text-xl sm:text-2xl">⭐</div>
             <div className="text-xl sm:text-2xl font-black font-mono text-stone-100 leading-normal">{quotesCount}</div>
@@ -300,7 +274,7 @@ export default function MojePostepyPage() {
             <div className="text-[10px] uppercase tracking-wider text-stone-500 font-extrabold leading-normal">Ocenione rozprawki</div>
           </CozyGlowCard>
 
-          <CozyGlowCard currentTheme={currentTheme} className="p-5 flex flex-col items-center justify-center text-center gap-2">
+          <CozyGlowCard currentTheme={currentTheme} className="p-5 flex flex-col items-center justify-center text-center gap-2 md:col-span-1 lg:col-span-1 col-span-2">
             <div className="text-xl sm:text-2xl">⏱️</div>
             <div className="text-xl sm:text-2xl font-black font-mono text-stone-100 leading-normal">{studyTime} min</div>
             <div className="text-[10px] uppercase tracking-wider text-stone-500 font-extrabold leading-normal">Łączny czas nauki</div>
@@ -308,7 +282,6 @@ export default function MojePostepyPage() {
 
         </div>
 
-        {/* DYNAMICZNY PANEL STATYSTYK ROZPRAWEK AI (NOWOŚĆ) */}
         {essaysCount > 0 && (
           <CozyGlowCard currentTheme={currentTheme} className="p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-md animate-slide-in">
             <div className="flex items-center gap-4 text-left">
@@ -329,9 +302,7 @@ export default function MojePostepyPage() {
 
             <div className="flex gap-3 sm:gap-4 shrink-0 font-mono text-center select-none">
               <div className="bg-stone-950/40 px-4 py-2 rounded-xl border border-stone-850">
-                <span className="block text-lg sm:text-xl font-extrabold text-stone-100">
-                  {essaysCount}
-                </span>
+                <span className="block text-lg sm:text-xl font-extrabold text-stone-100">{essaysCount}</span>
                 <span className="text-[9px] text-stone-500 uppercase tracking-wider font-sans">Napisane</span>
               </div>
               <div className="bg-stone-950/40 px-4 py-2 rounded-xl border border-stone-850">
@@ -341,16 +312,13 @@ export default function MojePostepyPage() {
                 <span className="text-[9px] text-stone-500 uppercase tracking-wider font-sans">Średnia</span>
               </div>
               <div className="bg-stone-950/40 px-4 py-2 rounded-xl border border-stone-850">
-                <span className="block text-lg sm:text-xl font-extrabold text-stone-100">
-                  {essaySuccessRate}%
-                </span>
+                <span className="block text-lg sm:text-xl font-extrabold text-stone-100">{essaySuccessRate}%</span>
                 <span className="text-[9px] text-stone-500 uppercase tracking-wider font-sans">Skuteczność</span>
               </div>
             </div>
           </CozyGlowCard>
         )}
 
-        {/* CENTRALNY PANEL POSTĘPU OPANOWANIA EPOK */}
         <CozyGlowCard currentTheme={currentTheme} className="p-6 sm:p-8 flex flex-col gap-6">
           <div>
             <h3 className="text-xs uppercase tracking-widest text-amber-500 font-bold">
@@ -362,67 +330,48 @@ export default function MojePostepyPage() {
           </div>
 
           <div className="flex flex-col gap-4.5">
-            
-            {/* Grupa 1 */}
             <div className="flex flex-col gap-1.5">
               <div className="flex justify-between text-xs font-semibold text-stone-300">
                 <span>Starożytność i Średniowiecze</span>
                 <span className="font-mono text-amber-500">{starozytnoscProgress}%</span>
               </div>
               <div className="w-full h-2.5 rounded-full bg-stone-950 overflow-hidden border border-stone-900">
-                <div 
-                  className="h-full bg-gradient-to-r from-amber-500 to-orange-400 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(245,158,11,0.2)]"
-                  style={{ width: `${starozytnoscProgress}%` }}
-                />
+                <div className="h-full bg-gradient-to-r from-amber-500 to-orange-400 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(245,158,11,0.2)]" style={{ width: `${starozytnoscProgress}%` }} />
               </div>
             </div>
 
-            {/* Grupa 2 */}
             <div className="flex flex-col gap-1.5">
               <div className="flex justify-between text-xs font-semibold text-stone-300">
                 <span>Renesans, Barok i Oświecenie</span>
                 <span className="font-mono text-amber-500">{renesansProgress}%</span>
               </div>
               <div className="w-full h-2.5 rounded-full bg-stone-950 overflow-hidden border border-stone-900">
-                <div 
-                  className="h-full bg-gradient-to-r from-amber-500 to-orange-400 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(245,158,11,0.2)]"
-                  style={{ width: `${renesansProgress}%` }}
-                />
+                <div className="h-full bg-gradient-to-r from-amber-500 to-orange-400 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(245,158,11,0.2)]" style={{ width: `${renesansProgress}%` }} />
               </div>
             </div>
 
-            {/* Grupa 3 */}
             <div className="flex flex-col gap-1.5">
               <div className="flex justify-between text-xs font-semibold text-stone-300">
                 <span>Romantyzm i Pozytywizm (Lektury kluczowe)</span>
                 <span className="font-mono text-amber-500">{romantyzmProgress}%</span>
               </div>
               <div className="w-full h-2.5 rounded-full bg-stone-950 overflow-hidden border border-stone-900">
-                <div 
-                  className="h-full bg-gradient-to-r from-amber-500 to-orange-400 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(245,158,11,0.2)]"
-                  style={{ width: `${romantyzmProgress}%` }}
-                />
+                <div className="h-full bg-gradient-to-r from-amber-500 to-orange-400 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(245,158,11,0.2)]" style={{ width: `${romantyzmProgress}%` }} />
               </div>
             </div>
 
-            {/* Grupa 4 */}
             <div className="flex flex-col gap-1.5">
               <div className="flex justify-between text-xs font-semibold text-stone-300">
                 <span>Współczesność i Międzywojenne</span>
                 <span className="font-mono text-amber-500">{wspolczesnoscProgress}%</span>
               </div>
               <div className="w-full h-2.5 rounded-full bg-stone-950 overflow-hidden border border-stone-900">
-                <div 
-                  className="h-full bg-gradient-to-r from-amber-500 to-orange-400 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(245,158,11,0.2)]"
-                  style={{ width: `${wspolczesnoscProgress}%` }}
-                />
+                <div className="h-full bg-gradient-to-r from-amber-500 to-orange-400 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(245,158,11,0.2)]" style={{ width: `${wspolczesnoscProgress}%` }} />
               </div>
             </div>
-
           </div>
         </CozyGlowCard>
 
-        {/* NOWY, DOLNY PANEL: OSTATNIO OPANOWANE FISZKI */}
         <CozyGlowCard currentTheme={currentTheme} className="p-6 sm:p-8 flex flex-col gap-4">
           <div>
             <h3 className="text-xs uppercase tracking-widest text-emerald-400 font-bold flex items-center gap-2 select-none">
@@ -436,10 +385,7 @@ export default function MojePostepyPage() {
           {masteredFlashcards.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-slide-in">
               {masteredFlashcards.slice(-4).reverse().map((card) => (
-                <div 
-                  key={card.id}
-                  className="p-4 rounded-xl bg-stone-950/50 border border-stone-900/60 text-left flex flex-col gap-2 transition-all hover:border-emerald-500/20"
-                >
+                <div key={card.id} className="p-4 rounded-xl bg-stone-950/50 border border-stone-900/60 text-left flex flex-col gap-2 transition-all hover:border-emerald-500/20">
                   <div className="flex items-center justify-between">
                     <span className="text-[9px] uppercase tracking-widest text-emerald-400 font-extrabold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-950/20">
                       📍 {card.category} {card.note_title ? `• ${card.note_title}` : ""}
