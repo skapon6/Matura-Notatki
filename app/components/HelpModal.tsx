@@ -1,4 +1,3 @@
-// components/HelpModal.tsx
 "use client";
 
 import React, { useState } from "react";
@@ -10,7 +9,7 @@ interface HelpModalProps {
   currentTheme: any;
 }
 
-type SectionType = "general" | "essay" | "oral" | "flashcards" | "quotes" | "pricing";
+type SectionType = "general" | "progress" | "essay" | "oral" | "flashcards" | "quotes" | "pricing";
 
 export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, currentTheme }) => {
   const [activeSection, setActiveSection] = useState<SectionType | null>("general");
@@ -75,7 +74,38 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, currentTh
             )}
           </div>
 
-          {/* SEKCJA 2: EDYTOR ROZPRAWKI AI */}
+          {/* NOWA SEKCJA 2: POSTĘPY I ZAZNACZANIE NOTATEK */}
+          <div className="border border-stone-800/60 rounded-xl overflow-hidden bg-stone-950/20 shrink-0">
+            <button
+              onClick={() => toggleSection("progress")}
+              className="w-full p-3.5 flex items-center justify-between text-left hover:bg-stone-900/40 transition-all gap-2"
+            >
+              <span className="text-xs font-bold text-stone-100 font-serif flex items-center gap-2">
+                <span className="shrink-0">📈</span> Śledzenie Postępów i Notatki
+              </span>
+              <span className="text-stone-500 text-xs shrink-0">{activeSection === "progress" ? "▲" : "▼"}</span>
+            </button>
+            {activeSection === "progress" && (
+              <div className="p-4 pt-1 border-t border-stone-800/40 text-xs text-stone-400 leading-relaxed space-y-3.5 animate-slide-in">
+                <p>
+                  W zakładce <strong className="text-stone-100 font-semibold">Wszystkie Notatki</strong> przy każdej karcie znajdziesz przycisk <strong className="text-stone-100 font-semibold">„Oznacz jako przeczytane”</strong>. Pozwala to na łatwe odfiltrowanie materiałów, których jeszcze nie powtarzałeś (użyj zakładek: ✔️ Przeczytane / ⏳ Do nauki).
+                </p>
+                <p>
+                  Swoje globalne statystyki znajdziesz wchodząc w <strong className="text-stone-100 font-semibold">Moje Postępy</strong>.
+                </p>
+                
+                {/* Wyróżnione ostrzeżenie o pamięci podręcznej przeglądarki */}
+                <div className="p-3 rounded-xl bg-stone-950/50 border border-stone-800 flex items-start gap-2.5 text-[11px] leading-relaxed font-sans text-stone-400">
+                  <span className="shrink-0 text-base">ℹ️</span>
+                  <span>
+                    <strong className="text-stone-300">Ważne:</strong> Twój łączny czas nauki oraz status przeczytanych notatek są zapisywane <strong className="text-stone-300">lokalnie w pamięci Twojej przeglądarki</strong>. Jeśli wyczyścisz historię przeglądania (ciasteczka i dane witryn), te dwie statystyki znikną. Twoje konto, kredyty i zapisy w chmurze są jednak całkowicie bezpieczne!
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* SEKCJA 3: EDYTOR ROZPRAWKI AI */}
           <div className="border border-stone-800/60 rounded-xl overflow-hidden bg-stone-950/20 shrink-0">
             <button
               onClick={() => toggleSection("essay")}
@@ -101,7 +131,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, currentTh
             )}
           </div>
 
-          {/* SEKCJA 3: MATURA USTNA AI */}
+          {/* SEKCJA 4: MATURA USTNA AI */}
           <div className="border border-stone-800/60 rounded-xl overflow-hidden bg-stone-950/20 shrink-0">
             <button
               onClick={() => toggleSection("oral")}
@@ -130,7 +160,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, currentTh
             )}
           </div>
 
-          {/* SEKCJA 4: SZYBKIE FISZKI */}
+          {/* SEKCJA 5: SZYBKIE FISZKI */}
           <div className="border border-stone-800/60 rounded-xl overflow-hidden bg-stone-950/20 shrink-0">
             <button
               onClick={() => toggleSection("flashcards")}
@@ -156,7 +186,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, currentTh
             )}
           </div>
 
-          {/* SEKCJA 5: ZŁOTE CYTATY */}
+          {/* SEKCJA 6: ZŁOTE CYTATY */}
           <div className="border border-stone-800/60 rounded-xl overflow-hidden bg-stone-950/20 shrink-0">
             <button
               onClick={() => toggleSection("quotes")}
@@ -179,7 +209,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, currentTh
             )}
           </div>
 
-          {/* SEKCJA 6: PREMIUM I TOKENY */}
+          {/* SEKCJA 7: PREMIUM I TOKENY */}
           <div className="border border-stone-800/60 rounded-xl overflow-hidden bg-stone-950/20 shrink-0">
             <button
               onClick={() => toggleSection("pricing")}
