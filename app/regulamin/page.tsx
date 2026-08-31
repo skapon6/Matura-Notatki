@@ -29,18 +29,14 @@ export default function RegulaminPage() {
         {/* Content */}
         <div className="text-xs sm:text-sm text-stone-300 space-y-6 leading-relaxed text-left font-sans">
           <p className="italic text-stone-400">
-            Ostatnia aktualizacja: 26 czerwca 2026 r. Niniejszy regulamin określa zasady korzystania z platformy internetowej oferującej asystenta pisania rozprawek oraz symulator matury ustnej z języka polskiego.
+            Ostatnia aktualizacja: 31 sierpnia 2026 r. Niniejszy regulamin określa zasady korzystania z platformy internetowej oferującej asystenta pisania rozprawek oraz symulator matury ustnej z języka polskiego.
           </p>
 
           {/* 1 */}
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-[#c68a4c] uppercase tracking-wider font-serif">1. Postanowienia Ogólne</h3>
             <p>
-              Właścicielem i administratorem platformy dostępnej pod adresem <strong className="text-stone-100">wiedzaszytanamiare.pl</strong> jest <strong className="text-stone-100">Kacper Leś</strong>, prowadzący działalność pod adresem: <strong className="text-stone-100">39-206 Pustków-Osiedle</strong>, kontakt e-mail: <strong className="text-stone-100">wiedzaszytanamiare@kontakt.pl</strong>. 
-              {/* JEŚLI MASZ FIRMĘ (JDG), ODBLOKUJ I UZUPEŁNIJ PONIŻSZE LINIE:
-              prowadzący działalność gospodarczą pod firmą Kacper Leś [Nazwa Firmy jeśli inna], wpisany do Centralnej Ewidencji i Informacji o Działalności Gospodarczej (CEIDG), posiadający NIP: [TWÓJ NIP] oraz REGON: [TWÓJ REGON]. 
-              */}
-              {/* JEŚLI PROWADZISZ DZIAŁALNOŚĆ NIEREJESTROWANĄ, ZOSTAW PONIŻSZY ZAPIS: */}
+              Właścicielem i administratorem platformy dostępnej pod adresem <strong className="text-stone-100">wiedzaszytanamiare.pl</strong> jest <strong className="text-stone-100">Kacper Leś</strong>, prowadzący działalność pod adresem: <strong className="text-stone-100">39-206 Pustków-Osiedle</strong>, kontakt e-mail: <strong className="text-stone-100">kontakt@wiedzaszytanamiare.pl</strong>. 
               Działalność prowadzona jest w formie działalności nierejestrowanej w rozumieniu art. 5 ustawy z dnia 6 marca 2018 r. — Prawo przedsiębiorców.
             </p>
             <p>
@@ -195,7 +191,10 @@ export default function RegulaminPage() {
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-[#c68a4c] uppercase tracking-wider font-serif">12. Zmiany Regulaminu</h3>
             <p>
-              Administrator zastrzega sobie prawo do wprowadzania zmian w niniejszym regulaminie z ważnych przyczyn (np. zmiany przepisów prawa, rozwój techniczny platformy). O każdej istotnej zmianie zarejestrowani Użytkownicy zostaną powiadomieni drogą e-mailową z co najmniej <strong>14-dniowym wyprzedzeniem</strong>. Brak akceptacji nowych warunków uprawnia Użytkownika do żądania usunięcia konta przed wejściem zmian w życie.
+              Administrator zastrzega sobie prawo do wprowadzania zmian w niniejszym regulaminie z ważnych przyczyn (np. zmiany przepisów prawa, rozwój techniczny platformy). O każdej istotnej zmianie zarejestrowani Użytkownicy zostaną powiadomieni z co najmniej <strong>14-dniowym wyprzedzeniem</strong> w formie komunikatu elektronicznego (np. wyraźnego powiadomienia wyświetlanego po zalogowaniu do panelu Użytkownika w Serwisie lub wiadomości e-mail).
+            </p>
+            <p>
+              Brak akceptacji nowych warunków uprawnia Użytkownika do żądania usunięcia konta przed wejściem zmian w życie. Dalsze korzystanie z Serwisu po wejściu w życie zmian równoznaczne jest z ich akceptacją.
             </p>
           </section>
 
@@ -203,7 +202,7 @@ export default function RegulaminPage() {
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-[#c68a4c] uppercase tracking-wider font-serif">13. Reklamacje i Zgodność Usługi z Umową (Konsumenci)</h3>
             <p>
-              Wszelkie reklamacje (w tym dotyczące braku zgodności usług/treści cyfrowych z umową) należy zgłaszać drogą elektroniczną na adres: <strong className="text-stone-100">wiedzaszytanamiare@kontakt.pl</strong>.
+              Wszelkie reklamacje (w tym dotyczące braku zgodności usług/treści cyfrowych z umową) należy zgłaszać drogą elektroniczną na adres: <strong className="text-stone-100">kontakt@wiedzaszytanamiare.pl</strong>.
             </p>
             <p>
               Do reklamacji konsumenckich dotyczących dostarczania treści lub usług cyfrowych po 1 stycznia 2023 r. zastosowanie mają przepisy <strong>Rozdziału 5b ustawy o prawach konsumenta</strong>. Jeżeli dostarczona usługa/treść cyfrowa jest niezgodna z umową, Konsument może żądać doprowadzenia jej do zgodności z umową lub – w określonych ustawą przypadkach (np. gdy niezgodność jest istotna) – złożyć oświadczenie o obniżeniu ceny lub odstąpieniu od umowy.
