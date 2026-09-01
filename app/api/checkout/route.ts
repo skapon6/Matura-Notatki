@@ -8,8 +8,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16' as any,
 });
 
-// FLAGA BLOKADY PŁATNOŚCI (Zmień na false, gdy przejdziesz na Stripe Live)
-const PAYMENTS_TEMPORARILY_DISABLED = true;
+// FLAGA BLOKADY PŁATNOŚCI (false = płatności aktywne)
+const PAYMENTS_TEMPORARILY_DISABLED = false;
 
 export async function POST(request: Request) {
   // 1. Bezpieczna blokada na czas prac technicznych
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
       metadata.tokenAmount = tokenCount.toString();
 
     } else {
-      // 4. KLASYCZNA SUBSKRYPCJA
+      // 4. KLASYCZNA SUBSKRYPCJA / PAKIET
       mode = 'payment';
       let priceId = '';
 
@@ -106,6 +106,7 @@ export async function POST(request: Request) {
     // Tworzenie sesji płatniczej Stripe Checkout
     const checkoutSession = await stripe.checkout.sessions.create({
       payment_method_types: ['card', 'blik', 'p24'],
+      allow_promotion_codes: true, // <--- ODBLOKOWUJE POLE NA KOD RABATOWY
       line_items: lineItems,
       mode: mode,
       success_url: `${request.headers.get('origin')}/?payment=success`,
