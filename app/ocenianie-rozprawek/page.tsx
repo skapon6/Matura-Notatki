@@ -13,7 +13,6 @@ interface Match {
   annotation: any;
 }
 
-// Baza oficjalnych tematów maturalnych CKE
 // Baza oficjalnych tematów maturalnych CKE (2023–2026)
 const OFFICIAL_CKE_YEARS = [
   {
@@ -96,6 +95,7 @@ export default function OcenianieRozprawekPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGenerationMode, setIsGenerationMode] = useState(false);
+  const [isGeneratedByAi, setIsGeneratedByAi] = useState(false); // <--- NOWOŚĆ: Śledzenie czy tekst pochodzi z generowania AI
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [generatedContexts, setGeneratedContexts] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
@@ -314,6 +314,7 @@ export default function OcenianieRozprawekPage() {
 
       setProfile((prev: any) => ({ ...prev, essay_credits: data.newCredits }));
       setEssayText(data.essayText);
+      setIsGeneratedByAi(true); // <--- Aktywujemy blokadę kopiowania dla tekstu wygenerowanego przez AI
       if (data.alternativeContexts) {
         setGeneratedContexts(data.alternativeContexts);
       }
@@ -335,6 +336,7 @@ export default function OcenianieRozprawekPage() {
     setAnalysisResult(item.analysis_result);
     setGeneratedContexts([]);
     setIsGenerationMode(false);
+    setIsGeneratedByAi(false); // Tekst z historii własnych prac ucznia jest odblokowany
     setActiveTab("preview");
     triggerAlert("Pomyślnie wczytano pracę z historii (0 kredytów)!", "success");
   };
@@ -458,7 +460,6 @@ export default function OcenianieRozprawekPage() {
         </div>
       )}
 
-      {/* ELEGANCKI MODAL WYBORU TEMATÓW CKE */}
       {/* NOWOCZESNY, CZYTELNY MODAL TEMATÓW CKE */}
       {isTopicModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in">
@@ -495,7 +496,7 @@ export default function OcenianieRozprawekPage() {
               </div>
             </div>
 
-            {/* Zakładki Roczników (ukrywane podczas wyszukiwania) */}
+            {/* Zakładki Roczników */}
             {!topicSearch && (
               <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 border-b border-stone-800/50">
                 <div className="flex gap-2">
@@ -522,7 +523,6 @@ export default function OcenianieRozprawekPage() {
             {/* Siatka Tematów */}
             <div className="flex flex-col gap-4 overflow-y-auto pr-1">
               {topicSearch ? (
-                // Wyniki wyszukiwania we wszystkich latach
                 <div className="space-y-4">
                   <p className="text-[11px] text-stone-400">
                     Wyniki wyszukiwania dla frazy: <strong className="text-amber-400">„{topicSearch}”</strong>
@@ -553,9 +553,7 @@ export default function OcenianieRozprawekPage() {
                   </div>
                 </div>
               ) : (
-                // Standardowy widok z podziałem na sesje wybranego roku
                 <div className="space-y-5">
-                  {/* Sesja Główna (Maj) */}
                   <div>
                     <div className="flex items-center gap-2 mb-2 px-1">
                       <span className="w-2 h-2 rounded-full bg-amber-400"></span>
@@ -586,7 +584,6 @@ export default function OcenianieRozprawekPage() {
                     </div>
                   </div>
 
-                  {/* Sesja Dodatkowa (Czerwiec) - jeśli istnieje */}
                   {currentYearData?.topics.some(t => t.session.includes("Czerwiec")) && (
                     <div>
                       <div className="flex items-center gap-2 mb-2 px-1">
@@ -619,7 +616,6 @@ export default function OcenianieRozprawekPage() {
                     </div>
                   )}
 
-                  {/* Sesja Poprawkowa (Sierpień) */}
                   <div>
                     <div className="flex items-center gap-2 mb-2 px-1">
                       <span className="w-2 h-2 rounded-full bg-orange-400"></span>
@@ -716,7 +712,6 @@ export default function OcenianieRozprawekPage() {
                   Temat Twojej rozprawki (Maksymalnie 200 słów)
                 </label>
                 
-                {/* NOWOCZESNY PRZYCISK OTWIERAJĄCY BAZĘ TEMATÓW CKE */}
                 <button
                   type="button"
                   onClick={() => setIsTopicModalOpen(true)}
@@ -737,7 +732,6 @@ export default function OcenianieRozprawekPage() {
                 className="w-full bg-stone-900/90 border border-stone-800 rounded-xl py-2.5 px-3.5 text-xs sm:text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-700/60 font-sans transition-all"
               />
 
-              {/* OSTRZEŻENIA DLA POLA TEMATU */}
               {isTopicSpam && (
                 <p className="text-[11px] text-red-400 font-semibold mt-1 animate-pulse">
                   ⚠️ Wykryto nieprawidłowe, zbyt długie słowo bez spacji (maksymalnie 20 znaków). Popraw temat, aby odblokować analizę!
@@ -767,6 +761,7 @@ export default function OcenianieRozprawekPage() {
                     setEssayText(""); 
                     setGeneratedContexts([]);
                     setAnalysisResult(null);
+                    setIsGeneratedByAi(false);
                   }
                 }}
                 disabled={isAnalyzing || isGenerating}
@@ -804,9 +799,18 @@ export default function OcenianieRozprawekPage() {
 
             {activeTab === "write" ? (
               <div>
-                <label className="text-xs uppercase tracking-widest text-stone-500 font-semibold block mb-2">
-                  Treść Twojego wypracowania
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs uppercase tracking-widest text-stone-500 font-semibold block">
+                    Treść Twojego wypracowania
+                  </label>
+                  {/* DYSKRETNA INFORMACJA O BLOKADZIE DLA WZORCA AI */}
+                  {isGeneratedByAi && (
+                    <span className="text-[10px] text-amber-500/90 font-semibold flex items-center gap-1 bg-amber-950/40 border border-amber-900/50 px-2.5 py-0.5 rounded-md">
+                      🔒 Wzorzec AI (Tylko do odczytu / Kopiowanie zablokowane)
+                    </span>
+                  )}
+                </div>
+
                 <textarea
                   rows={12}
                   placeholder={
@@ -815,11 +819,35 @@ export default function OcenianieRozprawekPage() {
                       : "Wklej tutaj treść swojej rozprawki (minimum 50 słów)..."
                   }
                   value={essayText}
-                  onChange={(e) => setEssayText(e.target.value)}
+                  onChange={(e) => {
+                    setEssayText(e.target.value);
+                    // Gdy uczeń sam modyfikuje lub pisze własny tekst, wyłączamy blokadę kopiowania
+                    setIsGeneratedByAi(false);
+                  }}
+                  onCopy={(e) => {
+                    // BLOKADA KOPIOWANIA WYŁĄCZNIE DLA TEKSTU WYGENEROWANEGO PRZEZ AI
+                    if (isGeneratedByAi) {
+                      e.preventDefault();
+                      triggerAlert("🔒 Kopiowanie prac wzorcowych AI jest zablokowane. Wykorzystaj ten tekst do inspiracji i samodzielnej nauki!", "error");
+                    }
+                  }}
+                  onCut={(e) => {
+                    if (isGeneratedByAi) {
+                      e.preventDefault();
+                      triggerAlert("🔒 Kopiowanie prac wzorcowych AI jest zablokowane.", "error");
+                    }
+                  }}
+                  onContextMenu={(e) => {
+                    if (isGeneratedByAi) {
+                      e.preventDefault();
+                    }
+                  }}
                   disabled={isAnalyzing || isGenerating || isGenerationMode}
-                  className="w-full bg-stone-900/80 border border-stone-800 rounded-2xl p-4 text-xs sm:text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-700/60 leading-relaxed font-sans disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={`w-full bg-stone-900/80 border border-stone-800 rounded-2xl p-4 text-xs sm:text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-700/60 leading-relaxed font-sans disabled:opacity-50 disabled:cursor-not-allowed ${
+                    isGeneratedByAi ? "select-none cursor-default" : ""
+                  }`}
                 />
-                {/* OSTRZEŻENIA DLA POLA TREŚCI */}
+
                 {isEssaySpam && (
                   <p className="text-[11px] text-red-400 font-semibold mt-1 animate-pulse">
                     ⚠️ Wykryto nieprawidłowe, zbyt długie słowo bez spacji (maksymalnie 20 znaków). Popraw wypracowanie, aby odblokować analizę!
@@ -867,7 +895,6 @@ export default function OcenianieRozprawekPage() {
                   </button>
                 )}
 
-                {/* OSTRZEGAWCZY BANER REASEKURACYJNY */}
                 {(isAnalyzing || isGenerating) && (
                   <div className="p-4 rounded-2xl bg-amber-950/20 border border-amber-900/30 text-left text-[11px] text-amber-400/95 leading-relaxed font-sans mt-1 animate-pulse">
                     ⚠️ <strong className="text-amber-300 font-bold">Trwa analiza przez sztuczną inteligencję. Prosimy o cierpliwość i nieodświeżanie tej strony.</strong> Zamknięcie lub przeładowanie karty w tym momencie uniemożliwi wyświetlenie wyników. Twój kredyt jest bezpieczny – w przypadku wystąpienia jakiegokolwiek błędu połączenia sieciowego, pobrany token zostanie automatycznie zwrócony na Twoje konto.
@@ -880,7 +907,6 @@ export default function OcenianieRozprawekPage() {
               </div>
             )}
 
-            {/* Alternatywne konteksty */}
             {activeTab === "write" && generatedContexts.length > 0 && (
               <div className="mt-4 p-4 rounded-2xl bg-stone-950/50 border border-stone-800/80 animate-fade-in">
                 <h4 className="text-xs uppercase tracking-widest text-amber-500 font-bold mb-3 flex items-center gap-2">
@@ -955,11 +981,13 @@ export default function OcenianieRozprawekPage() {
               </ul>
             </div>
 
-            {analysisResult && (
-              <div className="text-[10px] text-stone-500 leading-relaxed font-sans px-1 animate-fade-in">
-                * Uwaga: Model AI dokonuje bardzo rygorystycznej i dosłownej oceny według wytycznych CKE (a zwłaszcza zasady dotyczące interpunkcji i gramatyki). Rzeczywista punktacja na egzaminie państwowym może różnić się na korzyść zdającego z uwagi na bardziej elastyczną i holistyczną ocenę ludzkiego egzaminatora.
-              </div>
-            )}
+            {/* DYSKRETNE ZASTRZEŻENIE DOTYCZĄCE PUNKTACJI AI */}
+            <div className="p-3.5 rounded-2xl bg-stone-950/50 border border-stone-800/70 flex items-start gap-2.5 text-[11px] text-stone-400 leading-relaxed font-sans shadow-inner">
+              <span className="text-amber-500 text-sm shrink-0 mt-0.5">ℹ️</span>
+              <p>
+                <strong className="text-stone-300 font-semibold">Uwaga:</strong> Model AI dokonuje bardzo rygorystycznej i dosłownej oceny według wytycznych CKE (a zwłaszcza zasad dotyczących interpunkcji, stylu i gramatyki). Rzeczywista punktacja na egzaminie państwowym może różnić się na korzyść zdającego z uwagi na bardziej elastyczną i holistyczną ocenę ludzkiego egzaminatora.
+              </p>
+            </div>
           </div>
 
         </div>
