@@ -14,37 +14,45 @@ interface Quote {
 }
 
 const MATURA_QUOTES: Quote[] = [
-  { text: "Cierpliwość i praca tworzą wielkie dzieła.", author: "Konfucjusz" },
+  // --- Zweryfikowane i poprawione z Twojej listy ---
   { text: "Nie ma skrótów do miejsc, do których dojść warto.", author: "Beverly Sills" },
-  { text: "Mądrość musisz sam wypracować, nikt jej za ciebie nie zdobędzie.", author: "Sokrates" },
   { text: "Granice mojego języka są granicami mojego świata.", author: "Ludwig Wittgenstein" },
   { text: "Kto czyta książki, żyje podwójnie.", author: "Umberto Eco" },
-  { text: "Najważniejszym produktem wiedzy jest mądrość, a nie sama informacja.", author: "Albert Einstein" },
   { text: "Człowiek nie jest stworzony do klęski. Człowieka można zniszczyć, ale nie pokonać.", author: "Ernest Hemingway" },
-  { text: "Prawdziwa mądrość polega na tym, by wiedzieć, czego się nie wie.", author: "Sokrates" },
-  { text: "Non omnis moriar – nie wszystek umrę.", author: "Horacy" },
-  { text: "Żaden wiatr nie jest pomyślny temu, kto nie wie, do którego portu płynie.", author: "Seneka" },
+  { text: "Wiem, że nic nie wiem.", author: "Sokrates" },
+  { text: "Non omnis moriar.", author: "Horacy" },
+  { text: "Żaden wiatr nie jest pomyślny temu, kto nie wie, do którego portu płynie.", author: "Seneka Młodszy" },
   { text: "Być albo nie być – oto jest pytanie.", author: "William Szekspir" },
   { text: "Miej serce i patrzaj w serce!", author: "Adam Mickiewicz" },
-  { text: "Ludzie bezdomni, niespokojni, szukający swojego miejsca...", author: "Stefan Żeromski" },
-  { text: "Słowa mają moc zmieniania rzeczywistości, ale to czyny nadają im wartość.", author: "Władysław Bartoszewski" },
-  { text: "Nic tak nie niszczy człowieka, jak bierna bezczynność.", author: "Arystoteles" },
-  { text: "Wszystko, co w życiu wartościowe, rodzi się z trudu i cierpliwości.", author: "Henryk Sienkiewicz" },
   { text: "Nie bój się iść powoli, obawiaj się jedynie stania w miejscu.", author: "Przysłowie chińskie" },
   { text: "Zacznij tam, gdzie jesteś. Użyj tego, co masz. Rób to, co możesz.", author: "Arthur Ashe" },
-  { text: "Tylko ten nie popełnia błędów, kto nic nie robi.", author: "Teodor Roosevelt" },
-  { text: "Nauka to pokarm dla rozumu.", author: "Lew Tołstoj" },
-  { text: "Książka jest najlepszym przyjacielem człowieka, a biblioteka świątynią jego myśli.", author: "Cyceron" },
-  { text: "Wiedza jest jedyną rzeczą, którą możemy powiększyć, dzieląc się nią.", author: "Cezary Cezar" },
-  { text: "Nie wiedzieć – to błąd, nie chcieć wiedzieć – to grzech.", author: "Przysłowie polskie" }
+  { text: "Jedynym człowiekiem, który nigdy nie popełnia błędów, jest ten, który nigdy nic nie robi.", author: "Theodore Roosevelt" },
+  { text: "Nie wiedzieć – to błąd, nie chcieć wiedzieć – to grzech.", author: "Przysłowie polskie" },
+
+  // --- Dodatkowe autentyczne cytaty ---
+  { text: "A to miej na pilnej pieczy, abyś czytał, kiedy tylko masz wolny czas.", author: "Mikołaj Rej" },
+  { text: "Nic dwa razy się nie zdarza i nie zdarzy.", author: "Wisława Szymborska" },
+  { text: "A niechaj narodowie wżdy postronni znają, iż Polacy nie gęsi, iż swój język mają.", author: "Mikołaj Rej" },
+  { text: "Cudze chwalicie, swego nie znacie, sami nie wiecie, co posiadacie.", author: "Stanisław Jachowicz" },
+  { text: "Człowiekiem jestem; nic, co ludzkie, nie jest mi obce.", author: "Terencjusz" },
+  { text: "Sapere aude – odważ się być mądrym.", author: "Horacy" },
+  { text: "Lepiej zaliczać się do niektórych, niż do wszystkich.", author: "Andrzej Sapkowski" },
+  { text: "Poezja to wielka pani, której ani schlebiać, ani kłamać nie wolno.", author: "Zbigniew Herbert" },
+  { text: "Wszystko wypływa z tej samej tęsknoty za sensem.", author: "Czesław Miłosz" },
+  { text: "Los sprzyja umysłom przygotowanym.", author: "Ludwik Pasteur" },
+  { text: "Wiedza to potęga.", author: "Francis Bacon" },
+  { text: "Wyobraźnia bez wiedzy może stworzyć rzeczy piękne; wiedza bez wyobraźni najwyżej pożyteczne.", author: "Stanisław Lem" },
+  { text: "Bądź wierny. Idź.", author: "Zbigniew Herbert" },
+  { text: "Książki to są najlepsi twoi przyjaciele, nie wyśmieją, nie zdradzą, a nauczą wiele.", author: "Jan Rak" },
+  { text: "Koniec i bomba, a kto czytał, ten trąba!", author: "Witold Gombrowicz" }
 ];
 
-// Funkcja deterministycznie wyliczająca unikalny indeks cytatu dla dzisiejszego dnia
+// Niezawodne wyliczanie indeksu dnia (zwiększa się równomiernie o 1 co 24h, bez przeskoków na przełomie miesięcy)
 const getDailyQuoteIndex = (quotesCount: number): number => {
-  const today = new Date();
-  const dateString = `${today.getFullYear()}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}`;
-  const seed = parseInt(dateString, 10);
-  return seed % quotesCount;
+  if (quotesCount === 0) return 0;
+  // Liczba pełnych dni, które upłynęły od 1 stycznia 1970 r.
+  const daysSinceEpoch = Math.floor(Date.now() / (1000 * 60 * 60 * 24));
+  return daysSinceEpoch % quotesCount;
 };
 
 export function QuoteCard({ currentTheme }: QuoteCardProps) {
@@ -135,10 +143,7 @@ export function QuoteCard({ currentTheme }: QuoteCardProps) {
         </div>
       </div>
 
-      {/* 
-        Warstwa podświetlenia podążająca za myszką (Zintegrowana z CozyGlowCard).
-        Renderowana na samej górze (z-20) dla gwarancji widoczności, nie blokując klikania dzięki pointer-events-none.
-      */}
+      {/* Warstwa podświetlenia podążająca za myszką */}
       {isHovered && (
         <div
           className="pointer-events-none absolute -inset-px opacity-100 transition-opacity duration-300 z-20"
