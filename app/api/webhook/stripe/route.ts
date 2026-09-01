@@ -41,7 +41,7 @@ export async function POST(request: Request) {
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session;
     const metadata = session.metadata;
-    const customerEmail = session.customer_details?.email;
+    const customerEmail = session.customer_details?.email || metadata?.userEmail;
 
     // Dane do formalnego potwierdzenia umowy (Wymóg prawny)
     const transactionId = session.id;
@@ -123,54 +123,61 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: dbError.message }, { status: 500 });
         }
 
-      // 2. OBSŁUGA ZAKUPU SUBSKRYPCJI / PAKIETU
+      // 2. OBSŁUGA ZAKUPU PAKIETU / SUBSKRYPCJI
       } else if (purchaseType === 'subscription') {
         const tier = metadata.subscriptionTier || 'premium';
 
-        let expirationDate = new Date();
-        let daysAdded = 30;
+        let daysToAdd = 30;
+        let tokenIncrement = 5;
+
         if (tier === 'mini') {
-          expirationDate.setDate(expirationDate.getDate() + 30);
-          daysAdded = 30;
+          daysToAdd = 30;
+          tokenIncrement = 5;
         } else if (tier === 'medium') {
-          expirationDate.setDate(expirationDate.getDate() + 90);
-          daysAdded = 90;
+          daysToAdd = 90;
+          tokenIncrement = 10;
         } else if (tier === 'premium') {
-          expirationDate.setDate(expirationDate.getDate() + 365);
-          daysAdded = 365;
+          daysToAdd = 365;
+          tokenIncrement = 15;
         }
 
         try {
           const { data: profile, error: fetchError } = await supabase
             .from('profiles')
-            .select('essay_credits')
+            .select('essay_credits, expires_at')
             .eq('id', userId)
             .single();
 
           if (fetchError) throw fetchError;
 
+          // INTELIGENTNE LICZENIE DATY: Jeśli user ma aktywny pakiet, DODAJEMY dni do aktualnego końca
+          const now = new Date();
+          let baseDate = now;
+          if (profile?.expires_at) {
+            const currentExp = new Date(profile.expires_at);
+            if (currentExp > now) {
+              baseDate = currentExp; // Przedłużamy istniejący pakiet!
+            }
+          }
+
+          const newExpirationDate = new Date(baseDate);
+          newExpirationDate.setDate(newExpirationDate.getDate() + daysToAdd);
+
           const currentCredits = profile?.essay_credits || 0;
-
-          let tokenIncrement = 0;
-          if (tier === 'mini') tokenIncrement = 5;
-          else if (tier === 'medium') tokenIncrement = 10;
-          else if (tier === 'premium') tokenIncrement = 15;
-
           const newCredits = currentCredits + tokenIncrement;
 
-          // UŻYWAMY DOKŁADNIE TWOJEJ KOLUMNY: expires_at
           const { error: subUpdateError } = await supabase
             .from('profiles')
             .update({
               subscription_status: tier,
-              expires_at: expirationDate.toISOString(),
+              expires_at: newExpirationDate.toISOString(),
               essay_credits: newCredits,
             })
             .eq('id', userId);
 
           if (subUpdateError) throw subUpdateError;
 
-          console.log(`Pomyślnie zaktualizowano subskrypcję ${tier} dla użytkownika ${userId}.`);
+          console.log(`Pomyślnie zaktualizowano subskrypcję ${tier} dla użytkownika ${userId}. Nowa data: ${newExpirationDate.toISOString()}`);
 
           // E-MAIL POTWIERDZAJĄCY DLA KLIENTA (Z KLAUZULĄ PRAWNĄ)
           if (customerEmail) {
@@ -194,7 +201,7 @@ export async function POST(request: Request) {
                     Twój <strong>${displayTierName}</strong> został pomyślnie aktywowany.
                   </p>
                   <div style="background: #26201c; padding: 15px; border-radius: 8px; border: 1px solid #3d332d; font-size: 13px; color: #f3ece6; margin: 15px 0; line-height: 1.6;">
-                    ✅ <strong>Ważność pakietu:</strong> ${daysAdded} dni<br/>
+                    ✅ <strong>Ważność pakietu:</strong> +${daysToAdd} dni<br/>
                     ✅ <strong>Przyznane tokeny AI:</strong> +${tokenIncrement} ocen wypracowań<br/>
                     ✅ <strong>Baza notatek i lektur:</strong> Pełny dostęp bez limitów
                   </div>

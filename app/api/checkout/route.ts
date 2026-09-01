@@ -45,7 +45,8 @@ export async function POST(request: Request) {
 
     let lineItems: any[] = [];
     const metadata: Record<string, string> = {
-      userId: user.id, // Bezpiecznie zweryfikowane ID użytkownika
+      userId: user.id,
+      userEmail: user.email || '',
     };
     let mode: 'payment' | 'subscription' = 'payment';
 
@@ -86,7 +87,7 @@ export async function POST(request: Request) {
       metadata.tokenAmount = tokenCount.toString();
 
     } else {
-      // 4. KLASYCZNA SUBSKRYPCJA / PAKIET
+      // 4. KLASYCZNA SUBSKRYPCJA / PAKIET CZASOWY
       mode = 'payment';
       let priceId = '';
 
@@ -103,10 +104,10 @@ export async function POST(request: Request) {
       metadata.subscriptionTier = tier;
     }
 
-    // Tworzenie sesji płatniczej Stripe Checkout
-// Tworzenie sesji płatniczej Stripe Checkout (Automatyczne metody płatności)
+    // Tworzenie sesji płatniczej Stripe Checkout (Automatyczne metody + Prefill Email)
     const checkoutSession = await stripe.checkout.sessions.create({
-      allow_promotion_codes: true, // <--- ODBLOKOWUJE POLE NA KOD RABATOWY
+      customer_email: user.email, // <--- AUTOMATYCZNIE UZUPEŁNIA I BLOKUJE EMAIL UCZNIA
+      allow_promotion_codes: true, // <--- ODBLOKOWUJE KODY RABATOWE
       line_items: lineItems,
       mode: mode,
       success_url: `${request.headers.get('origin')}/?payment=success`,
@@ -116,7 +117,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ url: checkoutSession.url });
   } catch (err: any) {
-    console.error(err);
+    console.error('Błąd tworzenia sesji Checkout:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
