@@ -104,8 +104,8 @@ export async function POST(request: Request) {
     }
 
     // Tworzenie sesji płatniczej Stripe Checkout
+// Tworzenie sesji płatniczej Stripe Checkout (Automatyczne metody płatności)
     const checkoutSession = await stripe.checkout.sessions.create({
-      payment_method_types: ['card', 'blik', 'p24'],
       allow_promotion_codes: true, // <--- ODBLOKOWUJE POLE NA KOD RABATOWY
       line_items: lineItems,
       mode: mode,
