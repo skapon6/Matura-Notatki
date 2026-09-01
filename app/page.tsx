@@ -344,7 +344,7 @@ export default function Home() {
         <main className="max-w-4xl mx-auto w-full p-6 flex flex-col md:flex-row items-center justify-center gap-12 flex-1">
           <div className="max-w-md text-center md:text-left">
             <span className="text-xs font-semibold uppercase tracking-widest text-amber-500 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
-              Matura 2026
+              Matura 2027
             </span>
             <h2 className="text-4xl font-bold text-stone-100 mt-4 leading-tight font-serif tracking-tight">
               Zdasz Maturę z Palcem w Nosie.
