@@ -205,7 +205,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, currentTh
                   Zaznacz dany tekst myszką bezpośrednio w notatce, kliknij na złotą gwiazdkę (⭐), która się pojawi, a cytat natychmiast trafi do Twojego podręcznego notesu na stronie głównej, do którego masz dostęp w każdej chwili.
                 </p>
                 <p className="mt-2 text-[11px] text-amber-500/90 font-medium italic border-l-2 border-amber-500/30 pl-2.5">
-                • <strong className="text-stone-300">Pojemność notesu: 100</strong> Możesz przechować maksymalnie 100 najważniejszych cytatów (aby zachować czytelność i porządek). Jeśli osiągniesz limit, usuń starsze wpisy w notesie na stronie głównej.
+                • <strong className="text-stone-300">Pojemność notesu: 100</strong>  Możesz przechować maksymalnie 100 najważniejszych cytatów (aby zachować czytelność i porządek). Jeśli osiągniesz limit, usuń starsze wpisy w notesie na stronie głównej.
                   Wskazówka: Złota gwiazdka pojawi się tylko wtedy, gdy zaznaczony fragment nie jest ani za krótki, ani za długi (od 5 do 400 znaków). Dzięki temu system dba o to, byś zapisywał samą „esencję”, idealną do wykorzystania w rozprawce!
                 </p>
               </div>

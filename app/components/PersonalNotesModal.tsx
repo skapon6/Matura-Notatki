@@ -110,7 +110,7 @@ export const PersonalNotesModal: React.FC<PersonalNotesModalProps> = ({
                 Mój Przytulny Zeszyt z Cytatami
               </h2>
               <p className="text-[10px] uppercase tracking-widest text-amber-500 font-semibold mt-0.5">
-                Kieszeń z zapamiętaną wiedzą ({personalNotes.length} / 50)
+                Kieszeń z zapamiętaną wiedzą ({personalNotes.length} / 100)
               </p>
             </div>
           </div>

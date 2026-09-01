@@ -479,13 +479,15 @@ export default function Home() {
                 </nav>
               </CozyGlowCard>
 
-             <CozyGlowCard currentTheme={currentTheme} className="p-5 flex flex-col gap-3">
-                <h3 className="text-xs uppercase tracking-widest text-amber-500 font-semibold px-1 flex items-center justify-between">
-                  <span>Zapamiętane cytaty ⭐</span>
-                  <span className="text-[10px] bg-stone-900 border border-stone-800 text-amber-500/80 px-2 py-0.5 rounded-full font-mono">
+              <CozyGlowCard currentTheme={currentTheme} className="p-5 flex flex-col gap-3">
+                <div className="flex items-center justify-between gap-2 px-1 border-b border-stone-850/50 pb-2">
+                  <span className="text-xs uppercase tracking-wider text-amber-500 font-bold truncate">
+                    Zapamiętane cytaty ⭐
+                  </span>
+                  <span className="text-[10px] bg-stone-900 border border-stone-800 text-amber-500/90 px-2.5 py-0.5 rounded-full font-mono font-bold shrink-0 whitespace-nowrap shadow-inner">
                     {personalNotes.length} / 100
                   </span>
-                </h3>
+                </div>
                 <div className="max-h-72 overflow-y-auto pr-1 flex flex-col gap-3 scrollbar-thin scrollbar-thumb-stone-800">
                   <PersonalNotesList currentTheme={currentTheme} personalNotes={personalNotes} setPersonalNotes={setPersonalNotes} triggerNotification={triggerNotification} loading={personalNotesLoading} onOpenModal={handleOpenPersonalNotes} />
                 </div>
