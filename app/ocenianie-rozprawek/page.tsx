@@ -95,7 +95,7 @@ export default function OcenianieRozprawekPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGenerationMode, setIsGenerationMode] = useState(false);
-  const [isGeneratedByAi, setIsGeneratedByAi] = useState(false); // <--- NOWOŚĆ: Śledzenie czy tekst pochodzi z generowania AI
+  const [isGeneratedByAi, setIsGeneratedByAi] = useState(false); // Śledzenie wzorca AI
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [generatedContexts, setGeneratedContexts] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
@@ -171,6 +171,12 @@ export default function OcenianieRozprawekPage() {
   };
 
   const handleAnalyze = async () => {
+    // Blokada analizy dla tekstu wygenerowanego przez AI
+    if (isGeneratedByAi) {
+      triggerAlert("Ta praca została wygenerowana jako wzorzec AI. Napisz własną rozprawkę, aby poddać ją ocenie!", "error");
+      return;
+    }
+
     if (!selectedTopic.trim()) {
       triggerAlert("Wprowadź temat rozprawki przed rozpoczęciem analizy!", "error");
       return;
@@ -314,7 +320,7 @@ export default function OcenianieRozprawekPage() {
 
       setProfile((prev: any) => ({ ...prev, essay_credits: data.newCredits }));
       setEssayText(data.essayText);
-      setIsGeneratedByAi(true); // <--- Aktywujemy blokadę kopiowania dla tekstu wygenerowanego przez AI
+      setIsGeneratedByAi(true); // Aktywujemy blokadę kopiowania oraz blokadę oceny
       if (data.alternativeContexts) {
         setGeneratedContexts(data.alternativeContexts);
       }
@@ -330,13 +336,21 @@ export default function OcenianieRozprawekPage() {
     }
   };
 
+  const handleClearGenerated = () => {
+    setEssayText("");
+    setIsGeneratedByAi(false);
+    setGeneratedContexts([]);
+    setAnalysisResult(null);
+    triggerAlert("Wyczyszczono pole. Możesz teraz wpisać własną rozprawkę!", "success");
+  };
+
   const loadFromHistory = (item: any) => {
     setSelectedTopic(item.topic);
     setEssayText(item.essay_text);
     setAnalysisResult(item.analysis_result);
     setGeneratedContexts([]);
     setIsGenerationMode(false);
-    setIsGeneratedByAi(false); // Tekst z historii własnych prac ucznia jest odblokowany
+    setIsGeneratedByAi(false);
     setActiveTab("preview");
     triggerAlert("Pomyślnie wczytano pracę z historii (0 kredytów)!", "success");
   };
@@ -475,7 +489,6 @@ export default function OcenianieRozprawekPage() {
                 </div>
               </div>
 
-              {/* Wyszukiwarka motywów */}
               <div className="relative w-full sm:w-64">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500 text-xs">🔍</span>
                 <input
@@ -821,11 +834,9 @@ export default function OcenianieRozprawekPage() {
                   value={essayText}
                   onChange={(e) => {
                     setEssayText(e.target.value);
-                    // Gdy uczeń sam modyfikuje lub pisze własny tekst, wyłączamy blokadę kopiowania
                     setIsGeneratedByAi(false);
                   }}
                   onCopy={(e) => {
-                    // BLOKADA KOPIOWANIA WYŁĄCZNIE DLA TEKSTU WYGENEROWANEGO PRZEZ AI
                     if (isGeneratedByAi) {
                       e.preventDefault();
                       triggerAlert("🔒 Kopiowanie prac wzorcowych AI jest zablokowane. Wykorzystaj ten tekst do inspiracji i samodzielnej nauki!", "error");
@@ -886,13 +897,36 @@ export default function OcenianieRozprawekPage() {
                     {isGenerating ? "✍ Trwa generowanie rozprawki..." : "Generuj przykładową rozprawkę (1 kredyt)"}
                   </button>
                 ) : (
-                  <button
-                    onClick={handleAnalyze}
-                    disabled={isAnalyzing || isGenerating || hasValidationError}
-                    className="w-full py-3 rounded-xl bg-[#c68a4c] hover:bg-[#d99c5d] text-stone-950 font-bold transition-all text-xs sm:text-sm shadow-md disabled:bg-stone-800 disabled:text-stone-500 cursor-pointer"
-                  >
-                    {isAnalyzing ? "🤖 Trwa analiza tekstu..." : "Przeanalizuj rozprawkę (1 kredyt)"}
-                  </button>
+                  <>
+                    {/* PRZYCISK ANALIZY - INTELIGENTNIE ZABLOKOWANY DLA WZORCA AI */}
+                    <button
+                      onClick={handleAnalyze}
+                      disabled={isAnalyzing || isGenerating || hasValidationError || isGeneratedByAi}
+                      className={`w-full py-3 rounded-xl font-bold transition-all text-xs sm:text-sm shadow-md ${
+                        isGeneratedByAi
+                          ? "bg-stone-900 border border-stone-800 text-stone-500 cursor-not-allowed opacity-80"
+                          : "bg-[#c68a4c] hover:bg-[#d99c5d] text-stone-950 disabled:bg-stone-800 disabled:text-stone-500 cursor-pointer"
+                      }`}
+                    >
+                      {isAnalyzing
+                        ? "🤖 Trwa analiza tekstu..."
+                        : isGeneratedByAi
+                        ? "🔒 Praca wzorcowa AI (Nie wymaga oceny – służy do nauki)"
+                        : "Przeanalizuj rozprawkę (1 kredyt)"}
+                    </button>
+
+                    {/* PRZYCISK CZYSZCZENIA DLA WZORCA AI */}
+                    {isGeneratedByAi && (
+                      <button
+                        type="button"
+                        onClick={handleClearGenerated}
+                        className="w-full py-2.5 rounded-xl bg-stone-900/60 hover:bg-stone-800 border border-amber-900/40 text-amber-400 hover:text-amber-300 text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                      >
+                        <span>✍️</span>
+                        <span>Wyczyść wzorzec i napisz własną rozprawkę</span>
+                      </button>
+                    )}
+                  </>
                 )}
 
                 {(isAnalyzing || isGenerating) && (
@@ -907,6 +941,7 @@ export default function OcenianieRozprawekPage() {
               </div>
             )}
 
+            {/* Alternatywne konteksty */}
             {activeTab === "write" && generatedContexts.length > 0 && (
               <div className="mt-4 p-4 rounded-2xl bg-stone-950/50 border border-stone-800/80 animate-fade-in">
                 <h4 className="text-xs uppercase tracking-widest text-amber-500 font-bold mb-3 flex items-center gap-2">
