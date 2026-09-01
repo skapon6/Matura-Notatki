@@ -50,9 +50,6 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  alternates: {
-    canonical: "https://wiedzaszytanamiare.pl",
-  },
   openGraph: {
     title: "Notatki do Matury z Języka Polskiego | Wiedza Szyta na Miarę",
     description:
