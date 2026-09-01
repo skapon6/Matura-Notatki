@@ -366,12 +366,14 @@ export default function Home() {
               <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl z-0 pointer-events-none" />
               <div className="absolute bottom-0 left-0 w-80 h-80 bg-orange-600/5 rounded-full blur-3xl z-0 pointer-events-none" />
 
+              {/* ZNAK WODNY W TLE */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden z-0">
                 <span className="text-xl sm:text-2xl md:text-[3.5vw] font-black uppercase tracking-[0.18em] text-amber-500/[0.04] whitespace-nowrap leading-none font-serif -rotate-6">
                   Wiedza Szyta na Miarę
                 </span>
               </div>
 
+              {/* LEWA KOLUMNA: POWITANIE / PAKIETY */}
               <div className="max-w-xl text-center md:text-left relative z-10 w-full">
                 <span className="text-xs font-semibold uppercase tracking-widest text-amber-500 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
                   {profileLoading ? "Weryfikacja..." : hasAccess ? "Dostęp Aktywny 🎉" : "Matura 2026 🔑"}
@@ -409,6 +411,7 @@ export default function Home() {
                 )}
               </div>
 
+              {/* PRAWA KOLUMNA: NAZWA PLANU, GWIAZDKI I DYNAMICZNA DATA WYGAŚNIĘCIA */}
               <div className="flex flex-col items-center md:items-end justify-center text-center md:text-right border-t md:border-t-0 md:border-l border-stone-800/80 pt-4 md:pt-0 md:pl-8 relative z-10 shrink-0">
                 {profileLoading ? (
                   <div className="animate-pulse flex flex-col items-center md:items-end gap-2.5">
@@ -423,6 +426,8 @@ export default function Home() {
                       {hasAccess && (profile?.subscription_status || "PREMIUM")}
                     </span>
                     <span className="text-xs font-medium uppercase tracking-widest text-stone-400 mt-1">Twój Plan</span>
+                    
+                    {/* GWIAZDKI ODPOWIADAJĄCE PAKIETOWI */}
                     <div className="flex gap-1 mt-2 text-amber-500 text-xs">
                       {profile?.subscription_status === 'mini' && <><span>★</span><span>★</span><span>★</span></>}
                       {profile?.subscription_status === 'medium' && <><span>★</span><span>★</span><span>★</span><span>★</span></>}
@@ -430,10 +435,41 @@ export default function Home() {
                         <><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></>
                       )}
                     </div>
-                    <span className="text-[11px] text-stone-500 mt-1">
-                      {!hasAccess && "Zyskaj pełną moc nauki"}
-                      {hasAccess && (profile?.subscription_status === 'premium' || !['mini', 'medium'].includes(profile?.subscription_status)) && "Dostęp na 365 dni"}
-                    </span>
+
+                    {/* DYNAMICZNY CZAS I DATA WYGAŚNIĘCIA */}
+                    <div className="flex flex-col items-center md:items-end mt-2 text-center md:text-right">
+                      {!hasAccess ? (
+                        <span className="text-[11px] text-stone-500 font-medium">Zyskaj pełną moc nauki</span>
+                      ) : profile?.expires_at ? (
+                        (() => {
+                          const expDate = new Date(profile.expires_at);
+                          const diffMs = expDate.getTime() - Date.now();
+                          const diffDays = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+
+                          // Jeśli konto jest ważne dłużej niż 3 lata (np. konto nauczycielskie / VIP)
+                          if (diffDays > 1000) {
+                            return (
+                              <span className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
+                                <span>👑</span> Dostęp bezterminowy
+                              </span>
+                            );
+                          }
+
+                          return (
+                            <>
+                              <span className="text-[11px] text-stone-300 font-medium">
+                                Aktywny do: <strong className="text-amber-400">{expDate.toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" })}</strong>
+                              </span>
+                              <span className="text-[10px] text-stone-500 font-mono mt-0.5">
+                                (pozostało: {diffDays} {diffDays === 1 ? "dzień" : "dni"})
+                              </span>
+                            </>
+                          );
+                        })()
+                      ) : (
+                        <span className="text-[11px] text-emerald-400 font-semibold">Dostęp aktywny 🌟</span>
+                      )}
+                    </div>
                   </>
                 )}
               </div>
