@@ -402,11 +402,21 @@ export default function Home() {
                     <p className={`mt-3 text-sm sm:text-base ${currentTheme.subText} leading-relaxed`}>
                       Masz darmowe konto. Wybierz jeden z pakietów, aby odblokować pełny zasób wiedzy:
                     </p>
+                    
+                    {/* KAFELKI PŁATNOŚCI */}
                     <PaymentTiers 
                       paymentLoading={paymentLoading}
                       activePaymentTier={activePaymentTier}
                       handlePaymentInit={handlePaymentInit}
                     />
+
+                    {/* DYSKRETNY PRZYPIS O BRAKU UPGRADE'U W TRAKCIE PAKIETU */}
+                    <div className="mt-4 p-3.5 rounded-2xl bg-stone-950/40 border border-stone-800/70 flex items-start gap-2.5 text-[11px] text-stone-400 leading-relaxed font-sans shadow-inner">
+                      <span className="text-amber-500 text-sm shrink-0 mt-0.5">ℹ️</span>
+                      <p>
+                        <strong className="text-stone-300 font-semibold">Informacja:</strong> Pakiety to zakupy jednorazowe na określony czas. W trakcie trwania aktywnego planu nie ma możliwości jego zmiany ani ulepszenia (nowy pakiet wybierzesz po wygaśnięciu obecnego). W każdej chwili możesz natomiast dokupować same tokeny AI w panelu bocznym.
+                      </p>
+                    </div>
                   </>
                 )}
               </div>
