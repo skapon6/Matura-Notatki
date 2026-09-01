@@ -257,12 +257,16 @@ export default function MojePostepyPage() {
               <div className="text-[10px] uppercase tracking-wider text-stone-500 font-extrabold leading-normal">Przeczytane Notatki</div>
             </CozyGlowCard>
 
-            <CozyGlowCard currentTheme={currentTheme} className="p-5 flex flex-col items-center justify-center text-center gap-2">
+           <CozyGlowCard currentTheme={currentTheme} className="p-5 flex flex-col items-center justify-center text-center gap-2">
               <div className="text-xl sm:text-2xl">⭐</div>
-              <div className="text-xl sm:text-2xl font-black font-mono text-stone-100 leading-normal">{quotesCount}</div>
+              <div className="text-xl sm:text-2xl font-black font-mono text-stone-100 leading-normal flex items-baseline gap-1">
+                <span>{quotesCount}</span> 
+                <span className="text-[13px] font-sans font-medium text-stone-500">/ 100</span>
+              </div>
               <div className="text-[10px] uppercase tracking-wider text-stone-500 font-extrabold leading-normal">Zapisane cytaty</div>
             </CozyGlowCard>
 
+            
             <CozyGlowCard currentTheme={currentTheme} className="p-5 flex flex-col items-center justify-center text-center gap-2">
               <div className="text-xl sm:text-2xl">🪙</div>
               <div className="text-xl sm:text-2xl font-black font-mono text-stone-100 leading-normal">{credits}</div>
