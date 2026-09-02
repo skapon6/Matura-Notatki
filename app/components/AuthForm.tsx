@@ -174,26 +174,35 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
           resetPasswordFields();
         }
       } else {
-        // 9. KLASYCZNE LOGOWANIE + OBSŁUGA POJEDYNCZEJ SESJI (SINGLE DEVICE)
+        // 9. KLASYCZNE LOGOWANIE + OBSŁUGA POJEDYNCZEJ SESJI (Z BEZPIECZNIKIEM)
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem("is_logging_in", "true"); // Włączamy bezpiecznik
+        }
+
         const { data, error } = await supabase.auth.signInWithPassword({
           email: authEmail,
           password: authPassword,
         });
 
         if (error) {
+          if (typeof window !== "undefined") {
+            sessionStorage.removeItem("is_logging_in");
+          }
           triggerNotification(translateAuthError(error.message), "error");
         } else {
           // --- BLOKADA WSPÓŁDZIELENIA KONTA ---
           if (data?.user && typeof window !== "undefined") {
             const newSessionId = crypto.randomUUID();
-            // Zapisujemy klucz w pamięci tego urządzenia
             localStorage.setItem("user_session_id", newSessionId);
 
-            // Nadpisujemy aktywną sesję w bazie Supabase
+            // Zapisujemy nowy klucz sesji w bazie Supabase
             await supabase
               .from("profiles")
               .update({ current_session_id: newSessionId })
               .eq("id", data.user.id);
+
+            // Zdejmujemy bezpiecznik po udanym zapisie w bazie
+            sessionStorage.removeItem("is_logging_in");
           }
 
           triggerNotification("Zalogowano pomyślnie!", "success");

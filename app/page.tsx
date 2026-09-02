@@ -58,10 +58,9 @@ export default function Home() {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [activePaymentTier, setActivePaymentTier] = useState<string | null>(null);
 
-  // ===== POPRAWKA: STAN BANNERA REGULAMINU =====
+  // Stan banneru regulaminu
   const [showTosBanner, setShowTosBanner] = useState(false);
 
-  // ===== POPRAWKA: LOGIKA BANNERA REGULAMINU =====
   useEffect(() => {
     if (typeof window !== "undefined") {
       const hasAccepted = localStorage.getItem("tos_accepted_v1");
@@ -76,7 +75,6 @@ export default function Home() {
     setShowTosBanner(false);
     playSound("success");
   };
-  // =============================================
 
   // Powiadomienia
   const [cozyNotification, setCozyNotification] = useState<{
@@ -116,7 +114,7 @@ export default function Home() {
     return () => subscription.unsubscribe();
   }, []);
 
- // 2. Pobieranie profilu z aktywną ochroną Single Device Login
+  // 2. POBIERANIE PROFILU Z BEZPIECZNIKIEM SINGLE DEVICE LOGIN
   useEffect(() => {
     async function checkActiveSessionAndProfile() {
       if (!user) {
@@ -136,27 +134,29 @@ export default function Home() {
         
       if (profileData && !error) {
         if (typeof window !== "undefined") {
-          let localSessionId = localStorage.getItem("user_session_id");
+          const isLoggingIn = sessionStorage.getItem("is_logging_in");
+          const localSessionId = localStorage.getItem("user_session_id");
 
-          // Jeśli to urządzenie nie miało jeszcze klucza sesji, a w bazie też jest pusto -> generujemy i parujemy
-          if (!localSessionId && !profileData.current_session_id) {
-            const initialId = crypto.randomUUID();
-            localStorage.setItem("user_session_id", initialId);
-            await supabase.from('profiles').update({ current_session_id: initialId }).eq('id', user.id);
-            localSessionId = initialId;
-          } 
-          // Jeśli w bazie jest nowsza sesja, a to urządzenie ma inną (lub brak) -> NATYCHMIAST WYLOGUJ!
-          else if (profileData.current_session_id && localSessionId !== profileData.current_session_id) {
-            console.warn("Wykryto logowanie na innym urządzeniu. Wylogowywanie...");
-            await supabase.auth.signOut();
-            localStorage.removeItem("user_session_id");
-            triggerNotification("🔒 Zostałeś wylogowany, ponieważ zalogowano się na innym urządzeniu.", "error");
-            setUser(null);
-            setProfile(null);
-            setHasAccess(false);
-            setProfileLoading(false);
-            router.push("/");
-            return;
+          // Sprawdzamy sesję TYLKO jeśli nie jesteśmy w trakcie logowania na tym urządzeniu
+          if (!isLoggingIn) {
+            // Jeśli urządzenie ma swój klucz, a w bazie jest INNY nowszy klucz -> WYLOGUJ STARE URZĄDZENIE!
+            if (localSessionId && profileData.current_session_id && localSessionId !== profileData.current_session_id) {
+              console.warn("Wykryto nowsze logowanie na innym urządzeniu. Wylogowywanie...");
+              await supabase.auth.signOut();
+              localStorage.removeItem("user_session_id");
+              triggerNotification("🔒 Zostałeś wylogowany, ponieważ zalogowano się na Twoje konto z innego urządzenia.", "error");
+              setUser(null);
+              setProfile(null);
+              setHasAccess(false);
+              setProfileLoading(false);
+              router.push("/");
+              return;
+            }
+
+            // Jeśli na tym urządzeniu nie ma jeszcze zapisanego klucza, a w bazie jest -> przypisz go
+            if (!localSessionId && profileData.current_session_id) {
+              localStorage.setItem("user_session_id", profileData.current_session_id);
+            }
           }
         }
 
@@ -181,13 +181,8 @@ export default function Home() {
 
     checkActiveSessionAndProfile();
 
-    // Sprawdzaj sesję również gdy użytkownik przełączy okno / wróci do karty
-    const handleFocus = () => {
-      checkActiveSessionAndProfile();
-    };
-
+    const handleFocus = () => checkActiveSessionAndProfile();
     window.addEventListener('focus', handleFocus);
-    // Sprawdzanie co 15 sekund w tle
     const interval = setInterval(checkActiveSessionAndProfile, 15000);
 
     return () => {
@@ -252,17 +247,17 @@ export default function Home() {
     fetchPersonalNotes();
   }, [user]);
 
-  // 6. URL CLEANUP
+  // 6. URL CLEANUP (Wykrywanie płatności Stripe oraz wylogowania)
   useEffect(() => {
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get("payment") === "success") {
-        triggerNotification(
-          "🎉 Dziękujemy za zakup! Twoje konto i tokeny zostały pomyślnie zaktualizowane.", 
-          "success"
-        );
-        const cleanUrl = window.location.pathname;
-        window.history.replaceState({}, document.title, cleanUrl);
+        triggerNotification("🎉 Dziękujemy za zakup! Twoje konto i tokeny zostały pomyślnie zaktualizowane.", "success");
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+      if (urlParams.get("session") === "expired") {
+        triggerNotification("🔒 Zostałeś wylogowany, ponieważ zalogowano się na Twoje konto z innego urządzenia.", "error");
+        window.history.replaceState({}, document.title, window.location.pathname);
       }
     }
   }, []);
@@ -363,7 +358,7 @@ export default function Home() {
         handlePremiumNavigation={handlePremiumNavigation}
       />
 
-      {/* ===== BEZPIECZNE WYŚWIETLANIE BANNERA REGULAMINU ===== */}
+      {/* BANNER REGULAMINU */}
       {user && showTosBanner && (
         <div className="w-full bg-amber-500/10 border-b border-amber-500/30 px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-4 animate-slide-in relative z-30">
           <div className="flex items-center gap-3">
@@ -374,7 +369,7 @@ export default function Home() {
           </div>
           <button
             onClick={acceptTos}
-            className="shrink-0 px-4 py-1.5 rounded-xl bg-amber-500 text-stone-950 font-bold text-xs hover:bg-amber-400 transition-all shadow-md active:scale-95"
+            className="shrink-0 px-4 py-1.5 rounded-xl bg-amber-500 text-stone-950 font-bold text-xs hover:bg-amber-400 transition-all shadow-md active:scale-95 cursor-pointer"
           >
             Rozumiem
           </button>
@@ -408,14 +403,13 @@ export default function Home() {
               <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl z-0 pointer-events-none" />
               <div className="absolute bottom-0 left-0 w-80 h-80 bg-orange-600/5 rounded-full blur-3xl z-0 pointer-events-none" />
 
-              {/* ZNAK WODNY W TLE */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden z-0">
                 <span className="text-xl sm:text-2xl md:text-[3.5vw] font-black uppercase tracking-[0.18em] text-amber-500/[0.04] whitespace-nowrap leading-none font-serif -rotate-6">
                   Wiedza Szyta na Miarę
                 </span>
               </div>
 
-              {/* LEWA KOLUMNA: POWITANIE / PAKIETY */}
+              {/* LEWA KOLUMNA */}
               <div className="max-w-xl text-center md:text-left relative z-10 w-full">
                 <span className="text-xs font-semibold uppercase tracking-widest text-amber-500 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
                   {profileLoading ? "Weryfikacja..." : hasAccess ? "Dostęp Aktywny 🎉" : "Matura 2026 🔑"}
@@ -445,14 +439,13 @@ export default function Home() {
                       Masz darmowe konto. Wybierz jeden z pakietów, aby odblokować pełny zasób wiedzy:
                     </p>
                     
-                    {/* KAFELKI PŁATNOŚCI */}
                     <PaymentTiers 
                       paymentLoading={paymentLoading}
                       activePaymentTier={activePaymentTier}
                       handlePaymentInit={handlePaymentInit}
                     />
 
-                    {/* DYSKRETNY PRZYPIS O BRAKU UPGRADE'U W TRAKCIE PAKIETU */}
+                    {/* DYSKRETNY PRZYPIS O BRAKU UPGRADE'U */}
                     <div className="mt-4 p-3.5 rounded-2xl bg-stone-950/40 border border-stone-800/70 flex items-start gap-2.5 text-[11px] text-stone-400 leading-relaxed font-sans shadow-inner">
                       <span className="text-amber-500 text-sm shrink-0 mt-0.5">ℹ️</span>
                       <p>
@@ -463,7 +456,7 @@ export default function Home() {
                 )}
               </div>
 
-              {/* PRAWA KOLUMNA: NAZWA PLANU, GWIAZDKI I DYNAMICZNA DATA WYGAŚNIĘCIA */}
+              {/* PRAWA KOLUMNA */}
               <div className="flex flex-col items-center md:items-end justify-center text-center md:text-right border-t md:border-t-0 md:border-l border-stone-800/80 pt-4 md:pt-0 md:pl-8 relative z-10 shrink-0">
                 {profileLoading ? (
                   <div className="animate-pulse flex flex-col items-center md:items-end gap-2.5">
@@ -479,7 +472,6 @@ export default function Home() {
                     </span>
                     <span className="text-xs font-medium uppercase tracking-widest text-stone-400 mt-1">Twój Plan</span>
                     
-                    {/* GWIAZDKI ODPOWIADAJĄCE PAKIETOWI */}
                     <div className="flex gap-1 mt-2 text-amber-500 text-xs">
                       {profile?.subscription_status === 'mini' && <><span>★</span><span>★</span><span>★</span></>}
                       {profile?.subscription_status === 'medium' && <><span>★</span><span>★</span><span>★</span><span>★</span></>}
@@ -488,7 +480,6 @@ export default function Home() {
                       )}
                     </div>
 
-                    {/* DYNAMICZNY CZAS I DATA WYGAŚNIĘCIA */}
                     <div className="flex flex-col items-center md:items-end mt-2 text-center md:text-right">
                       {!hasAccess ? (
                         <span className="text-[11px] text-stone-500 font-medium">Zyskaj pełną moc nauki</span>
@@ -498,7 +489,6 @@ export default function Home() {
                           const diffMs = expDate.getTime() - Date.now();
                           const diffDays = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
 
-                          // Jeśli konto jest ważne dłużej niż 3 lata (np. konto nauczycielskie / VIP)
                           if (diffDays > 1000) {
                             return (
                               <span className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
@@ -567,6 +557,7 @@ export default function Home() {
                 </nav>
               </CozyGlowCard>
 
+              {/* ZAPAMIĘTANE CYTATY Z JEDNOLINOWYM LICZNIKIEM */}
               <CozyGlowCard currentTheme={currentTheme} className="p-5 flex flex-col gap-3">
                 <div className="flex items-center justify-between gap-2 px-1 border-b border-stone-850/50 pb-2">
                   <span className="text-xs uppercase tracking-wider text-amber-500 font-bold truncate">
@@ -627,7 +618,7 @@ export default function Home() {
                       <span className="text-[10px] text-purple-300 font-semibold uppercase tracking-wider">Pozostałe tokeny:</span>
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold font-mono text-purple-400 bg-stone-900 px-2 py-0.5 rounded-md border border-purple-900/40">{profile?.essay_credits ?? 0} tokeny</span>
-                        <button onClick={() => setIsTokenModalOpen(true)} className="text-[9px] uppercase tracking-wider font-extrabold bg-gradient-to-br from-amber-300 to-amber-500 text-stone-950 px-2 py-1 rounded-md hover:from-amber-200 hover:to-amber-400 transition-all shadow-md shadow-amber-500/20 flex items-center gap-1.5">
+                        <button onClick={() => setIsTokenModalOpen(true)} className="text-[9px] uppercase tracking-wider font-extrabold bg-gradient-to-br from-amber-300 to-amber-500 text-stone-950 px-2 py-1 rounded-md hover:from-amber-200 hover:to-amber-400 transition-all shadow-md shadow-amber-500/20 flex items-center gap-1.5 cursor-pointer">
                           Doładuj <span className="text-[11px]">🪙</span>
                         </button>
                       </div>
