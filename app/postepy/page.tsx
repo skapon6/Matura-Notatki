@@ -311,11 +311,11 @@ export default function MojePostepyPage() {
 
           </div>
 
-          {/* DYSKRETNY PRZYPIS INFORMACYJNY */}
+         {/* DYSKRETNY PRZYPIS INFORMACYJNY */}
           <div className="flex items-start gap-2 px-2 opacity-80 mt-1">
             <span className="text-stone-500 text-[11px] mt-0.5 select-none">ℹ️</span>
             <p className="text-[10px] text-stone-500 leading-relaxed font-sans">
-              <strong className="text-stone-400">Ważne:</strong> Twój <span className="text-stone-400">łączny czas nauki</span> oraz <span className="text-stone-400">status przeczytanych notatek</span> są zapisywane tylko na tym urządzeniu (w pamięci Twojej przeglądarki). Jeśli wyczyścisz historię przeglądania, te dwie statystyki znikną, ponieważ nie wysyłamy ich do chmury. Pozostałe postępy są bezpieczne!
+              <strong className="text-stone-400">Ważne:</strong> Twój <span className="text-stone-400">łączny czas nauki ze stopera</span> zapisywany jest lokalnie w pamięci tej przeglądarki (wyczyszczenie historii przeglądania zresetuje tę jedną statystykę). Przeczytane notatki, fiszki, historia ocen AI i zapisane cytaty są w 100% bezpiecznie zapisywane w chmurze i synchronizowane między Twoimi urządzeniami!
             </p>
           </div>
         </div>
