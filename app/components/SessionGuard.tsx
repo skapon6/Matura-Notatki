@@ -12,27 +12,26 @@ export function SessionGuard() {
     let isChecking = false;
 
     async function verifySingleSession() {
+      // 1. Jeśli karta jest uśpiona w tle lub trwa już zapytanie -> nie pytaj bazy
+      if (typeof document !== "undefined" && document.hidden) return;
       if (isChecking) return;
       isChecking = true;
 
       try {
-        // 1. Sprawdzamy czy w ogóle jest aktywna sesja użytkownika
+        // 2. Sprawdzamy czy użytkownik jest w ogóle zalogowany
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) {
           isChecking = false;
           return;
         }
 
-        // 2. Bezpiecznik: jeśli na tym urządzeniu trwa właśnie logowanie, wstrzymaj sprawdzanie
-        if (typeof window !== "undefined") {
-          const isLoggingIn = sessionStorage.getItem("is_logging_in");
-          if (isLoggingIn) {
-            isChecking = false;
-            return;
-          }
+        // 3. Bezpiecznik: jeśli na tym urządzeniu trwa właśnie proces logowania, odczekaj
+        if (typeof window !== "undefined" && sessionStorage.getItem("is_logging_in")) {
+          isChecking = false;
+          return;
         }
 
-        // 3. Pobieramy aktualny identyfikator aktywnej sesji z bazy
+        // 4. Pobieramy aktualny identyfikator sesji z bazy danych
         const { data: profile, error } = await supabase
           .from("profiles")
           .select("current_session_id")
@@ -42,15 +41,15 @@ export function SessionGuard() {
         if (profile?.current_session_id && !error) {
           const localSessionId = localStorage.getItem("user_session_id");
 
-          // Jeśli na tym urządzeniu klucz jest INNY niż najnowszy w bazie -> NATYCHMIAST WYLOGUJ!
+          // Jeśli klucz tego urządzenia jest INNY niż najnowszy w bazie -> WYLOGUJ!
           if (localSessionId && profile.current_session_id !== localSessionId) {
-            console.warn("Wykryto logowanie na innym urządzeniu. Globalne wylogowanie z podstrony...");
+            console.warn("Wykryto logowanie na innym urządzeniu. Następuje wylogowanie...");
             await supabase.auth.signOut();
             localStorage.removeItem("user_session_id");
-            // Przekierowujemy na stronę główną z parametrem pokazującym czerwony toast
+            // Przekierowanie na stronę główną z parametrem wywołującym czerwony toast
             window.location.href = "/?session=expired";
           } 
-          // Jeśli urządzenie nie miało jeszcze klucza lokalnie -> parujemy z bazą
+          // Jeśli na tym urządzeniu brak klucza lokalnie -> parujemy z bazą
           else if (!localSessionId && profile.current_session_id) {
             localStorage.setItem("user_session_id", profile.current_session_id);
           }
@@ -62,21 +61,28 @@ export function SessionGuard() {
       }
     }
 
-    // A. Sprawdzaj natychmiast przy wejściu na jakąkolwiek podstronę (np. /notes/lalka)
+    // 1. Sprawdź natychmiast przy zmianie podstrony (np. przejście z /notes do /mapa-mysli)
     verifySingleSession();
 
-    // B. Sprawdzaj gdy użytkownik wraca do karty przeglądarki
-    const handleFocus = () => verifySingleSession();
-    window.addEventListener("focus", handleFocus);
+    // 2. Sprawdź natychmiast gdy użytkownik wraca do karty / klika w okno
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        verifySingleSession();
+      }
+    };
 
-    // C. Sprawdzaj cicho w tle co 10 sekund
-    const interval = setInterval(verifySingleSession, 10000);
+    window.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleVisibilityChange);
+
+    // 3. W tle sprawdzaj co 60 sekund (1 minuta)
+    const interval = setInterval(verifySingleSession, 60000);
 
     return () => {
-      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleVisibilityChange);
       clearInterval(interval);
     };
   }, [pathname]);
 
-  return null; // Niewidoczny komponent
+  return null; // Niewidoczny komponent globalny
 }
