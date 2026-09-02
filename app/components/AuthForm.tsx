@@ -16,8 +16,8 @@ interface AuthFormProps {
 const BLOCKED_DOMAINS = [
   "temp-mail.org", "10minutemail.com", "yopmail.com", "guerrillamail.com",
   "mailinator.com", "trashmail.com", "dispostable.com", "getairmail.com",
-  "throwawaymail.com", "maildrop.cc", "tempmail.com", "sharklasers.com","necub.com",
-  "mtupu.com","laoia.com","jbsze.com","04.tml.waw.pl","ozsaip.com",
+  "throwawaymail.com", "maildrop.cc", "tempmail.com", "sharklasers.com", "necub.com",
+  "mtupu.com", "laoia.com", "jbsze.com", "04.tml.waw.pl", "ozsaip.com",
   "guerillamailblock.com", "guerillamail.net", "guerillamail.org",
   "yopmail.fr", "yopmail.net", "cool.fr.to", "jetable.org", "temp-mail.ru",
   "temp-mail.co", "temporary-mail.net", "generator.email", "emaildeck.com",
@@ -49,7 +49,6 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
 
   // PANCERNE WYKRYWANIE LINKU RESETUJĄCEGO HASŁO
   useEffect(() => {
-    // 1. Sprawdzamy czy w adresie URL znajduje się token odzyskiwania hasła
     if (typeof window !== "undefined") {
       const hash = window.location.hash;
       const search = window.location.search;
@@ -58,7 +57,6 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
       }
     }
 
-    // 2. Nasłuchujemy na oficjalne zdarzenie PASSWORD_RECOVERY od Supabase
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
         setIsRecoveryMode(true);
@@ -90,7 +88,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
           return;
         }
 
-        // 2. Jeśli sesja nie jest aktywna, pobieramy tokeny bezpośrednio z paska adresu URL
+        // 2. Pobieranie tokenów z paska adresu
         if (typeof window !== "undefined" && window.location.hash) {
           const hashParams = new URLSearchParams(window.location.hash.substring(1));
           const accessToken = hashParams.get("access_token");
@@ -118,7 +116,6 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
           setIsRegisterForm(false);
           resetPasswordFields();
 
-          // Czyścimy tokeny z paska adresu URL
           if (typeof window !== "undefined") {
             window.history.replaceState({}, document.title, window.location.pathname);
           }
@@ -126,7 +123,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
       } else if (isForgotPassword) {
         // 4. Wysłanie maila z linkiem resetującym
         const { error } = await supabase.auth.resetPasswordForEmail(authEmail, {
-        redirectTo: `${window.location.origin}/reset-hasla`, // <-- WSKAZUJEMY NOWĄ PODSTRONĘ
+          redirectTo: `${window.location.origin}/reset-hasla`,
         });
 
         if (error) {
@@ -146,7 +143,14 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
           return;
         }
 
-        // 6. Sprawdzenie powtórzonego hasła przy rejestracji
+        // 6. Zgoda na regulamin
+        if (!acceptTerms) {
+          triggerNotification("Musisz zaakceptować regulamin i politykę prywatności, aby założyć konto.", "error");
+          setAuthFormLoading(false);
+          return;
+        }
+
+        // 7. Sprawdzenie powtórzonego hasła przy rejestracji
         if (authPassword !== confirmPassword) {
           triggerNotification(
             "Podane hasła nie są identyczne. Upewnij się, że wpisałeś je poprawnie w obu polach.", 
@@ -156,7 +160,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
           return;
         }
 
-        // 7. Rejestracja użytkownika
+        // 8. Rejestracja użytkownika
         const { error } = await supabase.auth.signUp({
           email: authEmail,
           password: authPassword,
@@ -165,13 +169,13 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
         if (error) {
           triggerNotification(translateAuthError(error.message), "error");
         } else {
-          triggerNotification("Konto zostało utworzone pomyślnie!", "success");
+          triggerNotification("Konto zostało utworzone pomyślnie! Sprawdź e-mail, aby je aktywować.", "success");
           setIsRegisterForm(false);
           resetPasswordFields();
         }
       } else {
-        // 8. Klasyczne logowanie
-        const { error } = await supabase.auth.signInWithPassword({
+        // 9. KLASYCZNE LOGOWANIE + OBSŁUGA POJEDYNCZEJ SESJI (SINGLE DEVICE)
+        const { data, error } = await supabase.auth.signInWithPassword({
           email: authEmail,
           password: authPassword,
         });
@@ -179,11 +183,25 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
         if (error) {
           triggerNotification(translateAuthError(error.message), "error");
         } else {
+          // --- BLOKADA WSPÓŁDZIELENIA KONTA ---
+          if (data?.user && typeof window !== "undefined") {
+            const newSessionId = crypto.randomUUID();
+            // Zapisujemy klucz w pamięci tego urządzenia
+            localStorage.setItem("user_session_id", newSessionId);
+
+            // Nadpisujemy aktywną sesję w bazie Supabase
+            await supabase
+              .from("profiles")
+              .update({ current_session_id: newSessionId })
+              .eq("id", data.user.id);
+          }
+
           triggerNotification("Zalogowano pomyślnie!", "success");
           resetPasswordFields();
         }
       }
-    } catch (err) {
+    } 
+    catch (err) {
       triggerNotification("Wystąpił nieoczekiwany błąd serwera.", "error");
     } finally {
       setAuthFormLoading(false);
@@ -198,180 +216,185 @@ export const AuthForm: React.FC<AuthFormProps> = ({ currentTheme, triggerNotific
   };
 
   return (
-    <div className={`w-full max-w-sm rounded-3xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-6 sm:p-8 shadow-xl ${currentTheme.glow}`}>
+    <div className={`w-full max-w-md p-6 sm:p-8 rounded-3xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} shadow-2xl backdrop-blur-md transition-all duration-500`}>
+      <h2 className="text-2xl font-bold text-stone-100 font-serif mb-2 text-center sm:text-left">
+        {getFormTitle()}
+      </h2>
+      <p className="text-xs text-stone-400 mb-6 leading-relaxed text-center sm:text-left">
+        {isRecoveryMode && "Wpisz nowe, bezpieczne hasło do swojego konta."}
+        {isForgotPassword && "Podaj swój adres e-mail, a wyślemy Ci link do zresetowania hasła."}
+        {isRegisterForm && "Utwórz konto, aby otrzymać darmowy token AI i dostęp do kącika nauki."}
+        {!isRegisterForm && !isForgotPassword && !isRecoveryMode && "Wpisz swoje dane, aby uzyskać dostęp do swoich materiałów i postępów."}
+      </p>
+
       <form onSubmit={handleAuthSubmit} className="flex flex-col gap-4">
-        <h3 className="text-xl font-bold text-stone-100 font-serif text-center">
-          {getFormTitle()}
-        </h3>
-        
-        <div className="flex flex-col gap-3 mt-2">
-          {isRecoveryMode ? (
-            /* Tryb zmiany hasła (po kliknięciu linku z maila) */
-            <>
+        {/* POLA DLA TRYBU ODZYSKIWANIA HASŁA */}
+        {isRecoveryMode ? (
+          <>
+            <div>
+              <label className="text-xs font-semibold text-stone-300 uppercase tracking-wider block mb-1.5">
+                Nowe Hasło
+              </label>
               <input
                 type="password"
-                placeholder="Wpisz nowe hasło"
+                required
+                placeholder="••••••••"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                required
-                minLength={6}
-                className="w-full bg-stone-900 border border-stone-800 rounded-xl py-2 px-4 text-sm text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60"
+                className="w-full bg-stone-900/80 border border-stone-800 rounded-xl py-2.5 px-4 text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-700/60 transition-all font-sans"
               />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-stone-300 uppercase tracking-wider block mb-1.5">
+                Powtórz Nowe Hasło
+              </label>
               <input
                 type="password"
-                placeholder="Powtórz nowe hasło"
+                required
+                placeholder="••••••••"
                 value={confirmNewPassword}
                 onChange={(e) => setConfirmNewPassword(e.target.value)}
-                required
-                minLength={6}
-                className="w-full bg-stone-900 border border-stone-800 rounded-xl py-2 px-4 text-sm text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60"
+                className="w-full bg-stone-900/80 border border-stone-800 rounded-xl py-2.5 px-4 text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-700/60 transition-all font-sans"
               />
-            </>
-          ) : isForgotPassword ? (
-            /* Tryb wysyłania prośby o reset */
-            <input
-              type="email"
-              placeholder="Wpisz swój adres e-mail"
-              value={authEmail}
-              onChange={(e) => setAuthEmail(e.target.value)}
-              required
-              className="w-full bg-stone-900 border border-stone-800 rounded-xl py-2 px-4 text-sm text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60"
-            />
-          ) : (
-            /* Standardowy tryb logowania/rejestracji */
-            <>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* STANDARDOWE POLE E-MAIL */}
+            <div>
+              <label className="text-xs font-semibold text-stone-300 uppercase tracking-wider block mb-1.5">
+                Adres e-mail
+              </label>
               <input
                 type="email"
-                placeholder="Twój adres e-mail"
+                required
+                placeholder="twoj@email.pl"
                 value={authEmail}
                 onChange={(e) => setAuthEmail(e.target.value)}
-                required
-                className="w-full bg-stone-900 border border-stone-800 rounded-xl py-2 px-4 text-sm text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60"
+                className="w-full bg-stone-900/80 border border-stone-800 rounded-xl py-2.5 px-4 text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-700/60 transition-all font-sans"
               />
-              <input
-                type="password"
-                placeholder="Hasło"
-                value={authPassword}
-                onChange={(e) => setAuthPassword(e.target.value)}
-                required
-                className="w-full bg-stone-900 border border-stone-800 rounded-xl py-2 px-4 text-sm text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60"
-              />
-              
-              {/* Powtórz hasło (wyłącznie przy rejestracji) */}
-              {isRegisterForm && (
+            </div>
+
+            {/* POLE HASŁA (UKRYWANE W TRYBIE PRZYWRACANIA HASŁA) */}
+            {!isForgotPassword && (
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-stone-300 uppercase tracking-wider">
+                    Hasło
+                  </label>
+                  {!isRegisterForm && (
+                    <button
+                      type="button"
+                      onClick={() => setIsForgotPassword(true)}
+                      className="text-xs text-amber-500 hover:text-amber-400 font-medium transition-colors"
+                    >
+                      Zapomniałeś hasła?
+                    </button>
+                  )}
+                </div>
                 <input
                   type="password"
-                  placeholder="Powtórz hasło"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  className="w-full bg-stone-900 border border-stone-800 rounded-xl py-2 px-4 text-sm text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60 animate-slide-in"
+                  placeholder="••••••••"
+                  value={authPassword}
+                  onChange={(e) => setAuthPassword(e.target.value)}
+                  className="w-full bg-stone-900/80 border border-stone-800 rounded-xl py-2.5 px-4 text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-700/60 transition-all font-sans"
                 />
-              )}
-            </>
-          )}
+              </div>
+            )}
 
-          {/* Obowiązkowy checkbox przy rejestracji */}
-          {isRegisterForm && !isForgotPassword && !isRecoveryMode && (
-            <div className="flex items-start gap-2 px-1 text-left select-none my-1">
-              <input
-                type="checkbox"
-                id="uokikRegisterConsent"
-                checked={acceptTerms}
-                onChange={(e) => setAcceptTerms(e.target.checked)}
-                required
-                className="w-4 h-4 rounded border-stone-800 text-amber-500 focus:ring-amber-500 bg-stone-950 cursor-pointer accent-[#c68a4c] mt-0.5 shrink-0"
-              />
-              <label htmlFor="uokikRegisterConsent" className="text-[10px] sm:text-[11px] text-stone-400 cursor-pointer select-none leading-relaxed">
-                Oświadczam, że akceptuję{" "}
-                <Link href="/regulamin" target="_blank" className="text-amber-500 hover:underline">Regulamin Serwisu</Link>{" "}
-                oraz wyrażam zgodę na przetwarzanie danych osobowych zgodnie z{" "}
-                <Link href="/prywatnosc" target="_blank" className="text-amber-500 hover:underline">Polityką Prywatności</Link>.
-              </label>
-            </div>
-          )}
-          
-          <button
-            type="submit"
-            disabled={authFormLoading || (isRegisterForm && !acceptTerms)}
-            className={`w-full mt-2 py-2.5 rounded-xl ${currentTheme.accentBg} text-stone-950 font-bold ${currentTheme.accentHover} transition-all disabled:opacity-30 disabled:cursor-not-allowed`}
-          >
-            {authFormLoading 
-              ? "Przetwarzanie..." 
-              : isRecoveryMode 
-                ? "Zaktualizuj hasło" 
-                : isForgotPassword 
-                  ? "Wyślij link resetujący" 
-                  : isRegisterForm 
-                    ? "Zarejestruj się" 
-                    : "Zaloguj się"
-            }
-          </button>
-        </div>
+            {/* DODATKOWE POLA DLA REJESTRACJI */}
+            {isRegisterForm && (
+              <>
+                <div>
+                  <label className="text-xs font-semibold text-stone-300 uppercase tracking-wider block mb-1.5">
+                    Powtórz hasło
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full bg-stone-900/80 border border-stone-800 rounded-xl py-2.5 px-4 text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-700/60 transition-all font-sans"
+                  />
+                </div>
 
-        {/* Dolna nawigacja */}
-        <div className="flex flex-col gap-2 mt-2 text-center">
-          {isRecoveryMode ? (
-            <button
-              type="button"
-              onClick={() => {
-                setIsRecoveryMode(false);
-                setIsForgotPassword(false);
-                resetPasswordFields();
-                if (typeof window !== "undefined") {
-                  window.history.replaceState({}, document.title, window.location.pathname);
-                }
-              }}
-              className="text-xs text-stone-500 hover:underline focus:outline-none"
-            >
-              Anuluj i wróć do logowania
-            </button>
+                <div className="flex items-start gap-2.5 pt-1">
+                  <input
+                    type="checkbox"
+                    id="acceptTerms"
+                    checked={acceptTerms}
+                    onChange={(e) => setAcceptTerms(e.target.checked)}
+                    className="w-4 h-4 rounded border-stone-800 text-amber-500 focus:ring-amber-500 bg-stone-950 cursor-pointer accent-[#c68a4c] mt-0.5"
+                  />
+                  <label htmlFor="acceptTerms" className="text-xs text-stone-400 leading-relaxed cursor-pointer select-none">
+                    Akceptuję <Link href="/regulamin" target="_blank" className="text-amber-500 hover:underline">Regulamin</Link> oraz <Link href="/prywatnosc" target="_blank" className="text-amber-500 hover:underline">Politykę Prywatności</Link>.
+                  </label>
+                </div>
+              </>
+            )}
+          </>
+        )}
+
+        {/* PRZYCISK SUBMIT */}
+        <button
+          type="submit"
+          disabled={authFormLoading}
+          className="w-full py-3 rounded-xl bg-[#c68a4c] hover:bg-[#d99c5d] text-stone-950 font-bold transition-all text-xs sm:text-sm shadow-md mt-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer active:scale-98"
+        >
+          {authFormLoading ? (
+            <span className="animate-pulse">Przetwarzanie... ☕</span>
+          ) : isRecoveryMode ? (
+            "Zapisz nowe hasło"
           ) : isForgotPassword ? (
+            "Wyślij link resetujący"
+          ) : isRegisterForm ? (
+            "Załóż bezpłatne konto"
+          ) : (
+            "Zaloguj się do Kącika"
+          )}
+        </button>
+
+        {/* PRZEŁĄCZNIKI WIDOKÓW */}
+        <div className="flex flex-col items-center gap-2 pt-4 border-t border-stone-800/60 mt-2 text-xs text-stone-400">
+          {isForgotPassword ? (
             <button
               type="button"
-              onClick={() => {
-                setIsForgotPassword(false);
-                resetPasswordFields();
-              }}
-              className="text-xs text-amber-500 hover:underline focus:outline-none"
+              onClick={() => setIsForgotPassword(false)}
+              className="text-amber-500 hover:text-amber-400 font-semibold transition-colors"
             >
-              Wróć do logowania
+              ← Wróć do logowania
             </button>
           ) : isRegisterForm ? (
-            <button
-              type="button"
-              onClick={() => {
-                setIsRegisterForm(false);
-                resetPasswordFields();
-              }}
-              className="text-xs text-amber-500 hover:underline focus:outline-none"
-            >
-              Masz już konto? Zaloguj się
-            </button>
-          ) : (
-            <>
+            <p>
+              Masz już konto?{" "}
               <button
                 type="button"
                 onClick={() => {
-                  setIsForgotPassword(true);
+                  setIsRegisterForm(false);
                   resetPasswordFields();
                 }}
-                className="text-xs text-stone-500 hover:text-stone-300 hover:underline focus:outline-none"
+                className="text-amber-500 hover:text-amber-400 font-semibold transition-colors ml-1"
               >
-                Nie pamiętasz hasła?
+                Zaloguj się
               </button>
+            </p>
+          ) : !isRecoveryMode ? (
+            <p>
+              Nie masz jeszcze konta?{" "}
               <button
                 type="button"
                 onClick={() => {
                   setIsRegisterForm(true);
                   resetPasswordFields();
                 }}
-                className="text-xs text-amber-500 hover:underline focus:outline-none"
+                className="text-amber-500 hover:text-amber-400 font-semibold transition-colors ml-1"
               >
-                Nie masz konta? Zarejestruj się
+                Zarejestruj się za darmo
               </button>
-            </>
-          )}
+            </p>
+          ) : null}
         </div>
       </form>
     </div>

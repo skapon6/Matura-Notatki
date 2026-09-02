@@ -116,18 +116,36 @@ export default function Home() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // 2. Pobieranie danych profilu
+ // 2. Pobieranie danych profilu (z wbudowaną ochroną przed współdzieleniem konta)
   useEffect(() => {
     async function fetchUserProfile() {
       if (user) {
         setProfileLoading(true);
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('subscription_status, essay_credits, expires_at')
+          .select('subscription_status, essay_credits, expires_at, current_session_id') // <--- Pobieramy current_session_id
           .eq('id', user.id)
           .single();
           
         if (profileData) {
+          // --- OCHRONA SINGLE DEVICE LOGIN ---
+          if (typeof window !== "undefined") {
+            const localSessionId = localStorage.getItem("user_session_id");
+            
+            // Jeśli ktoś inny zalogował się na to konto i wygenerował nowszą sesję w bazie:
+            if (profileData.current_session_id && localSessionId && profileData.current_session_id !== localSessionId) {
+              await supabase.auth.signOut();
+              localStorage.removeItem("user_session_id");
+              triggerNotification("🔒 Zostałeś wylogowany, ponieważ zalogowano się na innym urządzeniu.", "error");
+              setUser(null);
+              setProfile(null);
+              setHasAccess(false);
+              setProfileLoading(false);
+              router.push("/");
+              return;
+            }
+          }
+
           setProfile(profileData);
           const activeStatuses = ['mini', 'medium', 'premium', 'admin', 'paid'];
           const isStatusActive = activeStatuses.includes(profileData.subscription_status);
@@ -152,7 +170,7 @@ export default function Home() {
       }
     }
     fetchUserProfile();
-  }, [user]);
+  }, [user, router]);
 
   // 3. Pobieranie ostatnich rozprawki
   useEffect(() => {
