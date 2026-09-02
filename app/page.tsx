@@ -116,60 +116,84 @@ export default function Home() {
     return () => subscription.unsubscribe();
   }, []);
 
- // 2. Pobieranie danych profilu (z wbudowaną ochroną przed współdzieleniem konta)
+ // 2. Pobieranie profilu z aktywną ochroną Single Device Login
   useEffect(() => {
-    async function fetchUserProfile() {
-      if (user) {
-        setProfileLoading(true);
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('subscription_status, essay_credits, expires_at, current_session_id') // <--- Pobieramy current_session_id
-          .eq('id', user.id)
-          .single();
-          
-        if (profileData) {
-          // --- OCHRONA SINGLE DEVICE LOGIN ---
-          if (typeof window !== "undefined") {
-            const localSessionId = localStorage.getItem("user_session_id");
-            
-            // Jeśli ktoś inny zalogował się na to konto i wygenerował nowszą sesję w bazie:
-            if (profileData.current_session_id && localSessionId && profileData.current_session_id !== localSessionId) {
-              await supabase.auth.signOut();
-              localStorage.removeItem("user_session_id");
-              triggerNotification("🔒 Zostałeś wylogowany, ponieważ zalogowano się na innym urządzeniu.", "error");
-              setUser(null);
-              setProfile(null);
-              setHasAccess(false);
-              setProfileLoading(false);
-              router.push("/");
-              return;
-            }
-          }
-
-          setProfile(profileData);
-          const activeStatuses = ['mini', 'medium', 'premium', 'admin', 'paid'];
-          const isStatusActive = activeStatuses.includes(profileData.subscription_status);
-          
-          let isExpired = false;
-          if (profileData.expires_at) {
-            const expirationTime = new Date(profileData.expires_at).getTime();
-            const currentTime = new Date().getTime();
-            isExpired = currentTime > expirationTime;
-          }
-          
-          setHasAccess(isStatusActive && !isExpired);
-        } else {
-          setProfile(null);
-          setHasAccess(false);
-        }
-        setProfileLoading(false);
-      } else {
+    async function checkActiveSessionAndProfile() {
+      if (!user) {
         setProfile(null);
         setHasAccess(false);
         setProfileLoading(false);
+        return;
       }
+
+      setProfileLoading(true);
+
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('subscription_status, essay_credits, expires_at, current_session_id')
+        .eq('id', user.id)
+        .single();
+        
+      if (profileData && !error) {
+        if (typeof window !== "undefined") {
+          let localSessionId = localStorage.getItem("user_session_id");
+
+          // Jeśli to urządzenie nie miało jeszcze klucza sesji, a w bazie też jest pusto -> generujemy i parujemy
+          if (!localSessionId && !profileData.current_session_id) {
+            const initialId = crypto.randomUUID();
+            localStorage.setItem("user_session_id", initialId);
+            await supabase.from('profiles').update({ current_session_id: initialId }).eq('id', user.id);
+            localSessionId = initialId;
+          } 
+          // Jeśli w bazie jest nowsza sesja, a to urządzenie ma inną (lub brak) -> NATYCHMIAST WYLOGUJ!
+          else if (profileData.current_session_id && localSessionId !== profileData.current_session_id) {
+            console.warn("Wykryto logowanie na innym urządzeniu. Wylogowywanie...");
+            await supabase.auth.signOut();
+            localStorage.removeItem("user_session_id");
+            triggerNotification("🔒 Zostałeś wylogowany, ponieważ zalogowano się na innym urządzeniu.", "error");
+            setUser(null);
+            setProfile(null);
+            setHasAccess(false);
+            setProfileLoading(false);
+            router.push("/");
+            return;
+          }
+        }
+
+        setProfile(profileData);
+        const activeStatuses = ['mini', 'medium', 'premium', 'admin', 'paid'];
+        const isStatusActive = activeStatuses.includes(profileData.subscription_status);
+        
+        let isExpired = false;
+        if (profileData.expires_at) {
+          const expirationTime = new Date(profileData.expires_at).getTime();
+          const currentTime = new Date().getTime();
+          isExpired = currentTime > expirationTime;
+        }
+        
+        setHasAccess(isStatusActive && !isExpired);
+      } else {
+        setProfile(null);
+        setHasAccess(false);
+      }
+      setProfileLoading(false);
     }
-    fetchUserProfile();
+
+    checkActiveSessionAndProfile();
+
+    // Sprawdzaj sesję również gdy użytkownik przełączy okno / wróci do karty
+    const handleFocus = () => {
+      checkActiveSessionAndProfile();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    // Sprawdzanie co 15 sekund w tle
+    const interval = setInterval(checkActiveSessionAndProfile, 15000);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(interval);
+    };
   }, [user, router]);
 
   // 3. Pobieranie ostatnich rozprawki
