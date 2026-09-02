@@ -65,21 +65,45 @@ export default function MojePostepyPage() {
         const userId = session.user.id;
 
         // Pobieramy dane równolegle (Promise.all) dodając zapytanie o łączną liczbę notatek
+        // Pobieramy dane równolegle (Promise.all) wraz z read_notes z profilu
         const [
           profileRes,
           quotesRes,
           essaysRes,
           flashcardsRes,
           progressRes,
-          notesCountRes // <--- Zapytanie typu HEAD, zlicza rekordy bez pobierania danych!
+          notesCountRes
         ] = await Promise.all([
-          supabase.from("profiles").select("essay_credits").eq("id", userId).single(),
+          supabase.from("profiles").select("essay_credits, read_notes").eq("id", userId).single(), // <--- dodano read_notes
           supabase.from("personal_notes").select("id", { count: "exact", head: true }),
           supabase.from("essay_evaluations").select("score").eq("user_id", userId),
           supabase.from("flashcards").select("id, era, note_slug, front, back"),
           supabase.from("flashcard_progress").select("flashcard_id, status").eq("user_id", userId),
           supabase.from("notes").select("id", { count: "exact", head: true }) // Zliczanie bazy notatek
         ]);
+
+        // A. Tokeny oraz dokładna liczba przeczytanych notatek z bazy w chmurze
+        if (profileRes.data) {
+          setCredits(profileRes.data.essay_credits || 0);
+          
+          if (profileRes.data.read_notes && Array.isArray(profileRes.data.read_notes)) {
+            setReadNotesCount(profileRes.data.read_notes.length);
+            // Zapisujemy kopię lokalnie dla natychmiastowej spójności
+            if (typeof window !== "undefined") {
+              localStorage.setItem("read_notes", JSON.stringify(profileRes.data.read_notes));
+            }
+          }
+        }
+
+        // B. Cytaty
+        if (quotesRes.count !== null) {
+          setQuotesCount(quotesRes.count);
+        }
+
+        // C. Liczba wszystkich notatek w bazie
+        if (notesCountRes.count !== null) {
+          setTotalNotesCount(notesCountRes.count);
+        }
 
         if (profileRes.data) setCredits(profileRes.data.essay_credits || 0);
         if (quotesRes.count !== null) setQuotesCount(quotesRes.count);

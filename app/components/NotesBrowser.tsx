@@ -1,9 +1,12 @@
+// components/NotesBrowser.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
 import { ThemeClasses } from "../lib/theme";
 import Link from "next/link";
 import { CozyGlowCard } from "./CozyGlowCard";
+import { supabase } from "../lib/supabase";
+import { playSound } from "../lib/sounds";
 
 const epochKeywords: Record<string, string[]> = {
   "Antyk": ["antyk", "starożytność", "mitologia", "homer", "sofokles", "biblia", "mit", "antygona", "król edyp", "iliada", "odyseja"],
@@ -115,34 +118,70 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("Wszystkie");
-  
-  // Stany filtrów dodatkowych
   const [showOnlyFree, setShowOnlyFree] = useState(false);
   const [readFilter, setReadFilter] = useState<"all" | "read" | "unread">("all");
   const [readNotes, setReadNotes] = useState<number[]>([]);
 
+  // WCZYTYWANIE PRZECZYTANYCH NOTATEK Z BAZY CHMUROWEJ
   useEffect(() => {
-    const stored = localStorage.getItem("read_notes");
-    if (stored) {
-      try { setReadNotes(JSON.parse(stored)); } catch (e) {}
+    async function loadCloudReadNotes() {
+      // 1. Błyskawiczny odczyt z pamięci lokalnej
+      const stored = localStorage.getItem("read_notes");
+      if (stored) {
+        try { setReadNotes(JSON.parse(stored)); } catch (e) {}
+      }
+
+      // 2. Pobranie zaktualizowanej listy ID z bazy Supabase
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('read_notes')
+            .eq('id', session.user.id)
+            .single();
+
+          if (profile?.read_notes && Array.isArray(profile.read_notes)) {
+            setReadNotes(profile.read_notes);
+            localStorage.setItem("read_notes", JSON.stringify(profile.read_notes));
+          }
+        }
+      } catch (err) {
+        console.error("Błąd pobierania przeczytanych notatek:", err);
+      }
     }
+    loadCloudReadNotes();
   }, []);
 
-  const toggleReadNote = (noteId: number, e: React.MouseEvent) => {
+  // SYNCHRONIZACJA Z BAZĄ SUPABASE PRZY KLIKNIĘCIU
+  const toggleReadNote = async (noteId: number, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
     const isCurrentlyRead = readNotes.includes(noteId);
-    let updatedReads;
+    const updatedReads = isCurrentlyRead
+      ? readNotes.filter((id) => id !== noteId)
+      : [...readNotes, noteId];
 
-    if (isCurrentlyRead) {
-      updatedReads = readNotes.filter((id) => id !== noteId);
-    } else {
-      updatedReads = [...readNotes, noteId];
-    }
-
+    // 1. Zmiana na ekranie i w localStorage
     setReadNotes(updatedReads);
     localStorage.setItem("read_notes", JSON.stringify(updatedReads));
+    if (!isCurrentlyRead) {
+      try { playSound("success"); } catch (_) {}
+    }
+
+    // 2. Zapis tablicy ID w Supabase (dla innych urządzeń)
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await supabase
+          .from('profiles')
+          .update({ read_notes: updatedReads })
+          .eq('id', session.user.id);
+      }
+    } catch (err) {
+      console.error("Błąd synchronizacji z chmurą:", err);
+    }
   };
 
   const getExcerpt = (note: any) => {
@@ -174,7 +213,6 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
         return `Aktualizacja: ${date.toLocaleDateString("pl-PL", { day: "numeric", month: "short", year: "numeric" })}`;
       } catch (_) {}
     }
-
     const titleLower = (note.title || "").toLowerCase();
     if (note.type === "lektura") {
       const pewniaki = ["lalka", "wesele", "dziady", "kordian", "potop", "przedwiośnie", "treny", "makbet", "skąpiec", "granica"];
@@ -185,14 +223,10 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
   };
 
   const filteredNotes = notes.filter((note) => {
-    // 1. Filtr darmowych
     if (!hasAccess && showOnlyFree && !note.is_free) return false;
-    
-    // 2. Filtr przeczytanych
     if (readFilter === "read" && !readNotes.includes(note.id)) return false;
     if (readFilter === "unread" && readNotes.includes(note.id)) return false;
 
-    // 3. Wyszukiwarka tekstowa
     const titleLower = (note.title || "").toLowerCase();
     const contentString = typeof note.content === 'string' ? note.content : JSON.stringify(note.content || "");
     const contentLower = contentString.toLowerCase();
@@ -202,16 +236,14 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
     const textToSearch = `${titleLower} ${contentLower} ${chipsString.toLowerCase()} ${eraLower} ${typeLower}`;
     
     const matchesSearch = textToSearch.includes(searchQuery.toLowerCase());
-    
-    // 4. Filtr przedmiotu / epoki
     let matchesSubject = true;
+    
     if (selectedSubject === "Inne (Pomocniki)") {
       matchesSubject = note.type !== "epoka" && note.type !== "lektura";
     } else if (selectedSubject !== "Wszystkie") {
       const keywords = epochKeywords[selectedSubject] || [selectedSubject.toLowerCase()];
       matchesSubject = keywords.some(keyword => textToSearch.includes(keyword));
     }
-    
     return matchesSearch && matchesSubject;
   });
 
@@ -238,7 +270,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
           )}
         </div>
 
-        {/* FILTRY STATUSU I DOSTĘPU */}
+        {/* FILTRY STATUSU */}
         <div className="flex flex-col sm:flex-row gap-3 pt-2 mt-1 border-t border-stone-800/40">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider mr-1">Status:</span>
@@ -272,7 +304,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
           </div>
         </div>
 
-        {/* FILTRY EPOK LITERACKICH */}
+        {/* FILTRY EPOK */}
         <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-stone-800/40">
           <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider mr-1">Kategoria:</span>
           {[
@@ -319,12 +351,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
               }
             };
 
-            const getNoteEmoji = (type: string) => {
-              if (type === "epoka") return "📜";
-              if (type === "lektura") return "📕";
-              return "💡";
-            };
-
+            const getNoteEmoji = (type: string) => type === "epoka" ? "📜" : type === "lektura" ? "📕" : "💡";
             const isRead = readNotes.includes(note.id);
 
             return (
@@ -381,6 +408,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
                   </p>
                 </div>
                 
+                {/* PRZYCISK PRZECZYTANO */}
                 <div className="border-t border-stone-800/40 mt-4 pt-3 flex flex-col gap-3 w-full">
                   <div className="flex items-center justify-between text-[11px] text-stone-500 w-full">
                     <span>{getBottomLeftMetadata(note)}</span>
@@ -393,7 +421,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
                     onClick={(e) => toggleReadNote(note.id, e)}
                     className={`w-full py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 border ${
                       isRead
-                        ? "bg-emerald-950/30 border-emerald-900/50 text-emerald-400 hover:bg-emerald-900/40"
+                        ? "bg-emerald-950/30 border-emerald-900/50 text-emerald-400 hover:bg-emerald-900/40 shadow-inner"
                         : "bg-stone-900/30 border-stone-800/60 text-stone-500 hover:bg-stone-800/60 hover:text-stone-300"
                     }`}
                   >
