@@ -1,263 +1,412 @@
-import React from 'react';
-import { notFound } from 'next/navigation';
-import Link from 'next/link';
-import { Metadata } from 'next';
-import { createClient } from '@supabase/supabase-js';
-import { getSupabaseServer } from '@/app/lib/supabaseServer';
+// app/notes/page.tsx
+"use client";
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import React, { useState, useEffect } from "react";
+import { supabase } from "../lib/supabase";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { playSound } from "../lib/sounds";
+import { useLofi } from "../context/LofiContext";
+import { getThemeClasses, CozyTheme } from "../lib/theme";
+import { CozyNotification } from "../components/CozyNotification";
+import { CozyGlowCard } from "../components/CozyGlowCard";
 
-type Props = {
-  params: Promise<{ slug: string }>;
-};
+export default function WszystkieNotatkiPage() {
+  const router = useRouter();
+  const [cozyTheme, setCozyTheme] = useState<CozyTheme>("library");
+  const currentTheme = getThemeClasses(cozyTheme);
 
-// 1. DYNAMICZNE METATAGI DLA GOOGLE (SEO)
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("app_theme") as CozyTheme;
+    if (savedTheme) {
+      setCozyTheme(savedTheme);
+    }
+  }, []);
 
-  const { data: note } = await supabaseAdmin
-    .from('notes')
-    .select('title, era, type')
-    .eq('slug', slug)
-    .single();
+  const {
+    lofiActive,
+    currentTrackIndex,
+    lofiVolume,
+    lofiTracks,
+    toggleLofi,
+    handleNextTrack,
+    handlePrevTrack,
+    handleVolumeChange
+  } = useLofi();
 
-  if (!note) {
-    return { title: 'Notatka nie znaleziona | Wiedza Szyta na Miarę' };
-  }
+  const [user, setUser] = useState<any>(null);
+  const [hasAccess, setHasAccess] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
+  const [notes, setNotes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  return {
-    title: `${note.title} — Opracowanie i Notatka Maturalna | Wiedza Szyta na Miarę`,
-    description: `Kompleksowe opracowanie maturalne: ${note.title}. Epoka: ${note.era || 'Język polski'}. Motywy, konteksty, streszczenie i najważniejsze zagadnienia do matury.`,
-    alternates: {
-      canonical: `https://wiedzaszytanamiare.pl/notes/${slug}`,
-    },
-    openGraph: {
-      title: `${note.title} — Notatka do Matury`,
-      description: `Opanuj ${note.title} do matury z języka polskiego. Sprawdź najważniejsze motywy i konteksty.`,
-      url: `https://wiedzaszytanamiare.pl/notes/${slug}`,
-      siteName: 'Wiedza Szyta na Miarę',
-      type: 'article',
-    },
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedEra, setSelectedEra] = useState("Wszystkie");
+  const [selectedType, setSelectedType] = useState<"all" | "epoka" | "lektura" | "inne">("all");
+  const [showOnlyFree, setShowOnlyFree] = useState(false);
+  const [readFilter, setReadFilter] = useState<"all" | "read" | "unread">("all");
+  const [readNotes, setReadNotes] = useState<number[]>([]);
+
+  const [cozyNotification, setCozyNotification] = useState<{
+    message: string; type: "success" | "error" | "info";
+  } | null>(null);
+
+  const triggerNotification = (message: string, type: "success" | "error" | "info" = "info") => {
+    setCozyNotification({ message, type });
+    if (type === "success") playSound("success");
+    else if (type === "error") playSound("error");
+    else playSound("click");
+    setTimeout(() => setCozyNotification(null), 4500);
   };
-}
 
-// 2. GŁÓWNY KOMPONENT PODSTRONY
-export default async function NotePage({ params }: Props) {
-  const { slug } = await params;
+  const eras = [
+    "Wszystkie", "Antyk", "Średniowiecze", "Renesans", "Barok", "Oświecenie", "Romantyzm", "Pozytywizm", "Młoda Polska", "Dwudziestolecie", "Wojna i Okupacja", "Współczesność",
+  ];
 
-  // Pobieramy dane notatki z Supabase
-  const { data: note, error } = await supabaseAdmin
-    .from('notes')
-    .select('*')
-    .eq('slug', slug)
-    .single();
-
-  if (error || !note) {
-    notFound();
-  }
-
-  const isNoteFree = note.is_free || false;
-
-  // Weryfikacja sesji i pakietu użytkownika po stronie serwera
-  let hasAccess = false;
-  let userEmail = null;
-
-  try {
-    const supabase = await getSupabaseServer();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (user) {
-      userEmail = user.email;
-      const { data: profile } = await supabaseAdmin
-        .from('profiles')
-        .select('subscription_status, expires_at')
-        .eq('id', user.id)
-        .single();
-
-      if (profile) {
-        const activeStatuses = ['mini', 'medium', 'premium', 'admin', 'paid'];
-        const isStatusActive = activeStatuses.includes(profile.subscription_status);
-
-        let isExpired = false;
-        if (profile.expires_at) {
-          const expirationTime = new Date(profile.expires_at).getTime();
-          isExpired = Date.now() > expirationTime;
+  useEffect(() => {
+    async function fetchUserDataAndNotes() {
+      setLoading(true);
+      try {
+        const stored = localStorage.getItem("read_notes");
+        if (stored) {
+          try { setReadNotes(JSON.parse(stored)); } catch (e) {}
         }
 
-        if (isStatusActive && !isExpired) {
-          hasAccess = true;
+        const { data: { session } } = await supabase.auth.getSession();
+        let userId = null;
+        if (session?.user) {
+          setUser(session.user);
+          userId = session.user.id;
         }
+
+        if (userId) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('subscription_status, expires_at, read_notes')
+            .eq('id', userId)
+            .single();
+            
+          if (profileData) {
+            setProfile(profileData);
+            const activeStatuses = ['mini', 'medium', 'premium', 'admin', 'paid'];
+            const isStatusActive = activeStatuses.includes(profileData.subscription_status);
+            
+            let isExpired = false;
+            if (profileData.expires_at) {
+              const expirationTime = new Date(profileData.expires_at).getTime();
+              isExpired = new Date().getTime() > expirationTime;
+            }
+            if (isStatusActive && !isExpired) setHasAccess(true);
+
+            // Pobieramy dokładną listę ID przeczytanych lektur z bazy
+            if (profileData.read_notes && Array.isArray(profileData.read_notes)) {
+              setReadNotes(profileData.read_notes);
+              localStorage.setItem("read_notes", JSON.stringify(profileData.read_notes));
+            }
+          }
+        }
+
+        const { data: notesData, error: notesError } = await supabase.from("notes").select("*").order("id", { ascending: true });
+        if (!notesError && notesData) setNotes(notesData);
+      } catch (err) {
+        console.error("Błąd pobierania danych:", err);
+      } finally {
+        setLoading(false);
       }
     }
-  } catch (authErr) {
-    console.warn('Weryfikacja autoryzacji w NotePage:', authErr);
-  }
+    fetchUserDataAndNotes();
+  }, []);
 
-  const canViewFullNote = isNoteFree || hasAccess;
+  // SYNCHRONIZACJA Z BAZĄ SUPABASE
+  const toggleReadNote = async (noteId: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
 
-  // Pobieranie treści HTML z GitHuba, jeśli użytkownik ma dostęp
-  let fullNoteHtml: string | null = null;
+    const isCurrentlyRead = readNotes.includes(noteId);
+    const updatedReads = isCurrentlyRead
+      ? readNotes.filter((id) => id !== noteId)
+      : [...readNotes, noteId];
 
-  if (canViewFullNote && note.file_path) {
+    setReadNotes(updatedReads);
+    localStorage.setItem("read_notes", JSON.stringify(updatedReads));
+    if (!isCurrentlyRead) {
+      try { playSound("success"); } catch (_) {}
+    }
+
     try {
-      const owner = 'skapon6';
-      const repo = 'Notatki-Private-Matura-Projekt';
-      const gitHubPath = note.file_path;
-
-      const response = await fetch(
-        `https://api.github.com/repos/${owner}/${repo}/contents/${gitHubPath}`,
-        {
-          headers: {
-            Authorization: `Bearer ${process.env.GITHUB_NOTES_PAT}`,
-            Accept: 'application/vnd.github.v3.raw',
-          },
-          cache: 'no-store',
-        }
-      );
-
-      if (response.ok) {
-        fullNoteHtml = await response.text();
-      } else {
-        console.error('Błąd pobierania notatki z GitHub API:', response.status);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await supabase
+          .from('profiles')
+          .update({ read_notes: updatedReads })
+          .eq('id', session.user.id);
       }
-    } catch (fetchErr) {
-      console.error('Krytyczny błąd pobierania pliku notatki:', fetchErr);
+    } catch (err) {
+      console.error("Błąd zapisu do chmury:", err);
     }
-  }
+  };
+
+  const getNoteDescription = (note: any) => {
+    const content = note.content;
+    if (!content) return "";
+    if (typeof content === "string") {
+      if (content.startsWith('["') && content.endsWith('"]')) {
+        try {
+          const parsed = JSON.parse(content);
+          if (Array.isArray(parsed)) return parsed[0];
+        } catch (_) {}
+      }
+      return content;
+    }
+    if (Array.isArray(content)) {
+      const first = content[0];
+      if (typeof first === "string") return first;
+      if (first && (first.content || first.text)) return first.content || first.text;
+    }
+    return "";
+  };
+
+  const getBottomLeftMetadata = (note: any) => {
+    if (note.updated_at || note.created_at) {
+      try {
+        const date = new Date(note.updated_at || note.created_at);
+        return `Aktualizacja: ${date.toLocaleDateString("pl-PL", { day: "numeric", month: "short", year: "numeric" })}`;
+      } catch (_) {}
+    }
+    const titleLower = (note.title || "").toLowerCase();
+    if (note.type === "lektura") {
+      const pewniaki = ["lalka", "wesele", "dziady", "kordian", "potop", "przedwiośnie", "treny", "makbet", "skąpiec", "granica"];
+      return pewniaki.some(p => titleLower.includes(p)) ? "🎯 Pewniak maturalny" : "📖 Lektura obowiązkowa";
+    }
+    if (note.type === "epoka") return "📜 Kontekst epoki";
+    return "💡 Pomocnik naukowy";
+  };
+
+  const filteredNotes = notes.filter((note) => {
+    if (!hasAccess && showOnlyFree && !note.is_free) return false;
+    if (readFilter === "read" && !readNotes.includes(note.id)) return false;
+    if (readFilter === "unread" && readNotes.includes(note.id)) return false;
+
+    if (selectedEra !== "Wszystkie") {
+      const eraMatch = note.era?.toLowerCase() === selectedEra.toLowerCase();
+      const specialMatch = 
+        (selectedEra === "Dwudziestolecie" && note.era?.toLowerCase().includes("międzywojenne")) ||
+        (selectedEra === "Współczesność" && note.era?.toLowerCase().includes("współczesność"));
+      if (!eraMatch && !specialMatch) return false;
+    }
+    if (selectedType !== "all") {
+      if (selectedType === "inne") {
+        if (note.type === "epoka" || note.type === "lektura") return false;
+      } else if (note.type !== selectedType) return false;
+    }
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const titleMatch = note.title?.toLowerCase().includes(query);
+      const eraMatch = note.era?.toLowerCase().includes(query);
+      const chipsMatch = Array.isArray(note.chips) && note.chips.some((chip: string) => chip.toLowerCase().includes(query));
+      return titleMatch || eraMatch || chipsMatch;
+    }
+    return true;
+  });
+
+  const handleOpenNote = (note: any) => {
+    if (!user) {
+      triggerNotification("🔑 Zaloguj się na stronie głównej, aby czytać notatki!", "info");
+      return;
+    }
+    if (note.is_free || hasAccess) {
+      playSound("success");
+      router.push(`/notes/${note.slug}`);
+    } else {
+      triggerNotification("🔒 Ta notatka wymaga kupna jednego z pakietów. Odblokuj pełny pakiet na stronie głównej!", "error");
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-[#120e0c] text-stone-200 font-sans flex flex-col selection:bg-amber-500/30 selection:text-amber-200">
-      
-      {/* GÓRNY PASEK NAWIGACJI */}
-      <nav className="border-b border-stone-800/60 bg-[#16110e]/90 backdrop-blur-md sticky top-0 z-30 px-4 sm:px-8 py-3.5 flex items-center justify-between">
-        <Link
-          href="/notes"
-          className="flex items-center gap-2 text-xs font-semibold text-stone-400 hover:text-amber-400 transition-colors py-1.5 px-3 rounded-xl hover:bg-stone-900/60 border border-stone-800/60"
-        >
-          <span>←</span>
-          <span>Wróć do bazy notatek</span>
-        </Link>
-        
-        <Link href="/" className="flex items-center gap-2 group">
-          <span className="text-xl">📖</span>
-          <span className="font-serif font-bold text-sm text-stone-200 group-hover:text-amber-400 transition-colors hidden sm:inline">
-            Wiedza Szyta na Miarę
-          </span>
-        </Link>
-      </nav>
+    <div className={`min-h-screen flex flex-col transition-colors duration-500 ${currentTheme.bg} text-stone-200 font-sans`}>
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes slideIn {
+          0% { transform: translateY(30px) scale(0.95); opacity: 0; }
+          100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+        .animate-slide-in { animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+      `}} />
 
-      {/* GŁÓWNA STRONA NOTATKI */}
-      <main className="max-w-4xl mx-auto w-full px-5 sm:px-8 py-8 flex-1 flex flex-col gap-6">
-        
-        {/* NAGŁÓWEK NOTATKI */}
-        <header className="flex flex-col gap-3.5 border-b border-stone-800/60 pb-6">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[10px] uppercase tracking-widest font-extrabold text-amber-500 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
-              📍 {note.era || 'Język Polski'}
-            </span>
-            <span className="text-[10px] uppercase tracking-widest font-extrabold text-stone-400 bg-stone-900 px-3 py-1 rounded-full border border-stone-800">
-              {note.type === 'epoka' ? '📜 Epoka' : note.type === 'lektura' ? '📕 Lektura' : '💡 Poradnik'}
-            </span>
-            {note.difficulty && (
-              <span className="text-[10px] uppercase tracking-widest font-extrabold text-emerald-400 bg-emerald-950/40 px-3 py-1 rounded-full border border-emerald-900/40">
-                Poziom: {note.difficulty}
-              </span>
-            )}
-            <span className="text-[10px] font-mono text-stone-500 ml-auto flex items-center gap-1">
-              ⏱️ Czas czytania: {note.read_time || 15} min
-            </span>
-          </div>
-
-          <h1 className="text-3xl sm:text-5xl font-bold font-serif text-stone-100 leading-tight tracking-tight mt-1">
-            {note.title}
-          </h1>
-
-          {Array.isArray(note.chips) && note.chips.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-1">
-              {note.chips.map((chip: string) => (
-                <span
-                  key={chip}
-                  className="text-xs text-stone-400 bg-stone-900/60 border border-stone-800/80 px-2.5 py-1 rounded-md"
-                >
-                  #{chip}
-                </span>
-              ))}
-            </div>
-          )}
-        </header>
-
-        {/* WIDOK 1: PEŁNA NOTATKA (DLA UŻYTKOWNIKÓW Z PAKIETEM LUB DARMOWEJ NOTATKI) */}
-        {canViewFullNote && fullNoteHtml ? (
-          <div className="bg-[#191412] p-6 sm:p-10 rounded-3xl border border-stone-800/80 shadow-xl overflow-hidden leading-relaxed text-stone-200">
-            <div
-              className="note-content-rendered prose prose-invert max-w-none text-stone-200"
-              dangerouslySetInnerHTML={{ __html: fullNoteHtml }}
-            />
-          </div>
-        ) : canViewFullNote && !fullNoteHtml ? (
-          <div className="p-8 rounded-2xl bg-amber-950/20 border border-amber-900/30 text-center text-amber-300 text-sm">
-            ☕ Wczytywanie notatki z serwera... Jeśli treść nie pojawi się za chwilę, odśwież stronę.
-          </div>
-        ) : (
-          /* WIDOK 2: FREEMIUM PREVIEW / PAYWALL (DLA GOŚCI I BOTÓW GOOGLE/AHREFS) */
-          <div className="flex flex-col gap-6">
-            <div className="p-6 rounded-2xl bg-stone-900/40 border border-stone-800 text-stone-300 leading-relaxed text-base">
-              <p className="italic text-stone-400">
-                {typeof note.content === 'string'
-                  ? note.content
-                  : 'Kompleksowe opracowanie maturalne zawierające konteksty, motywy, bohaterów i wzorce wypracowań...'}
-              </p>
-            </div>
-
-            {/* KARTA PAYWALL */}
-            <div className="relative overflow-hidden rounded-3xl border border-amber-900/40 bg-gradient-to-b from-[#1c1613] to-[#120e0c] p-8 sm:p-10 shadow-2xl text-center flex flex-col items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-2xl mb-1 shadow-inner">
-                🔒
-              </div>
-              <span className="text-xs uppercase tracking-widest font-extrabold text-amber-500">
-                Pełny Dostęp Wymagany
-              </span>
-              <h2 className="text-2xl sm:text-3xl font-bold font-serif text-stone-100 max-w-md">
-                Odblokuj to opracowanie i całą bazę 42 lektur
-              </h2>
-              <p className="text-sm text-stone-400 max-w-lg leading-relaxed">
-                Zaloguj się na swoje konto lub wybierz jeden z pakietów dostępu (Mini, Medium lub Premium), aby natychmiast odblokować pełną treść, quizy oraz Asystentów AI.
-              </p>
-              
-              <div className="flex flex-col sm:flex-row items-center gap-3 mt-3 w-full max-w-xs sm:max-w-none justify-center">
-                <Link
-                  href="/"
-                  className="w-full sm:w-auto px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-sm transition-all shadow-lg shadow-amber-500/20 active:scale-95 text-center"
-                >
-                  🚀 Odblokuj Pakiet na Pulpicie
-                </Link>
-                <Link
-                  href="/"
-                  className="w-full sm:w-auto px-6 py-3 rounded-xl bg-stone-900 hover:bg-stone-800 border border-stone-700 text-stone-200 font-semibold text-sm transition-all text-center"
-                >
-                  🔑 Zaloguj się
-                </Link>
-              </div>
-            </div>
-          </div>
-        )}
-
-      </main>
-
-      {/* STOPKA */}
-      <footer className="border-t border-stone-800/60 mt-auto py-8 px-6 text-center text-xs text-stone-500 bg-[#0e0b0a]">
-        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>© 2026 Wiedza Szyta na Miarę. Wszelkie prawa zastrzeżone.</p>
-          <div className="flex gap-4">
-            <Link href="/regulamin" className="hover:text-stone-300 transition-colors">Regulamin</Link>
-            <Link href="/prywatnosc" className="hover:text-stone-300 transition-colors">Prywatność</Link>
-            <Link href="/kontakt" className="hover:text-stone-300 transition-colors">Kontakt</Link>
+      <header className={`border-b ${currentTheme.cardBorder} px-4 sm:px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 backdrop-blur-md sticky top-0 z-40 transition-colors duration-500`}>
+        <div className="flex w-full md:w-auto items-center justify-between md:justify-start gap-4">
+          <button onClick={() => { playSound("click"); router.push("/"); }} className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 transition-all text-xs font-medium ${currentTheme.subText} hover:text-stone-100`}>
+            ← Wróć do kącika
+          </button>
+        </div>
+        <div className="hidden md:flex flex-col items-center select-none">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">📚</span>
+            <h1 className="text-xl font-semibold tracking-wide bg-gradient-to-r from-amber-200 via-orange-300 to-amber-100 bg-clip-text text-transparent drop-shadow-sm">
+              Wszystkie Notatki Maturalne
+            </h1>
           </div>
         </div>
-      </footer>
+        <div className="flex w-full md:w-auto items-center justify-between md:justify-end gap-3 sm:gap-4 border-t md:border-t-0 border-stone-800/40 pt-3 md:pt-0">
+          <div className={`flex items-center gap-2 sm:gap-3 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} transition-all duration-300 select-none shadow-md hover:border-amber-500/20 hover:bg-stone-900/30 hover:shadow-lg hover:shadow-amber-500/5`}>
+            <button type="button" onClick={handlePrevTrack} className="text-stone-400 hover:text-amber-400 p-1 rounded-xl hover:bg-stone-800/40 transition-colors">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.334 4zM4.066 11.2a1 1 0 01-14 0 7 7 0 0114 0z" /></svg>
+            </button>
+            <button onClick={toggleLofi} className={`text-xs px-4 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} ${currentTheme.subText} hover:text-stone-100 font-semibold transition-all`}>
+              {currentTrackIndex !== null ? lofiTracks[currentTrackIndex].name : "Włącz Lofi"}
+            </button>
+            <button type="button" onClick={handleNextTrack} className="text-stone-400 hover:text-amber-400 p-1 rounded-xl hover:bg-stone-800/40 transition-colors">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 005 8v8a1 1 0 001.6.8l5.334-4zM19.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.334-4z" /></svg>
+            </button>
+            <div className="hidden sm:flex items-center gap-2 sm:gap-2.5 ml-1 border-l border-stone-800/80 pl-2 sm:pl-3">
+              <svg className="w-4 h-4 text-stone-500" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 12H3a1 1 0 01-1-1V9a1 1 0 011-1h1.586l3.707-3.707a1 1 0 011.09-.217z" clipRule="evenodd" /></svg>
+              <input type="range" min="0" max="1" step="0.05" value={lofiVolume} onChange={(e) => handleVolumeChange(parseFloat(e.target.value))} className="w-14 sm:w-16 md:w-20 h-1 bg-stone-850 rounded-lg appearance-none cursor-pointer accent-amber-500 focus:outline-none" style={{ WebkitAppearance: "none" }} />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto w-full p-6 flex flex-col gap-6 flex-1 select-none animate-slide-in">
+        <div className={`p-6 rounded-3xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} shadow-md flex flex-col gap-4`}>
+          
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 border-b border-stone-800/40 pb-3 mb-1">
+            <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider pl-1 select-none">Status nauki:</span>
+            <div className="flex gap-1.5 flex-wrap">
+              {!hasAccess && (
+                <button onClick={() => { playSound("click"); setShowOnlyFree(!showOnlyFree); }} className={`text-[10px] px-3.5 py-1.5 rounded-xl border font-bold uppercase transition-all flex items-center gap-1.5 ${showOnlyFree ? "bg-emerald-950/80 text-emerald-400 border-emerald-500/40 shadow-md shadow-emerald-950/30" : "bg-emerald-950/10 text-emerald-400 border-emerald-900/30 hover:text-stone-300"}`}>🎁 Pokaż tylko darmowe</button>
+              )}
+              {[
+                { id: "all" as const, label: "Wszystkie" },
+                { id: "read" as const, label: "✔️ Przeczytane" },
+                { id: "unread" as const, label: "⏳ Do nauki" },
+              ].map((status) => (
+                <button 
+                  key={status.id} 
+                  onClick={() => { playSound("click"); setReadFilter(status.id); }} 
+                  className={`text-[10px] px-3.5 py-1.5 rounded-xl border font-bold uppercase transition-all ${readFilter === status.id ? `${currentTheme.accentBg || "bg-amber-500/20 text-amber-400"} font-bold border-transparent` : "border-stone-800/60 bg-stone-950/40 text-stone-400 hover:border-stone-700 hover:text-stone-200"}`}
+                >
+                  {status.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 border-b border-stone-800/40 pb-3 mb-1">
+            <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider pl-1 select-none">Rodzaj notatek:</span>
+            <div className="flex gap-1.5 flex-wrap">
+              {[
+                { id: "all" as const, label: "Wszystkie" },
+                { id: "epoka" as const, label: "📜 Same Epoki" },
+                { id: "lektura" as const, label: "📖 Same Lektury" },
+                { id: "inne" as const, label: "📝 Pomocniki / Inne" },
+              ].map((typeItem) => (
+                <button key={typeItem.id} onClick={() => { playSound("click"); setSelectedType(typeItem.id); }} className={`text-[10px] px-3.5 py-1.5 rounded-xl border font-bold uppercase transition-all ${selectedType === typeItem.id ? `${currentTheme.accentBg || "bg-amber-500/20 text-amber-400"} font-bold border-transparent` : "border-stone-800/60 bg-stone-950/40 text-stone-400 hover:border-stone-700 hover:text-stone-200"}`}>{typeItem.label}</button>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 pt-1">
+            {eras.map((era) => (
+              <button key={era} onClick={() => setSelectedEra(era)} className={`text-xs px-3 py-1.5 rounded-xl border transition-all ${selectedEra === era ? `${currentTheme.accentBg || "bg-amber-500/20 text-amber-400"} font-bold border-transparent` : "border-stone-800/60 bg-stone-950/40 text-stone-400 hover:border-stone-700 hover:text-stone-200"}`}>{era}</button>
+            ))}
+          </div>
+          <div className="relative">
+            <input type="text" placeholder="Wyszukaj lekturę, motyw lub epokę..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-stone-950/80 border border-stone-800/80 rounded-2xl py-3 px-5 text-sm text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60" />
+            <span className="absolute right-5 top-3.5 text-stone-500 text-sm">🔍</span>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="text-center py-16 text-stone-500 text-sm">Wczytywanie pełnej bazy notatek...</div>
+        ) : filteredNotes.length === 0 ? (
+          <div className="text-center py-20 border border-dashed border-stone-800 rounded-3xl text-stone-500">
+            <span className="text-3xl block mb-2">📚</span>
+            <p className="text-sm font-semibold">Nie znaleźliśmy notatek spełniających wybrane kryteria.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredNotes.map((note) => {
+              const isLocked = !note.is_free && !hasAccess;
+              const isFreeNoteStyle = !hasAccess && note.is_free;
+              const isRead = readNotes.includes(note.id); // Rozpoznaje dokładne ID lektury
+              
+              const cardBorderClass = isFreeNoteStyle ? "border-emerald-800/40" : currentTheme.cardBorder;
+              const cardBgClass = isFreeNoteStyle ? "bg-emerald-950/10 shadow-emerald-950/20" : currentTheme.cardBg;
+
+              return (
+                <CozyGlowCard key={note.id} currentTheme={currentTheme} className={`p-6 flex flex-col justify-between gap-4 shadow-lg border ${cardBorderClass} ${cardBgClass} hover:scale-[1.01] transition-all duration-300`}>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[9px] uppercase tracking-widest text-amber-500 font-extrabold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">📍 {note.era || "Pomocnik"}</span>
+                        <span className={`text-[9px] uppercase tracking-widest font-extrabold px-2 py-0.5 rounded border ${note.type === "epoka" ? "bg-purple-950/40 border-purple-900/50 text-purple-400" : note.type === "lektura" ? "bg-amber-950/40 border-amber-900/50 text-amber-400" : "bg-blue-950/40 border-blue-900/50 text-blue-300"}`}>
+                          {note.type === "epoka" ? "📜 Epoka" : note.type === "lektura" ? "📖 Lektura" : "📝 Pomocnik"}
+                        </span>
+                        {isFreeNoteStyle && (
+                          <span className="bg-emerald-950/80 text-emerald-400 border border-emerald-800/40 text-[9px] uppercase font-bold px-2 py-0.5 rounded-md tracking-wide animate-pulse">🎁 Darmowa</span>
+                        )}
+                      </div>
+                      <span className={`text-[9px] uppercase tracking-widest font-extrabold px-2 py-0.5 rounded border shrink-0 ${["łatwy", "latwy", "easy"].includes((note.difficulty || "Średni").toLowerCase()) ? "bg-emerald-950/50 border-emerald-900/40 text-emerald-400" : ["średni", "sredni", "medium"].includes((note.difficulty || "Średni").toLowerCase()) ? "bg-orange-950/50 border-orange-900/40 text-orange-400" : "bg-red-950/50 border-red-900/40 text-red-400"}`}>
+                        {note.difficulty || "Średni"}
+                      </span>
+                    </div>
+
+                    <h2 className="text-lg font-bold text-stone-100 font-serif leading-snug">{note.title}</h2>
+                    <p className="text-xs text-stone-400 leading-relaxed font-sans">{getNoteDescription(note)}</p>
+                  </div>
+
+                  <div className="flex flex-col gap-3 mt-2">
+                    {Array.isArray(note.chips) && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {note.chips.map((chip: string) => (
+                          <span key={chip} className="text-xs text-stone-400 bg-stone-950 px-2.5 py-1 rounded-md border border-stone-900 transition-colors hover:text-stone-200">#{chip}</span>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between text-[11px] text-stone-500 font-sans px-1">
+                      <span>{getBottomLeftMetadata(note)}</span>
+                      <span>⏱️ {note.read_time || note.readTime || 15} min</span>
+                    </div>
+
+                    {/* DWA PRZYCISKI: PRZECZYTANO + OTWÓRZ */}
+                    <div className="flex items-center gap-2 mt-1">
+                      <button
+                        onClick={(e) => toggleReadNote(note.id, e)}
+                        className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border cursor-pointer active:scale-95 ${
+                          isRead
+                            ? "bg-emerald-950/40 border-emerald-900/50 text-emerald-400 hover:bg-emerald-900/40 shadow-inner"
+                            : "bg-stone-900/40 border-stone-800/60 text-stone-400 hover:bg-stone-800/60 hover:text-stone-200"
+                        }`}
+                      >
+                        {isRead ? "✔️ Przeczytane" : "✔️ Zaznacz"}
+                      </button>
+
+                      {isLocked ? (
+                        <button
+                          onClick={() => handleOpenNote(note)}
+                          className="flex-[2] py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 bg-stone-950 border border-stone-800 text-stone-500 hover:bg-stone-900/40"
+                        >
+                          <span>🔒</span> Zablokowane
+                        </button>
+                      ) : (
+                        <a
+                          href={`/notes/${note.slug}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-[2] py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 bg-amber-500 text-stone-950 hover:bg-amber-400 shadow-md"
+                        >
+                          Otwórz notatkę 📖
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </CozyGlowCard>
+              );
+            })}
+          </div>
+        )}
+      </main>
+
+      <CozyNotification notification={cozyNotification} onClose={() => setCozyNotification(null)} />
     </div>
   );
 }
