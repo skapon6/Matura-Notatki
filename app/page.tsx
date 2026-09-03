@@ -114,9 +114,9 @@ export default function Home() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // 2. POBIERANIE PROFILU Z BEZPIECZNIKIEM SINGLE DEVICE LOGIN
+  // 2. POBIERANIE PROFILU BEZ MRUGANIA (CICHE ODPYTYWANIE W TLE)
   useEffect(() => {
-    async function checkActiveSessionAndProfile() {
+    async function checkActiveSessionAndProfile(isInitial = false) {
       if (!user) {
         setProfile(null);
         setHasAccess(false);
@@ -124,7 +124,10 @@ export default function Home() {
         return;
       }
 
-      setProfileLoading(true);
+      // Pokazuj animację ładowania TYLKO przy pierwszym otwarciu strony
+      if (isInitial && !profile) {
+        setProfileLoading(true);
+      }
 
       const { data: profileData, error } = await supabase
         .from('profiles')
@@ -137,9 +140,7 @@ export default function Home() {
           const isLoggingIn = sessionStorage.getItem("is_logging_in");
           const localSessionId = localStorage.getItem("user_session_id");
 
-          // Sprawdzamy sesję TYLKO jeśli nie jesteśmy w trakcie logowania na tym urządzeniu
           if (!isLoggingIn) {
-            // Jeśli urządzenie ma swój klucz, a w bazie jest INNY nowszy klucz -> WYLOGUJ STARE URZĄDZENIE!
             if (localSessionId && profileData.current_session_id && localSessionId !== profileData.current_session_id) {
               console.warn("Wykryto nowsze logowanie na innym urządzeniu. Wylogowywanie...");
               await supabase.auth.signOut();
@@ -153,7 +154,6 @@ export default function Home() {
               return;
             }
 
-            // Jeśli na tym urządzeniu nie ma jeszcze zapisanego klucza, a w bazie jest -> przypisz go
             if (!localSessionId && profileData.current_session_id) {
               localStorage.setItem("user_session_id", profileData.current_session_id);
             }
@@ -179,11 +179,13 @@ export default function Home() {
       setProfileLoading(false);
     }
 
-    checkActiveSessionAndProfile();
+    // Pierwsze pobranie z animacją
+    checkActiveSessionAndProfile(true);
 
-    const handleFocus = () => checkActiveSessionAndProfile();
+    // Kolejne weryfikacje w tle (BEZ mrugania ekranu!)
+    const handleFocus = () => checkActiveSessionAndProfile(false);
     window.addEventListener('focus', handleFocus);
-    const interval = setInterval(checkActiveSessionAndProfile, 15000);
+    const interval = setInterval(() => checkActiveSessionAndProfile(false), 30000);
 
     return () => {
       window.removeEventListener('focus', handleFocus);
@@ -208,7 +210,7 @@ export default function Home() {
     fetchRecentEssays();
   }, [user]);
 
-  // 4. Pobieranie bazy notatek
+  // 4. Pobieranie bazy notatek (tylko raz przy starcie)
   useEffect(() => {
     async function fetchNotes() {
       setLoading(true);
@@ -222,7 +224,7 @@ export default function Home() {
       }
     }
     fetchNotes();
-  }, [hasAccess]);
+  }, []);
 
   // 5. Pobieranie osobistych notatek
   useEffect(() => {
@@ -247,7 +249,7 @@ export default function Home() {
     fetchPersonalNotes();
   }, [user]);
 
-  // 6. URL CLEANUP (Wykrywanie płatności Stripe oraz wylogowania)
+  // 6. URL CLEANUP
   useEffect(() => {
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
