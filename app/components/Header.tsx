@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { supabase } from "../lib/supabase";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { ThemeClasses } from "../lib/theme";
 import { useLofi } from "../context/LofiContext";
 
@@ -31,6 +31,7 @@ export function Header({
   handlePremiumNavigation,
 }: HeaderProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const navMenuRef = useRef<HTMLDivElement>(null);
 
@@ -68,6 +69,14 @@ export function Header({
     }
   };
 
+  // Obsługa kliknięcia w Logo: płynny powrót na samą górę ekranu
+  const handleLogoClick = (e: React.MouseEvent) => {
+    if (pathname === "/") {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   return (
     <header className={`border-b ${currentTheme.cardBorder} backdrop-blur-md sticky top-0 z-40 transition-colors duration-500`}>
       <div className="px-4 sm:px-6 py-3 flex flex-col lg:flex-row items-center justify-between gap-3 lg:gap-4 w-full mx-auto max-w-[1800px]">
@@ -75,20 +84,24 @@ export function Header({
         {/* --- STREFA LEWA (Górny rząd na telefonach) --- */}
         <div className="flex items-center justify-between w-full lg:w-auto gap-4">
           
-          {/* Logo */}
-          <div className="flex items-center gap-2 select-none shrink-0">
-            <span className="text-xl sm:text-2xl">📖</span>
-            <div className="flex flex-col">
-              <h1 className="text-sm md:text-base font-bold tracking-wide bg-gradient-to-r from-amber-200 via-orange-300 to-amber-100 bg-clip-text text-transparent drop-shadow-sm">
+          {/* Logo i powrót na górę strony */}
+          <Link
+            href="/"
+            onClick={handleLogoClick}
+            className="flex items-center gap-2 select-none shrink-0 group cursor-pointer active:scale-95 transition-transform"
+          >
+            <span className="text-xl sm:text-2xl transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3">📖</span>
+            <div className="flex flex-col text-left">
+              <h1 className="text-sm md:text-base font-bold tracking-wide bg-gradient-to-r from-amber-200 via-orange-300 to-amber-100 bg-clip-text text-transparent drop-shadow-sm group-hover:brightness-110 transition-all">
                 {/* Pełna nazwa na większych ekranach, skrót WSnM na maleńkich telefonach */}
                 <span className="hidden sm:inline">Wiedza Szyta na Miarę</span>
                 <span className="inline sm:hidden tracking-widest">WSnM</span>
               </h1>
-              <span className="hidden xl:block text-[9px] uppercase tracking-widest text-amber-500/60 font-semibold">
+              <span className="hidden xl:block text-[9px] uppercase tracking-widest text-amber-500/60 font-semibold group-hover:text-amber-400/80 transition-colors">
                 Maturalny Kącik Spokoju
               </span>
             </div>
-          </div>
+          </Link>
 
           {/* Szybkie Akcje: Nawigacja, Ustawienia, Pomoc */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
@@ -105,7 +118,7 @@ export function Header({
                 </svg>
               </button>
 
-              {/* Menu Nawigacji (Wysuwa się inteligentnie do lewej lub prawej) */}
+              {/* Menu Nawigacji */}
               {isNavMenuOpen && (
                 <div className={`absolute right-0 lg:left-0 lg:right-auto mt-2 w-52 rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} p-2 shadow-xl z-50 animate-slide-in flex flex-col gap-1 backdrop-blur-lg`}>
                   <div className="px-3 py-1.5 text-[10px] uppercase font-bold tracking-widest text-stone-500 border-b border-stone-800/40 mb-1">
@@ -157,7 +170,6 @@ export function Header({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-              {/* Tekst widoczny tylko na dużych monitorach */}
               <span className="hidden xl:inline">Ustawienia</span>
             </button>
 
@@ -165,7 +177,6 @@ export function Header({
               <svg className="w-4 h-4 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              {/* Tekst widoczny tylko na dużych monitorach */}
               <span className="hidden xl:inline">Pomoc</span>
             </button>
           </div>
@@ -174,7 +185,7 @@ export function Header({
         {/* --- STREFA PRAWA (Dolny rząd na telefonach) --- */}
         <div className="flex items-center justify-between lg:justify-end w-full lg:w-auto gap-3 lg:gap-4 border-t lg:border-t-0 border-stone-800/40 pt-3 lg:pt-0">
           
-          {/* Lo-Fi Player (Bardziej kompaktowy na małych ekranach) */}
+          {/* Lo-Fi Player */}
           <div className={`flex items-center gap-1 sm:gap-1.5 px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} transition-all duration-300 select-none shadow-md hover:border-amber-500/20 hover:bg-stone-900/30 hover:shadow-lg hover:shadow-amber-500/5`}>
             <button onClick={handlePrevTrack} className="text-stone-400 hover:text-amber-400 p-1 rounded-xl hover:bg-stone-800/40 transition-colors" title="Poprzedni utwór">
               <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -193,7 +204,6 @@ export function Header({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               )}
-              {/* Inteligentne skracanie tekstu na wąskich ekranach */}
               <span className="text-[10px] sm:text-[11px] tracking-wide truncate max-w-[80px] md:max-w-[120px] xl:max-w-[150px]">
                 {lofiTracks[currentTrackIndex].name}
               </span>
@@ -205,7 +215,7 @@ export function Header({
               </svg>
             </button>
             
-            {/* Suwak widoczny tylko od rozmiaru tabletu w górę */}
+            {/* Suwak głośności */}
             <div className="hidden md:flex items-center gap-1.5 sm:gap-2 ml-1 border-l border-stone-800/80 pl-2 sm:pl-3">
               <svg className="w-4 h-4 text-stone-500" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 12H3a1 1 0 01-1-1V9a1 1 0 011-1h1.586l3.707-3.707a1 1 0 011.09-.217z" clipRule="evenodd" />
@@ -228,7 +238,7 @@ export function Header({
             {user && (
               <button
                 onClick={onOpenTokens}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-purple-900/30 bg-purple-950/20 text-purple-300 hover:bg-purple-900/30 active:scale-95 transition-all text-xs font-bold"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-purple-900/30 bg-purple-950/20 text-purple-300 hover:bg-purple-900/30 active:scale-95 transition-all text-xs font-bold cursor-pointer"
                 title="Twoje tokeny AI. Kliknij, aby doładować."
               >
                 <span>🪙</span>
@@ -238,7 +248,6 @@ export function Header({
 
             {user ? (
               <div className="flex items-center gap-2">
-                {/* Email i ranga widoczne tylko na wielkich ekranach PC */}
                 <div className="hidden xl:flex items-center gap-2 px-3 py-1 text-xs rounded-full bg-stone-900/60 border border-stone-800">
                   <span className={`w-2 h-2 rounded-full ${hasAccess ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
                   <span>
@@ -253,7 +262,7 @@ export function Header({
                 </div>
                 <button
                   onClick={handleSignOut}
-                  className="px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl text-[10px] sm:text-xs font-semibold border border-red-900/30 bg-red-950/20 text-red-400 hover:bg-red-900 hover:text-white transition-all whitespace-nowrap"
+                  className="px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl text-[10px] sm:text-xs font-semibold border border-red-900/30 bg-red-950/20 text-red-400 hover:bg-red-900 hover:text-white transition-all whitespace-nowrap cursor-pointer"
                 >
                   Wyloguj
                 </button>
