@@ -90,7 +90,7 @@ export default function Home() {
     setTimeout(() => setCozyNotification(null), 4500);
   };
 
-  // 1. Monitorowanie sesji
+  // 1. Monitorowanie stanu sesji
   useEffect(() => {
     async function checkInitialSession() {
       setAuthLoading(true);
@@ -114,9 +114,9 @@ export default function Home() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // 2. POBIERANIE PROFILU BEZ MRUGANIA (CICHE ODPYTYWANIE W TLE)
+  // 2. Pobieranie danych profilu (subskrypcja, tokeny, data) - lekko i bez pętli
   useEffect(() => {
-    async function checkActiveSessionAndProfile(isInitial = false) {
+    async function fetchProfile() {
       if (!user) {
         setProfile(null);
         setHasAccess(false);
@@ -124,42 +124,15 @@ export default function Home() {
         return;
       }
 
-      // Pokazuj animację ładowania TYLKO przy pierwszym otwarciu strony
-      if (isInitial && !profile) {
-        setProfileLoading(true);
-      }
+      setProfileLoading(true);
 
       const { data: profileData, error } = await supabase
         .from('profiles')
-        .select('subscription_status, essay_credits, expires_at, current_session_id')
+        .select('subscription_status, essay_credits, expires_at')
         .eq('id', user.id)
         .single();
         
       if (profileData && !error) {
-        if (typeof window !== "undefined") {
-          const isLoggingIn = sessionStorage.getItem("is_logging_in");
-          const localSessionId = localStorage.getItem("user_session_id");
-
-          if (!isLoggingIn) {
-            if (localSessionId && profileData.current_session_id && localSessionId !== profileData.current_session_id) {
-              console.warn("Wykryto nowsze logowanie na innym urządzeniu. Wylogowywanie...");
-              await supabase.auth.signOut();
-              localStorage.removeItem("user_session_id");
-              triggerNotification("🔒 Zostałeś wylogowany, ponieważ zalogowano się na Twoje konto z innego urządzenia.", "error");
-              setUser(null);
-              setProfile(null);
-              setHasAccess(false);
-              setProfileLoading(false);
-              router.push("/");
-              return;
-            }
-
-            if (!localSessionId && profileData.current_session_id) {
-              localStorage.setItem("user_session_id", profileData.current_session_id);
-            }
-          }
-        }
-
         setProfile(profileData);
         const activeStatuses = ['mini', 'medium', 'premium', 'admin', 'paid'];
         const isStatusActive = activeStatuses.includes(profileData.subscription_status);
@@ -179,19 +152,8 @@ export default function Home() {
       setProfileLoading(false);
     }
 
-    // Pierwsze pobranie z animacją
-    checkActiveSessionAndProfile(true);
-
-    // Kolejne weryfikacje w tle (BEZ mrugania ekranu!)
-    const handleFocus = () => checkActiveSessionAndProfile(false);
-    window.addEventListener('focus', handleFocus);
-    const interval = setInterval(() => checkActiveSessionAndProfile(false), 30000);
-
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-      clearInterval(interval);
-    };
-  }, [user, router]);
+    fetchProfile();
+  }, [user]);
 
   // 3. Pobieranie ostatnich rozprawki
   useEffect(() => {
@@ -210,7 +172,7 @@ export default function Home() {
     fetchRecentEssays();
   }, [user]);
 
-  // 4. Pobieranie bazy notatek (tylko raz przy starcie)
+  // 4. Pobieranie bazy notatek
   useEffect(() => {
     async function fetchNotes() {
       setLoading(true);
@@ -226,7 +188,7 @@ export default function Home() {
     fetchNotes();
   }, []);
 
-  // 5. Pobieranie osobistych notatek
+  // 5. Pobieranie osobistych notatek (cytaty)
   useEffect(() => {
     async function fetchPersonalNotes() {
       if (!user) {
@@ -249,7 +211,7 @@ export default function Home() {
     fetchPersonalNotes();
   }, [user]);
 
-  // 6. URL CLEANUP
+  // 6. URL Cleanup (po powrocie ze Stripe lub wylogowaniu z innego urządzenia)
   useEffect(() => {
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
@@ -272,7 +234,7 @@ export default function Home() {
     }
   }, []);
 
-  // Dźwięk kliknięcia
+  // Dźwięk kliknięcia w elementy interaktywne
   useEffect(() => {
     const handleGlobalClick = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
@@ -476,7 +438,7 @@ export default function Home() {
                     
                     <div className="flex gap-1 mt-2 text-amber-500 text-xs">
                       {profile?.subscription_status === 'mini' && <><span>★</span><span>★</span><span>★</span></>}
-                      {profile?.subscription_status === 'medium' && <><span>★</span><span>★</span><span>★</span><span>★</span></>}
+                      {profile?.subscription_status === 'medium' && <><span>★</span><span>★</span><span>★</span></>}
                       {(profile?.subscription_status === 'premium' || !hasAccess || !['mini', 'medium'].includes(profile?.subscription_status)) && (
                         <><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></>
                       )}

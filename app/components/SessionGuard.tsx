@@ -74,8 +74,8 @@ export function SessionGuard() {
     window.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("focus", handleVisibilityChange);
 
-    // 3. W tle sprawdzaj co 60 sekund (1 minuta)
-    const interval = setInterval(verifySingleSession, 60000);
+    // 3. W tle sprawdzaj co 120 sekund (2 minuta)
+    const interval = setInterval(verifySingleSession, 120000);
 
     return () => {
       window.removeEventListener("visibilitychange", handleVisibilityChange);
