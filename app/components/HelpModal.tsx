@@ -97,7 +97,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, currentTh
                 <div className="p-3 rounded-xl bg-stone-950/50 border border-stone-800 flex items-start gap-2.5 text-[11px] leading-relaxed font-sans text-stone-400">
                   <span className="shrink-0 text-base">ℹ️</span>
                   <span>
-                    <strong className="text-stone-300">Ważne:</strong> Twój łączny czas nauki oraz status przeczytanych notatek są zapisywane <strong className="text-stone-300">lokalnie w pamięci Twojej przeglądarki</strong>. Jeśli wyczyścisz historię przeglądania (ciasteczka i dane witryn), te dwie statystyki znikną. Twoje konto, kredyty i zapisy w chmurze są jednak całkowicie bezpieczne!
+                    <strong className="text-stone-300">Ważne:</strong> Twój łączny czas nauki ze stopera Pomodoro zapisywany jest <strong className="text-stone-300">lokalnie w pamięci Twojej przeglądarki</strong> (na tym konkretnym urządzeniu). Status przeczytanych notatek, opanowane fiszki, oceny AI oraz zapisane cytaty są bezpiecznie synchronizowane w chmurze z Twoim kontem na każdym urządzeniu!
                   </span>
                 </div>
               </div>

@@ -2,6 +2,9 @@
 import { MetadataRoute } from 'next';
 import { createClient } from '@supabase/supabase-js';
 
+// Wymuszenie rewalidacji co 24h lub dynamicznego generowania
+export const revalidate = 86400;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://wiedzaszytanamiare.pl';
 
@@ -63,27 +66,38 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  // 2. Dynamiczne pobieranie wszystkich notatek i lektur z Supabase
+  // 2. Dynamiczne pobieranie slugów notatek z bazy
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    // Używamy SERVICE_ROLE_KEY (jeśli dostępny na Vercelu) lub fallback do ANON_KEY
+    const supabaseKey =
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-    const { data: notes } = await supabase
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Pobieramy TYLKO kolumnę slug, która na 100% istnieje w tabeli notes
+    const { data: notes, error } = await supabase
       .from('notes')
-      .select('slug, updated_at, created_at');
+      .select('slug');
 
-    const notePages: MetadataRoute.Sitemap = (notes || []).map((note) => ({
-      url: `${baseUrl}/notes/${note.slug}`,
-      lastModified: note.updated_at ? new Date(note.updated_at) : new Date(note.created_at || new Date()),
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    }));
+    if (error) {
+      console.error('Błąd Supabase przy pobieraniu sitemapy:', error.message);
+      return staticPages;
+    }
+
+    const notePages: MetadataRoute.Sitemap = (notes || [])
+      .filter((note) => Boolean(note.slug))
+      .map((note) => ({
+        url: `${baseUrl}/notes/${note.slug}`,
+        lastModified: new Date(),
+        changeFrequency: 'weekly',
+        priority: 0.8,
+      }));
 
     return [...staticPages, ...notePages];
   } catch (error) {
-    console.error('Błąd podczas generowania dynamicznej sitemapy:', error);
+    console.error('Krytyczny błąd generatora sitemapy:', error);
     return staticPages;
   }
 }

@@ -1,3 +1,4 @@
+// app/notes/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -39,12 +40,9 @@ export default function WszystkieNotatkiPage() {
   const [notes, setNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Stany filtrów
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEra, setSelectedEra] = useState("Wszystkie");
   const [selectedType, setSelectedType] = useState<"all" | "epoka" | "lektura" | "inne">("all");
-  
-  // Stany dostępu i przerobienia
   const [showOnlyFree, setShowOnlyFree] = useState(false);
   const [readFilter, setReadFilter] = useState<"all" | "read" | "unread">("all");
   const [readNotes, setReadNotes] = useState<number[]>([]);
@@ -66,14 +64,14 @@ export default function WszystkieNotatkiPage() {
   ];
 
   useEffect(() => {
-    const stored = localStorage.getItem("read_notes");
-    if (stored) {
-      try { setReadNotes(JSON.parse(stored)); } catch (e) {}
-    }
-
     async function fetchUserDataAndNotes() {
       setLoading(true);
       try {
+        const stored = localStorage.getItem("read_notes");
+        if (stored) {
+          try { setReadNotes(JSON.parse(stored)); } catch (e) {}
+        }
+
         const { data: { session } } = await supabase.auth.getSession();
         let userId = null;
         if (session?.user) {
@@ -84,7 +82,7 @@ export default function WszystkieNotatkiPage() {
         if (userId) {
           const { data: profileData } = await supabase
             .from('profiles')
-            .select('subscription_status, expires_at')
+            .select('subscription_status, expires_at, read_notes')
             .eq('id', userId)
             .single();
             
@@ -99,6 +97,12 @@ export default function WszystkieNotatkiPage() {
               isExpired = new Date().getTime() > expirationTime;
             }
             if (isStatusActive && !isExpired) setHasAccess(true);
+
+            // Pobieramy dokładną listę ID przeczytanych lektur z bazy
+            if (profileData.read_notes && Array.isArray(profileData.read_notes)) {
+              setReadNotes(profileData.read_notes);
+              localStorage.setItem("read_notes", JSON.stringify(profileData.read_notes));
+            }
           }
         }
 
@@ -113,22 +117,33 @@ export default function WszystkieNotatkiPage() {
     fetchUserDataAndNotes();
   }, []);
 
-  const toggleReadNote = (noteId: number, e: React.MouseEvent) => {
+  // SYNCHRONIZACJA Z BAZĄ SUPABASE
+  const toggleReadNote = async (noteId: number, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
     const isCurrentlyRead = readNotes.includes(noteId);
-    let updatedReads;
-
-    if (isCurrentlyRead) {
-      updatedReads = readNotes.filter((id) => id !== noteId);
-    } else {
-      updatedReads = [...readNotes, noteId];
-      playSound("success");
-    }
+    const updatedReads = isCurrentlyRead
+      ? readNotes.filter((id) => id !== noteId)
+      : [...readNotes, noteId];
 
     setReadNotes(updatedReads);
     localStorage.setItem("read_notes", JSON.stringify(updatedReads));
+    if (!isCurrentlyRead) {
+      try { playSound("success"); } catch (_) {}
+    }
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await supabase
+          .from('profiles')
+          .update({ read_notes: updatedReads })
+          .eq('id', session.user.id);
+      }
+    } catch (err) {
+      console.error("Błąd zapisu do chmury:", err);
+    }
   };
 
   const getNoteDescription = (note: any) => {
@@ -168,14 +183,10 @@ export default function WszystkieNotatkiPage() {
   };
 
   const filteredNotes = notes.filter((note) => {
-    // Filtr darmowych
     if (!hasAccess && showOnlyFree && !note.is_free) return false;
-    
-    // Filtr statusu (przeczytane / nieprzeczytane)
     if (readFilter === "read" && !readNotes.includes(note.id)) return false;
     if (readFilter === "unread" && readNotes.includes(note.id)) return false;
 
-    // Filtry merytoryczne
     if (selectedEra !== "Wszystkie") {
       const eraMatch = note.era?.toLowerCase() === selectedEra.toLowerCase();
       const specialMatch = 
@@ -188,8 +199,6 @@ export default function WszystkieNotatkiPage() {
         if (note.type === "epoka" || note.type === "lektura") return false;
       } else if (note.type !== selectedType) return false;
     }
-    
-    // Wyszukiwarka tekstowa
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const titleMatch = note.title?.toLowerCase().includes(query);
@@ -199,19 +208,6 @@ export default function WszystkieNotatkiPage() {
     }
     return true;
   });
-
-  useEffect(() => {
-    const handleGlobalClick = (event: MouseEvent) => {
-      try {
-        const target = event.target as HTMLElement;
-        if (!target) return;
-        const isInteractive = target.closest("button") || target.closest("a") || target.closest("[role='button']") || (target.style && window.getComputedStyle(target).cursor === "pointer");
-        if (isInteractive) playSound("click");
-      } catch (err) {}
-    };
-    window.addEventListener("click", handleGlobalClick);
-    return () => window.removeEventListener("click", handleGlobalClick);
-  }, []);
 
   const handleOpenNote = (note: any) => {
     if (!user) {
@@ -236,92 +232,35 @@ export default function WszystkieNotatkiPage() {
         .animate-slide-in { animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
       `}} />
 
-      {/* HEADER SECTION */}
       <header className={`border-b ${currentTheme.cardBorder} px-4 sm:px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 backdrop-blur-md sticky top-0 z-40 transition-colors duration-500`}>
         <div className="flex w-full md:w-auto items-center justify-between md:justify-start gap-4">
-          <button 
-            onClick={() => { playSound("click"); router.push("/"); }} 
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 transition-all text-xs font-medium ${currentTheme.subText} hover:text-stone-100 cursor-pointer`}
-          >
+          <button onClick={() => { playSound("click"); router.push("/"); }} className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 transition-all text-xs font-medium ${currentTheme.subText} hover:text-stone-100`}>
             ← Wróć do kącika
           </button>
         </div>
-
         <div className="hidden md:flex flex-col items-center select-none">
           <div className="flex items-center gap-2">
             <span className="text-2xl">📚</span>
-            <h1 className="text-xl font-semibold tracking-wide bg-gradient-to-r from-amber-200 via-orange-300 to-amber-100 bg-clip-text text-transparent drop-shadow-sm font-serif">
+            <h1 className="text-xl font-semibold tracking-wide bg-gradient-to-r from-amber-200 via-orange-300 to-amber-100 bg-clip-text text-transparent drop-shadow-sm">
               Wszystkie Notatki Maturalne
             </h1>
           </div>
         </div>
-
-        {/* Globalny Odtwarzacz Lofi */}
         <div className="flex w-full md:w-auto items-center justify-between md:justify-end gap-3 sm:gap-4 border-t md:border-t-0 border-stone-800/40 pt-3 md:pt-0">
-          <div className={`flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} transition-all duration-300 select-none shadow-md hover:border-amber-500/20 hover:bg-stone-900/30`}>
-            
-            {/* Poprzedni utwór (NAPRAWIONA IKONA SVG) */}
-            <button 
-              type="button" 
-              onClick={handlePrevTrack} 
-              className="text-stone-400 hover:text-amber-400 p-1 rounded-xl hover:bg-stone-800/40 transition-colors cursor-pointer"
-              title="Poprzedni utwór"
-            >
-              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.334 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z" />
-              </svg>
+          <div className={`flex items-center gap-2 sm:gap-3 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} transition-all duration-300 select-none shadow-md hover:border-amber-500/20 hover:bg-stone-900/30 hover:shadow-lg hover:shadow-amber-500/5`}>
+            <button type="button" onClick={handlePrevTrack} className="text-stone-400 hover:text-amber-400 p-1 rounded-xl hover:bg-stone-800/40 transition-colors">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.334 4zM4.066 11.2a1 1 0 01-14 0 7 7 0 0114 0z" /></svg>
             </button>
-            
-            {/* Play / Pause z nazwą utworu i ikoną */}
-            <button 
-              type="button" 
-              onClick={toggleLofi} 
-              className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 hover:text-amber-400 border border-amber-500/20 transition-all font-semibold text-xs active:scale-95 cursor-pointer"
-            >
-              {lofiActive ? (
-                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              ) : (
-                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              )}
-              <span className="text-[10px] sm:text-[11px] tracking-wide truncate max-w-[100px] sm:max-w-[130px]">
-                {currentTrackIndex !== null && lofiTracks[currentTrackIndex] ? lofiTracks[currentTrackIndex].name : "Włącz Lofi"}
-              </span>
+            <button onClick={toggleLofi} className={`text-xs px-4 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} ${currentTheme.subText} hover:text-stone-100 font-semibold transition-all`}>
+              {currentTrackIndex !== null ? lofiTracks[currentTrackIndex].name : "Włącz Lofi"}
             </button>
-            
-            {/* Następny utwór */}
-            <button 
-              type="button" 
-              onClick={handleNextTrack} 
-              className="text-stone-400 hover:text-amber-400 p-1 rounded-xl hover:bg-stone-800/40 transition-colors cursor-pointer"
-              title="Następny utwór"
-            >
-              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 005 8v8a1 1 0 001.6.8l5.334-4zM19.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.334-4z" />
-              </svg>
+            <button type="button" onClick={handleNextTrack} className="text-stone-400 hover:text-amber-400 p-1 rounded-xl hover:bg-stone-800/40 transition-colors">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 005 8v8a1 1 0 001.6.8l5.334-4zM19.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.334-4z" /></svg>
             </button>
-            
-            {/* Suwak głośności */}
-            <div className="hidden sm:flex items-center gap-1.5 sm:gap-2 ml-1 border-l border-stone-800/80 pl-2 sm:pl-3">
-              <svg className="w-4 h-4 text-stone-500" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 12H3a1 1 0 01-1-1V9a1 1 0 011-1h1.586l3.707-3.707a1 1 0 011.09-.217z" clipRule="evenodd" />
-              </svg>
-              <input 
-                type="range" 
-                min="0" 
-                max="1" 
-                step="0.05" 
-                value={lofiVolume} 
-                onChange={(e) => handleVolumeChange(parseFloat(e.target.value))} 
-                className="w-12 sm:w-16 md:w-20 h-1 bg-stone-850 rounded-lg appearance-none cursor-pointer accent-amber-500 focus:outline-none" 
-                style={{ WebkitAppearance: "none" }} 
-              />
+            <div className="hidden sm:flex items-center gap-2 sm:gap-2.5 ml-1 border-l border-stone-800/80 pl-2 sm:pl-3">
+              <svg className="w-4 h-4 text-stone-500" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 12H3a1 1 0 01-1-1V9a1 1 0 011-1h1.586l3.707-3.707a1 1 0 011.09-.217z" clipRule="evenodd" /></svg>
+              <input type="range" min="0" max="1" step="0.05" value={lofiVolume} onChange={(e) => handleVolumeChange(parseFloat(e.target.value))} className="w-14 sm:w-16 md:w-20 h-1 bg-stone-850 rounded-lg appearance-none cursor-pointer accent-amber-500 focus:outline-none" style={{ WebkitAppearance: "none" }} />
             </div>
-
           </div>
         </div>
       </header>
@@ -329,7 +268,6 @@ export default function WszystkieNotatkiPage() {
       <main className="max-w-7xl mx-auto w-full p-6 flex flex-col gap-6 flex-1 select-none animate-slide-in">
         <div className={`p-6 rounded-3xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} shadow-md flex flex-col gap-4`}>
           
-          {/* NOWY WIERSZ: STATUS PRZEROBIENIA */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 border-b border-stone-800/40 pb-3 mb-1">
             <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider pl-1 select-none">Status nauki:</span>
             <div className="flex gap-1.5 flex-wrap">
@@ -388,7 +326,7 @@ export default function WszystkieNotatkiPage() {
             {filteredNotes.map((note) => {
               const isLocked = !note.is_free && !hasAccess;
               const isFreeNoteStyle = !hasAccess && note.is_free;
-              const isRead = readNotes.includes(note.id);
+              const isRead = readNotes.includes(note.id); // Rozpoznaje dokładne ID lektury
               
               const cardBorderClass = isFreeNoteStyle ? "border-emerald-800/40" : currentTheme.cardBorder;
               const cardBgClass = isFreeNoteStyle ? "bg-emerald-950/10 shadow-emerald-950/20" : currentTheme.cardBg;
@@ -426,15 +364,16 @@ export default function WszystkieNotatkiPage() {
 
                     <div className="flex items-center justify-between text-[11px] text-stone-500 font-sans px-1">
                       <span>{getBottomLeftMetadata(note)}</span>
-                      <span>⏱️ {note.read_time || note.readTime || (Math.max(2, Math.round((String(note.content || "")).split(/\s+/).length / 150)) + " min")}</span>
+                      <span>⏱️ {note.read_time || note.readTime || 15} min</span>
                     </div>
 
+                    {/* DWA PRZYCISKI: PRZECZYTANO + OTWÓRZ */}
                     <div className="flex items-center gap-2 mt-1">
                       <button
                         onClick={(e) => toggleReadNote(note.id, e)}
-                        className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border ${
+                        className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border cursor-pointer active:scale-95 ${
                           isRead
-                            ? "bg-emerald-950/40 border-emerald-900/50 text-emerald-400 hover:bg-emerald-900/40"
+                            ? "bg-emerald-950/40 border-emerald-900/50 text-emerald-400 hover:bg-emerald-900/40 shadow-inner"
                             : "bg-stone-900/40 border-stone-800/60 text-stone-400 hover:bg-stone-800/60 hover:text-stone-200"
                         }`}
                       >

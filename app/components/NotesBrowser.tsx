@@ -5,6 +5,20 @@ import { ThemeClasses } from "../lib/theme";
 import Link from "next/link";
 import { CozyGlowCard } from "./CozyGlowCard";
 
+const epochKeywords: Record<string, string[]> = {
+  "Antyk": ["antyk", "starożytność", "mitologia", "homer", "sofokles", "biblia", "mit", "antygona", "król edyp", "iliada", "odyseja"],
+  "Średniowiecze": ["średniowiecze", "bogurodzica", "lament swietokrzyski", "pieśń o rolandzie", "rozmowa mistrza polikarpa", "gall anonim"],
+  "Renesans": ["renesans", "odrodzenie", "kochanowski", "treny", "szachy", "odprawa posłów", "fraszki", "pieśni", "mikołaj rej", "szekspir", "makbet"],
+  "Barok": ["barok", "vanitas", "konceptyzm", "sarmatyzm", "marinizm", "paski", "morsztyn", "naborowski", "skąpiec", "molier"],
+  "Oświecenie": ["oświecenie", "krasicki", "monachomachia", "hymn do miłości", "żona modna", "powrót posła", "bajki"],
+  "Romantyzm": ["romantyzm", "kordian", "mickiewicz", "słowacki", "dziady", "pan tadeusz", "ballady i romanse", "nie-boska komedia", "krasiński"],
+  "Pozytywizm": ["pozytywizm", "lalka", "prus", "orzeszkowa", "nad niemnem", "mendel gdanski", "gloria victis", "potop", "trylogia", "kmicic"],
+  "Młoda Polska": ["młoda polska", "wesele", "wyspiański", "ludzie bezdomni", "chłopi", "reymont", "deszcz jesienny", "tetmajer", "kasprowicz"],
+  "Dwudziestolecie": ["dwudziestolecie", "ferdydurke", "gombrowicz", "przedwiośnie", "żeromski", "granica", "nałkowska", "skamander", "schulz", "sklepy cynamonowe"],
+  "Wojna i okupacja": ["wojna", "okupacja", "kamienie na szaniec", "baczyński", "borowski", "opoowiadania borowskiego", "inny świat", "grudziński"],
+  "Współczesność": ["współczesność", "tango", "mrożek", "ocalenie", "szymborska", "różewicz", "herbert", "rok 1984", "orwell", "dżuma", "camus"]
+};
+
 const CozyGlowLinkCard = ({
   children,
   href,
@@ -178,37 +192,27 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
     if (readFilter === "read" && !readNotes.includes(note.id)) return false;
     if (readFilter === "unread" && readNotes.includes(note.id)) return false;
 
-    // 3. Filtr kategorii / epoki (Precyzyjne dopasowanie po kolumnie note.era)
+    // 3. Wyszukiwarka tekstowa
+    const titleLower = (note.title || "").toLowerCase();
+    const contentString = typeof note.content === 'string' ? note.content : JSON.stringify(note.content || "");
+    const contentLower = contentString.toLowerCase();
+    const chipsString = Array.isArray(note.chips) ? note.chips.join(" ") : "";
+    const eraLower = (note.era || "").toLowerCase();
+    const typeLower = (note.type || "").toLowerCase();
+    const textToSearch = `${titleLower} ${contentLower} ${chipsString.toLowerCase()} ${eraLower} ${typeLower}`;
+    
+    const matchesSearch = textToSearch.includes(searchQuery.toLowerCase());
+    
+    // 4. Filtr przedmiotu / epoki
+    let matchesSubject = true;
     if (selectedSubject === "Inne (Pomocniki)") {
-      if (note.type === "epoka" || note.type === "lektura") return false;
+      matchesSubject = note.type !== "epoka" && note.type !== "lektura";
     } else if (selectedSubject !== "Wszystkie") {
-      const noteEra = (note.era || "").toLowerCase().trim();
-      const targetEra = selectedSubject.toLowerCase().trim();
-
-      const eraMatch = noteEra === targetEra;
-      const specialMatch =
-        (targetEra === "dwudziestolecie" && (noteEra.includes("dwudziestolecie") || noteEra.includes("międzywojenne"))) ||
-        (targetEra === "wojna i okupacja" && (noteEra.includes("wojna") || noteEra.includes("okupacj"))) ||
-        (targetEra === "współczesność" && noteEra.includes("współczesność")) ||
-        noteEra.includes(targetEra);
-
-      if (!eraMatch && !specialMatch) return false;
-    }
-
-    // 4. Wyszukiwarka tekstowa (jeśli użytkownik wpisał coś w lupkę)
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      const titleMatch = (note.title || "").toLowerCase().includes(q);
-      const eraMatch = (note.era || "").toLowerCase().includes(q);
-      const chipsMatch = Array.isArray(note.chips) && note.chips.some((chip: string) => chip.toLowerCase().includes(q));
-      
-      const contentString = typeof note.content === 'string' ? note.content : JSON.stringify(note.content || "");
-      const contentMatch = contentString.toLowerCase().includes(q);
-
-      if (!titleMatch && !eraMatch && !chipsMatch && !contentMatch) return false;
+      const keywords = epochKeywords[selectedSubject] || [selectedSubject.toLowerCase()];
+      matchesSubject = keywords.some(keyword => textToSearch.includes(keyword));
     }
     
-    return true;
+    return matchesSearch && matchesSubject;
   });
 
   const displayedNotes = limit ? filteredNotes.slice(0, limit) : filteredNotes;
@@ -228,7 +232,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           {searchQuery && (
-            <button onClick={() => setSearchQuery("")} className="absolute right-3 top-3.5 text-xs text-stone-500 hover:text-stone-200 cursor-pointer">
+            <button onClick={() => setSearchQuery("")} className="absolute right-3 top-3.5 text-xs text-stone-500 hover:text-stone-200">
               wyczyść
             </button>
           )}
@@ -241,7 +245,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
             {!hasAccess && (
               <button
                 onClick={() => setShowOnlyFree(!showOnlyFree)}
-                className={`text-xs px-3 py-1.5 rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`text-xs px-3 py-1.5 rounded-xl border transition-all flex items-center gap-1.5 ${
                   showOnlyFree ? "bg-emerald-950/80 text-emerald-400 border-emerald-500 text-emerald-300" : "border-stone-800/80 bg-stone-900/40 text-stone-400 hover:text-stone-200"
                 }`}
               >
@@ -256,7 +260,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
               <button
                 key={status.id}
                 onClick={() => setReadFilter(status.id as any)}
-                className={`text-xs px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${
+                className={`text-xs px-3 py-1.5 rounded-xl border transition-all ${
                   readFilter === status.id
                     ? `${currentTheme.accentBg || "bg-amber-500/20 text-amber-400"} font-bold border-transparent`
                     : "border-stone-800/60 bg-stone-950/40 text-stone-400 hover:border-stone-700 hover:text-stone-200"
@@ -277,7 +281,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
             <button
               key={subject}
               onClick={() => setSelectedSubject(subject)}
-              className={`text-xs px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${
+              className={`text-xs px-3 py-1.5 rounded-xl border transition-all ${
                 selectedSubject === subject
                   ? `${currentTheme.accentBg || "bg-amber-500/20 text-amber-400"} font-bold border-transparent`
                   : "border-stone-800/60 bg-stone-950/40 text-stone-400 hover:border-stone-700 hover:text-stone-200"
@@ -387,7 +391,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
                   
                   <button
                     onClick={(e) => toggleReadNote(note.id, e)}
-                    className={`w-full py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 border cursor-pointer ${
+                    className={`w-full py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 border ${
                       isRead
                         ? "bg-emerald-950/30 border-emerald-900/50 text-emerald-400 hover:bg-emerald-900/40"
                         : "bg-stone-900/30 border-stone-800/60 text-stone-500 hover:bg-stone-800/60 hover:text-stone-300"
