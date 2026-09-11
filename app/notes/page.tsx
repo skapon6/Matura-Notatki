@@ -368,36 +368,32 @@ export default function WszystkieNotatkiPage() {
                     </div>
 
                     {/* DWA PRZYCISKI: PRZECZYTANO + OTWÓRZ */}
-                    <div className="flex items-center gap-2 mt-1">
-                      <button
-                        onClick={(e) => toggleReadNote(note.id, e)}
-                        className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border cursor-pointer active:scale-95 ${
-                          isRead
-                            ? "bg-emerald-950/40 border-emerald-900/50 text-emerald-400 hover:bg-emerald-900/40 shadow-inner"
-                            : "bg-stone-900/40 border-stone-800/60 text-stone-400 hover:bg-stone-800/60 hover:text-stone-200"
-                        }`}
-                      >
-                        {isRead ? "✔️ Przeczytane" : "✔️ Zaznacz"}
-                      </button>
-
-                      {isLocked ? (
+                    {/* W app/notes/page.tsx - sekcja przycisków na dole karty */}
+                      <div className="flex items-center gap-2 mt-1">
                         <button
-                          onClick={() => handleOpenNote(note)}
-                          className="flex-[2] py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 bg-stone-950 border border-stone-800 text-stone-500 hover:bg-stone-900/40"
+                          onClick={(e) => toggleReadNote(note.id, e)}
+                          className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border cursor-pointer active:scale-95 ${
+                            isRead
+                              ? "bg-emerald-950/40 border-emerald-900/50 text-emerald-400 hover:bg-emerald-900/40 shadow-inner"
+                              : "bg-stone-900/40 border-stone-800/60 text-stone-400 hover:bg-stone-800/60 hover:text-stone-200"
+                          }`}
                         >
-                          <span>🔒</span> Zablokowane
+                          {isRead ? "✔️ Przeczytane" : "✔️ Zaznacz"}
                         </button>
-                      ) : (
+
                         <a
                           href={`/notes/${note.slug}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex-[2] py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 bg-amber-500 text-stone-950 hover:bg-amber-400 shadow-md"
+                          className={`flex-[2] py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-md ${
+                            isLocked 
+                              ? "bg-stone-900 border border-stone-800 text-amber-400 hover:bg-stone-850 hover:text-amber-300" 
+                              : "bg-amber-500 text-stone-950 hover:bg-amber-400"
+                          }`}
                         >
-                          Otwórz notatkę 📖
+                          {isLocked ? "Zobacz podgląd 🔒" : "Otwórz notatkę 📖"}
                         </a>
-                      )}
-                    </div>
+                      </div>
                   </div>
                 </CozyGlowCard>
               );

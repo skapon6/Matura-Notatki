@@ -178,7 +178,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
     if (readFilter === "read" && !readNotes.includes(note.id)) return false;
     if (readFilter === "unread" && readNotes.includes(note.id)) return false;
 
-    // 3. Filtr kategorii / epoki (Precyzyjne dopasowanie po kolumnie note.era)
+    // 3. Filtr kategorii / epoki
     if (selectedSubject === "Inne (Pomocniki)") {
       if (note.type === "epoka" || note.type === "lektura") return false;
     } else if (selectedSubject !== "Wszystkie") {
@@ -195,7 +195,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
       if (!eraMatch && !specialMatch) return false;
     }
 
-    // 4. Wyszukiwarka tekstowa (jeśli użytkownik wpisał coś w lupkę)
+    // 4. Wyszukiwarka tekstowa
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       const titleMatch = (note.title || "").toLowerCase().includes(q);
@@ -308,13 +308,6 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
           </div>
         ) : filteredNotes.length > 0 ? (
           displayedNotes.map((note) => {
-            const handleNoteClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-              if (!hasAccess && !note.is_free) {
-                e.preventDefault();
-                triggerNotification("🔒 Ta notatka wymaga kupna jednego z pakietów. Odblokuj pełny pakiet na stronie głównej!", "error");
-              }
-            };
-
             const getNoteEmoji = (type: string) => {
               if (type === "epoka") return "📜";
               if (type === "lektura") return "📕";
@@ -322,17 +315,17 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
             };
 
             const isRead = readNotes.includes(note.id);
+            const isNoteLocked = !hasAccess && !note.is_free;
 
             return (
               <CozyGlowLinkCard
                 href={`/notes/${note.slug}`}
-                onClick={handleNoteClick}
                 target="_blank"
                 rel="noopener noreferrer"
                 key={note.id}
                 currentTheme={currentTheme}
                 isFree={!hasAccess && note.is_free}
-                className="p-5 hover:scale-[1.01] group flex flex-col justify-between"
+                className="p-5 hover:scale-[1.01] group flex flex-col justify-between cursor-pointer"
               >
                 <div>
                   <div className="flex items-center justify-between text-[11px] font-semibold text-stone-400 w-full">
@@ -347,7 +340,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="flex items-center gap-1">
-                        ⏱️ {note.read_time || note.readTime || (Math.max(2, Math.round((String(note.content || "")).split(/\s+/).length / 150)) + " min")}
+                        ⏱️ {note.read_time || note.readTime || 15} min
                       </span>
                       <span className={`px-2 py-0.5 rounded-md text-[10px] border ${
                         note.type === "epoka" ? "bg-purple-950/40 border-purple-900/50 text-purple-400" 
@@ -369,7 +362,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
                   </div>
                   
                   <h4 className="text-base font-bold text-stone-100 font-serif mt-3 tracking-tight group-hover:text-amber-200 transition-colors w-full text-left">
-                    {note.title} {!hasAccess && !note.is_free && "🔒"}
+                    {note.title} {isNoteLocked && "🔒"}
                   </h4>
                   
                   <p className="text-xs text-stone-400/90 leading-relaxed mt-2 line-clamp-3 w-full text-left">
@@ -381,7 +374,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
                   <div className="flex items-center justify-between text-[11px] text-stone-500 w-full">
                     <span>{getBottomLeftMetadata(note)}</span>
                     <span className={`text-[#c68a4c] group-hover:text-amber-400 font-medium flex items-center gap-1 transition-colors`}>
-                      {hasAccess || note.is_free ? "Otwórz notatkę 📚" : "Odblokuj notatkę 🔒"}
+                      {hasAccess || note.is_free ? "Otwórz notatkę 📖" : "Zobacz podgląd 🔒"}
                     </span>
                   </div>
                   
