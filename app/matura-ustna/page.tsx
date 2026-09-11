@@ -183,6 +183,7 @@ export default function MaturaUstnaPage() {
   };
 
   // Dyktowanie głosowe
+  // ULEPSZONE DYKTOWANIE GŁOSOWE NA ŻYWO
   const startSpeechRecognition = () => {
     if (typeof window === "undefined") return;
 
@@ -190,52 +191,67 @@ export default function MaturaUstnaPage() {
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      alert("Twoja przeglądarka nie wspiera dyktowania głosowego. Użyj Google Chrome lub Microsoft Edge.");
+      alert("⚠️ Twoja przeglądarka (np. Firefox) nie wspiera dyktowania mowy. Otwórz stronę w Google Chrome lub Microsoft Edge, aby korzystać z mikrofonu!");
       return;
     }
 
-    const rec = new SpeechRecognition();
-    rec.lang = "pl-PL";
-    rec.continuous = true;
-    rec.interimResults = true;
+    try {
+      const rec = new SpeechRecognition();
+      rec.lang = "pl-PL";
+      rec.continuous = true;
+      rec.interimResults = true; // Rozpoznawanie na żywo
 
-    rec.onstart = () => {
-      playSound("click");
-      setIsRecording(true);
-    };
+      rec.onstart = () => {
+        playSound("click");
+        setIsRecording(true);
+      };
 
-    rec.onresult = (event: any) => {
-      let finalTranscript = "";
-
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript;
+      rec.onresult = (event: any) => {
+        let currentTranscript = "";
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          currentTranscript += event.results[i][0].transcript;
         }
-      }
 
-      if (finalTranscript) {
-        setSpeechText((prev) => {
-          return prev + (prev ? " " : "") + finalTranscript;
-        });
-      }
-    };
+        if (currentTranscript) {
+          // Jeśli wynik jest ostateczny, dopisujemy do wypowiedzi
+          if (event.results[event.results.length - 1].isFinal) {
+            setSpeechText((prev) => {
+              const cleanPrev = prev.trim();
+              return cleanPrev ? `${cleanPrev} ${currentTranscript.trim()}` : currentTranscript.trim();
+            });
+          }
+        }
+      };
 
-    rec.onerror = (err: any) => {
-      console.error("Speech Recognition Error:", err);
+      rec.onerror = (err: any) => {
+        console.error("Speech Recognition Error:", err.error);
+        if (err.error === "not-allowed" || err.error === "service-not-allowed") {
+          alert("🔒 Dostęp do mikrofonu został zablokowany! Kliknij ikonę kłódki przy adresie strony i zezwól na dostęp do mikrofonu.");
+        } else if (err.error === "network") {
+          alert("Błąd połączenia z usługą rozpoznawania mowy. Sprawdź połączenie z internetem.");
+        }
+        setIsRecording(false);
+      };
+
+      rec.onend = () => {
+        // Jeśli nagrywanie zakończyło się naturalnie, aktualizujemy stan
+        setIsRecording(false);
+      };
+
+      recognitionRef.current = rec;
+      rec.start();
+    } catch (e) {
+      console.error("Błąd inicjalizacji mikrofonu:", e);
+      alert("Nie udało się uruchomić mikrofonu. Upewnij się, że używasz przeglądarki Chrome lub Edge.");
       setIsRecording(false);
-    };
-
-    rec.onend = () => {
-      setIsRecording(false);
-    };
-
-    recognitionRef.current = rec;
-    rec.start();
+    }
   };
 
   const stopSpeechRecognition = () => {
     if (recognitionRef.current) {
-      recognitionRef.current.stop();
+      try {
+        recognitionRef.current.stop();
+      } catch (_) {}
       setIsRecording(false);
       playSound("success");
     }
