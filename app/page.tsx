@@ -245,7 +245,7 @@ export default function Home() {
 
   const handlePaymentInit = async (tier: 'mini' | 'medium' | 'premium') => {
     if (!user) {
-      triggerNotification("🔑 Najpierw załóż darmowe konto, aby aktywować pakiet!", "info");
+      triggerNotification("🔑 Zaloguj się lub załóż darmowe konto, aby odblokować ten pakiet!", "info");
       setIsGuestPreview(false);
       return;
     }
