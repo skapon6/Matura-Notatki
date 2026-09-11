@@ -16,10 +16,10 @@ export async function GET(
 ) {
   const { slug } = await params;
 
-  // 1. Pobieramy notatkę z bazy danych
+  // 1. Pobieramy notatkę z bazy Supabase
   const { data: note, error } = await supabaseAdmin
     .from('notes')
-    .select('title, era, difficulty, read_time, file_path, is_free, content')
+    .select('title, era, difficulty, read_time, file_path, is_free')
     .eq('slug', slug)
     .single();
 
@@ -63,161 +63,176 @@ export async function GET(
 
   const canViewFullNote = isNoteFree || hasAccess;
 
-  // 3. JEŚLI ZALOGOWANY Z PAKIETEM -> ZWRACAMY ORYGINALNĄ, PEŁNĄ NOTATKĘ Z GITHUBA
-  if (canViewFullNote) {
-    try {
-      const owner = 'skapon6';
-      const repo = 'Notatki-Private-Matura-Projekt';
+  // 3. POBIERAMY ORYGINALNY PLIK HTML Z GITHUBA DLA KAŻDEGO
+  try {
+    const owner = 'skapon6';
+    const repo = 'Notatki-Private-Matura-Projekt';
 
-      const response = await fetch(
-        `https://api.github.com/repos/${owner}/${repo}/contents/${note.file_path}`,
-        {
-          headers: {
-            Authorization: `Bearer ${process.env.GITHUB_NOTES_PAT}`,
-            Accept: 'application/vnd.github.v3.raw',
-          },
-          cache: 'no-store',
-        }
-      );
-
-      if (!response.ok) {
-        return new NextResponse('Błąd pobierania pliku notatki z serwera', { status: 404 });
-      }
-
-      const rawHtml = await response.text();
-
-      return new NextResponse(rawHtml, {
-        status: 200,
+    const response = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/contents/${note.file_path}`,
+      {
         headers: {
-          'Content-Type': 'text/html; charset=utf-8',
+          Authorization: `Bearer ${process.env.GITHUB_NOTES_PAT}`,
+          Accept: 'application/vnd.github.v3.raw',
         },
+        cache: 'no-store',
+      }
+    );
+
+    if (!response.ok) {
+      return new NextResponse('Błąd pobierania pliku notatki z serwera', { status: 404 });
+    }
+
+    let html = await response.text();
+
+    // -------------------------------------------------------------
+    // WARIANT A: UŻYTKOWNIK ZALOGOWANY Z PAKIETEM -> PEŁNA NOTATKA
+    // -------------------------------------------------------------
+    if (canViewFullNote) {
+      return new NextResponse(html, {
+        status: 200,
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
       });
-    } catch (err) {
-      console.error('Błąd GitHub API:', err);
-      return new NextResponse('Błąd serwera', { status: 500 });
     }
+
+    // -------------------------------------------------------------
+    // WARIANT B: GOŚĆ / BOT GOOGLE -> ORYGINALNY NAGŁÓWEK + ZABLOKOWANE SEKCJE + PAYWALL
+    // -------------------------------------------------------------
+    
+    // Styl i baner paywalla wstrzykiwany do oryginalnego HTML-a
+    const lockStylesAndPaywall = `
+      <style>
+        /* Blokujemy rozwijanie treści dla niezalogowanych */
+        .collapsible-content, 
+        .section-content, 
+        .accordion-content, 
+        [id*="content"], 
+        [class*="content-body"],
+        details > :not(summary) {
+          display: none !important;
+        }
+
+        /* Zmieniamy przyciski rozwijania na kłódki */
+        button, .btn, [onclick*="toggle"], [onclick*="pokaz"] {
+          pointer-events: none !important;
+          opacity: 0.65 !important;
+          cursor: not-allowed !important;
+          background: rgba(30, 24, 20, 0.8) !important;
+          color: #c68a4c !important;
+          border-color: rgba(198, 138, 76, 0.3) !important;
+        }
+
+        /* Dolny kontener Paywalla */
+        .preview-paywall-container {
+          margin: 40px auto 60px auto;
+          max-width: 850px;
+          background: linear-gradient(180deg, rgba(28, 22, 18, 0.95), rgba(16, 12, 10, 0.98));
+          border: 1px solid rgba(198, 138, 76, 0.35);
+          border-radius: 28px;
+          padding: 40px 24px;
+          text-align: center;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+          position: relative;
+          z-index: 100;
+        }
+
+        .preview-paywall-badge {
+          display: inline-block;
+          background: rgba(198, 138, 76, 0.15);
+          color: #c68a4c;
+          padding: 6px 14px;
+          border-radius: 999px;
+          font-size: 11px;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 1.5px;
+          border: 1px solid rgba(198, 138, 76, 0.3);
+          margin-bottom: 16px;
+        }
+
+        .preview-paywall-btn {
+          display: inline-block;
+          background: #c68a4c;
+          color: #120e0c !important;
+          font-weight: 800;
+          font-size: 15px;
+          padding: 16px 32px;
+          border-radius: 16px;
+          text-decoration: none !important;
+          margin-top: 20px;
+          transition: transform 0.2s, background 0.2s;
+          pointer-events: auto !important;
+          opacity: 1 !important;
+          box-shadow: 0 10px 25px rgba(198, 138, 76, 0.25);
+        }
+
+        .preview-paywall-btn:hover {
+          background: #dba062;
+          transform: scale(1.03);
+        }
+
+        .preview-nav-bar {
+          padding: 14px 24px;
+          background: rgba(18, 14, 12, 0.95);
+          border-bottom: 1px solid rgba(212, 197, 185, 0.1);
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-family: sans-serif;
+        }
+
+        .preview-nav-bar a {
+          color: #c68a4c;
+          text-decoration: none;
+          font-size: 13px;
+          font-weight: 700;
+          pointer-events: auto !important;
+          opacity: 1 !important;
+        }
+      </style>
+
+      <div class="preview-nav-bar">
+        <a href="/notes">← Wróć do bazy notatek</a>
+        <a href="/">📖 Wiedza Szyta na Miarę</a>
+      </div>
+    `;
+
+    const paywallHtml = `
+      <div class="preview-paywall-container">
+        <div style="font-size: 36px; margin-bottom: 8px;">🔒</div>
+        <span class="preview-paywall-badge">Pełne Opracowanie Zablokowane</span>
+        <h2 style="color: #f5f0eb; font-family: Georgia, serif; font-size: 28px; margin: 0 0 12px 0;">
+          Odblokuj całą treść notatki z ${note.title}
+        </h2>
+        <p style="color: #a89f91; font-size: 14px; max-width: 540px; margin: 0 auto; line-height: 1.6;">
+          Zaloguj się lub odblokuj pakiet dostępu, aby czytać pełne streszczenia, motywy, konteksty, rozwiązywać quizy oraz sprawdzać wypracowania przez AI.
+        </p>
+        <a href="/" class="preview-paywall-btn">
+          🚀 Przejdź do Pulpitu i Odblokuj Dostęp
+        </a>
+      </div>
+    `;
+
+    // 1. Wstrzykujemy pasek nawigacji i style na początek <body>
+    html = html.replace(/<body[^>]*>/i, (match) => `${match}${lockStylesAndPaywall}`);
+
+    // 2. Podmieniamy tekst na przyciskach na kłódeczki 🔒
+    html = html.replace(/Pokaż\s*\/\s*ukryj/gi, '🔒 Zablokowane');
+
+    // 3. Wstrzykujemy baner paywalla przed końcem </body>
+    if (html.includes('</body>')) {
+      html = html.replace('</body>', `${paywallHtml}</body>`);
+    } else {
+      html += paywallHtml;
+    }
+
+    return new NextResponse(html, {
+      status: 200,
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    });
+
+  } catch (err) {
+    console.error('Błąd serwera notatek:', err);
+    return new NextResponse('Błąd serwera', { status: 500 });
   }
-
-  // 4. JEŚLI GOŚĆ LUB BOT GOOGLE/AHREFS -> ZWRACAMY PODGLĄD SEO + PAYWALL (KOD 200 OK)
-  const previewHtml = `
-<!DOCTYPE html>
-<html lang="pl">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${note.title} — Opracowanie i Notatka Maturalna | Wiedza Szyta na Miarę</title>
-  <meta name="description" content="Kompleksowe opracowanie maturalne: ${note.title}. Epoka: ${note.era || 'Język polski'}. Motywy, konteksty i najważniejsze zagadnienia do matury.">
-  <link rel="canonical" href="https://wiedzaszytanamiare.pl/notes/${slug}">
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      background-color: #120e0c;
-      color: #d4c5b9;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-    .nav {
-      border-bottom: 1px solid rgba(212, 197, 185, 0.1);
-      background-color: rgba(22, 17, 14, 0.9);
-      padding: 14px 24px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .nav a {
-      color: #c68a4c;
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 13px;
-    }
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 40px 20px;
-      flex: 1;
-    }
-    .tag {
-      background: rgba(198, 138, 76, 0.15);
-      color: #c68a4c;
-      padding: 4px 12px;
-      border-radius: 9999px;
-      font-size: 11px;
-      font-weight: bold;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      border: 1px solid rgba(198, 138, 76, 0.3);
-    }
-    h1 {
-      font-family: Georgia, serif;
-      font-size: 38px;
-      color: #f5f0eb;
-      margin: 16px 0 12px 0;
-    }
-    .excerpt {
-      background: rgba(26, 21, 18, 0.6);
-      border: 1px solid rgba(212, 197, 185, 0.1);
-      padding: 24px;
-      border-radius: 16px;
-      line-height: 1.6;
-      font-size: 15px;
-      color: #a89f91;
-      margin-bottom: 30px;
-    }
-    .paywall {
-      background: linear-gradient(180deg, rgba(28, 22, 19, 0.9), rgba(18, 14, 12, 0.95));
-      border: 1px solid rgba(198, 138, 76, 0.3);
-      padding: 40px 24px;
-      border-radius: 24px;
-      text-align: center;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-    }
-    .btn {
-      display: inline-block;
-      background: #c68a4c;
-      color: #120e0c;
-      font-weight: bold;
-      padding: 14px 28px;
-      border-radius: 12px;
-      text-decoration: none;
-      font-size: 14px;
-      margin-top: 15px;
-      transition: all 0.2s;
-    }
-    .btn:hover {
-      background: #dba062;
-      transform: scale(1.02);
-    }
-  </style>
-</head>
-<body>
-  <div class="nav">
-    <a href="/notes">← Wróć do bazy notatek</a>
-    <a href="/">📖 Wiedza Szyta na Miarę</a>
-  </div>
-  <div class="container">
-    <span class="tag">📍 ${note.era || 'Język Polski'}</span>
-    <h1>${note.title}</h1>
-    <div class="excerpt">
-      <em>${typeof note.content === 'string' && note.content.length > 0 ? note.content : 'Kompleksowe opracowanie maturalne z epoki ' + (note.era || 'Język Polski') + ' zawierające motywy, konteksty i wzorce wypracowań.'}</em>
-    </div>
-    <div class="paywall">
-      <div style="font-size: 32px; margin-bottom: 10px;">🔒</div>
-      <h2 style="color: #f5f0eb; font-family: Georgia, serif; margin: 0 0 10px 0;">Odblokuj całą notatkę i bazę 42 lektur</h2>
-      <p style="color: #8c827a; font-size: 14px; max-width: 500px; margin: 0 auto 20px auto; line-height: 1.5;">Zaloguj się na swoje konto lub wybierz pakiet dostępu na stronie głównej, aby czytać pełne opracowanie i korzystać z Asystenta Rozprawek AI.</p>
-      <a href="/" class="btn">🚀 Przejdź do Pulpitu i Odblokuj</a>
-    </div>
-  </div>
-</body>
-</html>
-  `;
-
-  return new NextResponse(previewHtml, {
-    status: 200,
-    headers: {
-      'Content-Type': 'text/html; charset=utf-8',
-    },
-  });
 }
