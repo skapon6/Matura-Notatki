@@ -1,3 +1,4 @@
+// components/NotesBrowser.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -34,8 +35,8 @@ const CozyGlowLinkCard = ({
   const cardBgClasses = currentTheme?.cardBg || "";
   
   if (isFree) {
-    glowColor = "rgba(16, 185, 129, 0.25)";
-    hoverBorderClass = "hover:border-emerald-500/30";
+    glowColor = "rgba(16, 185, 129, 0.28)";
+    hoverBorderClass = "hover:border-emerald-500/40";
   } else if (cardBgClasses.includes("151c24") || cardBgClasses.includes("121820")) {
     glowColor = "rgba(14, 165, 233, 0.25)";
     hoverBorderClass = "hover:border-sky-500/30";
@@ -53,8 +54,8 @@ const CozyGlowLinkCard = ({
     });
   };
 
-  const borderClass = isFree ? "border-emerald-800/40" : currentTheme.cardBorder;
-  const bgClass = isFree ? "bg-emerald-950/10 shadow-md shadow-emerald-950/20" : currentTheme.cardBg;
+  const borderClass = isFree ? "border-emerald-700/60 shadow-lg shadow-emerald-950/30" : currentTheme.cardBorder;
+  const bgClass = isFree ? "bg-emerald-950/20" : currentTheme.cardBg;
 
   return (
     <a
@@ -102,7 +103,6 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("Wszystkie");
   
-  // Stany filtrów dodatkowych
   const [showOnlyFree, setShowOnlyFree] = useState(false);
   const [readFilter, setReadFilter] = useState<"all" | "read" | "unread">("all");
   const [readNotes, setReadNotes] = useState<number[]>([]);
@@ -170,15 +170,12 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
     return "💡 Pomocnik naukowy";
   };
 
+  // Filtrowanie
   const filteredNotes = notes.filter((note) => {
-    // 1. Filtr darmowych
     if (!hasAccess && showOnlyFree && !note.is_free) return false;
-    
-    // 2. Filtr przeczytanych
     if (readFilter === "read" && !readNotes.includes(note.id)) return false;
     if (readFilter === "unread" && readNotes.includes(note.id)) return false;
 
-    // 3. Filtr kategorii / epoki
     if (selectedSubject === "Inne (Pomocniki)") {
       if (note.type === "epoka" || note.type === "lektura") return false;
     } else if (selectedSubject !== "Wszystkie") {
@@ -195,13 +192,11 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
       if (!eraMatch && !specialMatch) return false;
     }
 
-    // 4. Wyszukiwarka tekstowa
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       const titleMatch = (note.title || "").toLowerCase().includes(q);
       const eraMatch = (note.era || "").toLowerCase().includes(q);
       const chipsMatch = Array.isArray(note.chips) && note.chips.some((chip: string) => chip.toLowerCase().includes(q));
-      
       const contentString = typeof note.content === 'string' ? note.content : JSON.stringify(note.content || "");
       const contentMatch = contentString.toLowerCase().includes(q);
 
@@ -211,7 +206,16 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
     return true;
   });
 
-  const displayedNotes = limit ? filteredNotes.slice(0, limit) : filteredNotes;
+  // SORTOWANIE: DLA NIEZALOGOWANYCH DARMOWE NOTATKI TRAFIAJĄ NA SAMĄ GÓRĘ
+  const sortedNotes = [...filteredNotes].sort((a, b) => {
+    if (!hasAccess) {
+      if (a.is_free && !b.is_free) return -1;
+      if (!a.is_free && b.is_free) return 1;
+    }
+    return 0;
+  });
+
+  const displayedNotes = limit ? sortedNotes.slice(0, limit) : sortedNotes;
 
   return (
     <>
@@ -315,7 +319,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
             };
 
             const isRead = readNotes.includes(note.id);
-            const isNoteLocked = !hasAccess && !note.is_free;
+            const isFreeNote = !hasAccess && note.is_free;
 
             return (
               <CozyGlowLinkCard
@@ -324,17 +328,19 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
                 rel="noopener noreferrer"
                 key={note.id}
                 currentTheme={currentTheme}
-                isFree={!hasAccess && note.is_free}
+                isFree={isFreeNote}
                 className="p-5 hover:scale-[1.01] group flex flex-col justify-between cursor-pointer"
               >
                 <div>
                   <div className="flex items-center justify-between text-[11px] font-semibold text-stone-400 w-full">
                     <div className="flex items-center gap-1.5">
                       <span className="text-base">{getNoteEmoji(note.type)}</span>
-                      <span className="uppercase tracking-wider text-[#c68a4c]">{note.subject || "Język Polski"}</span>
-                      {!hasAccess && note.is_free && (
-                        <span className="bg-emerald-950/80 text-emerald-400 border border-emerald-800/40 text-[9px] uppercase font-bold px-2 py-0.5 rounded-md tracking-wide animate-pulse">
-                          🎁 Darmowa
+                      <span className={`uppercase tracking-wider ${isFreeNote ? 'text-emerald-400 font-bold' : 'text-[#c68a4c]'}`}>
+                        {note.subject || "Język Polski"}
+                      </span>
+                      {isFreeNote && (
+                        <span className="bg-emerald-950/90 text-emerald-300 border border-emerald-600/50 text-[9px] uppercase font-extrabold px-2.5 py-0.5 rounded-md tracking-wider animate-pulse shadow-sm shadow-emerald-900/50">
+                          🎁 DARMOWA PRÓBKA
                         </span>
                       )}
                     </div>
@@ -349,20 +355,11 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
                       }`}>
                         {note.type === "epoka" ? "Epoka" : note.type === "lektura" ? "Lektura" : "Pomocnik"}
                       </span>
-                      {note.difficulty && (
-                        <span className={`px-2 py-0.5 rounded-md text-[10px] uppercase font-bold border ${
-                          ["łatwy", "latwy", "easy"].includes(note.difficulty.toLowerCase()) ? "bg-emerald-950/40 border-emerald-900/50 text-emerald-400"
-                            : ["średni", "sredni", "medium"].includes(note.difficulty.toLowerCase()) ? "bg-orange-950/40 border-orange-900/50 text-orange-400"
-                            : "bg-red-950/40 border-red-900/50 text-red-400"
-                        }`}>
-                          {note.difficulty}
-                        </span>
-                      )}
                     </div>
                   </div>
                   
-                  <h4 className="text-base font-bold text-stone-100 font-serif mt-3 tracking-tight group-hover:text-amber-200 transition-colors w-full text-left">
-                    {note.title} {isNoteLocked && "🔒"}
+                  <h4 className="text-base font-bold text-stone-100 font-serif mt-3 tracking-tight group-hover:text-amber-200 transition-colors w-full text-left flex items-center gap-2">
+                    {note.title} {!hasAccess && !note.is_free && <span className="text-sm">🔒</span>}
                   </h4>
                   
                   <p className="text-xs text-stone-400/90 leading-relaxed mt-2 line-clamp-3 w-full text-left">
@@ -373,8 +370,10 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
                 <div className="border-t border-stone-800/40 mt-4 pt-3 flex flex-col gap-3 w-full">
                   <div className="flex items-center justify-between text-[11px] text-stone-500 w-full">
                     <span>{getBottomLeftMetadata(note)}</span>
-                    <span className={`text-[#c68a4c] group-hover:text-amber-400 font-medium flex items-center gap-1 transition-colors`}>
-                      {hasAccess || note.is_free ? "Otwórz notatkę 📖" : "Zobacz podgląd 🔒"}
+                    <span className={`font-semibold flex items-center gap-1 transition-colors ${
+                      isFreeNote ? "text-emerald-400 group-hover:text-emerald-300" : "text-[#c68a4c] group-hover:text-amber-400"
+                    }`}>
+                      {hasAccess || note.is_free ? "Otwórz pełną notatkę 📖" : "Zobacz podgląd 🔒"}
                     </span>
                   </div>
                   
@@ -394,7 +393,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
           })
         ) : (
           <div className={`rounded-2xl border border-dashed border-stone-800 p-8 text-center text-sm text-stone-500`}>
-            😴 Brak notatek spełniających wybrane kryteria. Spróbuj zmienić słowo kluczowe lub kategorię.
+            😴 Brak notatek spełniających wybrane kryteria.
           </div>
         )}
       </div>
