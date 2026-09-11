@@ -176,7 +176,6 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
     return true;
   });
 
-  // SORTOWANIE: DLA NIEZALOGOWANYCH DARMOWE NOTATKI TRAFIAJĄ NA SAMĄ GÓRĘ
   const sortedNotes = [...filteredNotes].sort((a, b) => {
     if (!hasAccess) {
       if (a.is_free && !b.is_free) return -1;
@@ -187,14 +186,22 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-500 ${currentTheme.bg} text-stone-200 font-sans`}>
-      
-      {/* HEADER */}
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes slideIn {
+          0% { transform: translateY(30px) scale(0.95); opacity: 0; }
+          100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+        .animate-slide-in { animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+      `}} />
+
+      {/* HEADER Z ORYGINALNYM ODTWARZACZEM LO-FI */}
       <header className={`border-b ${currentTheme.cardBorder} px-4 sm:px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 backdrop-blur-md sticky top-0 z-40 transition-colors duration-500`}>
         <div className="flex w-full md:w-auto items-center justify-between md:justify-start gap-4">
           <button onClick={() => { playSound("click"); router.push("/"); }} className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 transition-all text-xs font-medium ${currentTheme.subText} hover:text-stone-100 cursor-pointer`}>
             ← Wróć do kącika
           </button>
         </div>
+
         <div className="hidden md:flex flex-col items-center select-none">
           <div className="flex items-center gap-2">
             <span className="text-2xl">📚</span>
@@ -203,17 +210,56 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
             </h1>
           </div>
         </div>
+
+        {/* ORYGINALNY ODTWARZACZ LO-FI Z IKONAMI SVG I SUWAKIEM GŁOŚNOŚCI */}
         <div className="flex w-full md:w-auto items-center justify-between md:justify-end gap-3 sm:gap-4 border-t md:border-t-0 border-stone-800/40 pt-3 md:pt-0">
-          <div className={`flex items-center gap-2 sm:gap-3 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} transition-all duration-300 select-none shadow-md hover:border-amber-500/20 hover:bg-stone-900/30`}>
-            <button type="button" onClick={handlePrevTrack} className="text-stone-400 hover:text-amber-400 p-1 rounded-xl cursor-pointer">
-              ⏮️
+          <div className={`flex items-center gap-1 sm:gap-1.5 px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} transition-all duration-300 select-none shadow-md hover:border-amber-500/20 hover:bg-stone-900/30 hover:shadow-lg hover:shadow-amber-500/5`}>
+            
+            <button onClick={handlePrevTrack} className="text-stone-400 hover:text-amber-400 p-1 rounded-xl hover:bg-stone-800/40 transition-colors cursor-pointer" title="Poprzedni utwór">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.334 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z" />
+              </svg>
             </button>
-            <button onClick={toggleLofi} className={`text-xs px-4 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} ${currentTheme.subText} hover:text-stone-100 font-semibold transition-all cursor-pointer`}>
-              {currentTrackIndex !== null ? lofiTracks[currentTrackIndex].name : "Włącz Lofi"}
+            
+            <button onClick={toggleLofi} className="flex items-center gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 hover:text-amber-400 border border-amber-500/20 transition-all font-semibold text-xs active:scale-95 cursor-pointer">
+              {lofiActive ? (
+                <svg className="w-4 h-4 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
+              <span className="text-[10px] sm:text-[11px] tracking-wide truncate max-w-[80px] md:max-w-[120px] xl:max-w-[150px]">
+                {lofiTracks[currentTrackIndex]?.name || "Cozy Lofi 1"}
+              </span>
             </button>
-            <button type="button" onClick={handleNextTrack} className="text-stone-400 hover:text-amber-400 p-1 rounded-xl cursor-pointer">
-              ⏭️
+            
+            <button onClick={handleNextTrack} className="text-stone-400 hover:text-amber-400 p-1 rounded-xl hover:bg-stone-800/40 transition-colors cursor-pointer" title="Następny utwór">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 005 8v8a1 1 0 001.6.8l5.334-4zM19.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.334-4z" />
+              </svg>
             </button>
+            
+            {/* Suwak głośności */}
+            <div className="hidden sm:flex items-center gap-1.5 sm:gap-2 ml-1 border-l border-stone-800/80 pl-2 sm:pl-3">
+              <svg className="w-4 h-4 text-stone-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 12H3a1 1 0 01-1-1V9a1 1 0 011-1h1.586l3.707-3.707a1 1 0 011.09-.217z" clipRule="evenodd" />
+              </svg>
+              <input 
+                type="range" 
+                min="0" 
+                max="1" 
+                step="0.05" 
+                value={lofiVolume} 
+                onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                className="w-14 sm:w-16 md:w-20 h-1 bg-stone-850 rounded-lg appearance-none cursor-pointer accent-amber-500 focus:outline-none"
+                style={{ WebkitAppearance: "none" }}
+              />
+            </div>
+
           </div>
         </div>
       </header>
@@ -225,9 +271,6 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 border-b border-stone-800/40 pb-3 mb-1">
             <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider pl-1">Status:</span>
             <div className="flex gap-1.5 flex-wrap">
-              {!hasAccess && (
-                <button onClick={() => { playSound("click"); setShowOnlyFree(!showOnlyFree); }} className={`text-[10px] px-3.5 py-1.5 rounded-xl border font-bold uppercase transition-all flex items-center gap-1.5 cursor-pointer ${showOnlyFree ? "bg-emerald-950/80 text-emerald-400 border-emerald-500/40 shadow-md shadow-emerald-950/30" : "bg-emerald-950/10 text-emerald-400 border-emerald-900/30 hover:text-stone-300"}`}>🎁 Pokaż tylko darmowe</button>
-              )}
               {[
                 { id: "all" as const, label: "Wszystkie" },
                 { id: "read" as const, label: "✔️ Przeczytane" },
@@ -259,7 +302,7 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
           />
         </div>
 
-        {/* SIATKA KAFELKÓW - DARMOWE PODŚWIETLONE NA ZIELONO I NA SAMYM POCZĄTKU */}
+        {/* SIATKA KAFELKÓW */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sortedNotes.map((note) => {
             const isLocked = !note.is_free && !hasAccess;
