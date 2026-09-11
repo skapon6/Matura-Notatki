@@ -19,7 +19,7 @@ export async function GET(
   // 1. Pobieramy notatkę z bazy Supabase
   const { data: note, error } = await supabaseAdmin
     .from('notes')
-    .select('title, era, difficulty, read_time, file_path, is_free')
+    .select('title, era, difficulty, read_time, file_path, is_free, content')
     .eq('slug', slug)
     .single();
 
@@ -30,7 +30,7 @@ export async function GET(
   const isNoteFree = Boolean(note.is_free);
   let hasAccess = false;
 
-  // 2. Weryfikacja sesji użytkownika na serwerze
+  // 2. Weryfikacja sesji użytkownika
   try {
     const supabase = await getSupabaseServer();
     const { data: { user } } = await supabase.auth.getUser();
@@ -63,7 +63,7 @@ export async function GET(
 
   const canViewFullNote = isNoteFree || hasAccess;
 
-  // 3. POBIERAMY ORYGINALNY PLIK HTML Z GITHUBA
+  // 3. Pobieranie pliku HTML z GitHuba
   try {
     const owner = 'skapon6';
     const repo = 'Notatki-Private-Matura-Projekt';
@@ -85,8 +85,11 @@ export async function GET(
 
     let html = await response.text();
 
+    // POPRAWKA BŁĘDU 404: Usuwamy odwołania do brakującego pliku watermark.png
+    html = html.replace(/src=["'][^"']*watermark\.png["']/gi, 'src="data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'1\' height=\'1\'></svg>"');
+
     // -------------------------------------------------------------
-    // WARIANT A: ZALOGOWANY Z PAKIETEM -> 100% PEŁNA NOTATKA
+    // WARIANT A: ZALOGOWANY Z PAKIETEM -> PEŁNA NOTATKA
     // -------------------------------------------------------------
     if (canViewFullNote) {
       return new NextResponse(html, {
@@ -96,22 +99,19 @@ export async function GET(
     }
 
     // -------------------------------------------------------------
-    // WARIANT B: GOŚĆ / BOT GOOGLE -> PANCERNY PODGLĄD BEZ ROZJEŻDŻANIA STRONY
+    // WARIANT B: GOŚĆ / BOT GOOGLE -> PANCERNY PODGLĄD + PEŁNE SEO
     // -------------------------------------------------------------
     
-    // 1. Serwerowe usuwanie prawdziwej treści (zastępujemy tekst bezpieczną atrapą)
-    // Zostawiamy nagłówki i strukturę, ale czyścimy całą treść szczegółową
+    // Czyszczenie treści merytorycznej
     html = html.replace(/<p\b[^>]*>[\s\S]*?<\/p>/gi, '<p style="color:#6b5f54; font-style:italic; filter:blur(3px); user-select:none; margin:8px 0;">Treść merytoryczna zablokowana. Dostępna po odblokowaniu pakietu na platformie Wiedza Szyta na Miarę...</p>');
     html = html.replace(/<li\b[^>]*>[\s\S]*?<\/li>/gi, '<li style="color:#6b5f54; filter:blur(3px); user-select:none;">Punkt opracowania zablokowany (wymaga aktywnego pakietu).</li>');
     html = html.replace(/<blockquote\b[^>]*>[\s\S]*?<\/blockquote>/gi, '<blockquote style="color:#6b5f54; filter:blur(3px);">Cytat i omówienie zablokowane.</blockquote>');
-
-    // 2. Usuwamy wszelkie skrypty rozwijania
     html = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
 
-    // 3. Wstrzykujemy bezpieczny arkusz stylów i nawigację
-    const lockStylesAndNav = `
+    const seoMetaAndStyles = `
+      <meta name="description" content="Kompleksowe opracowanie maturalne: ${note.title}. Epoka: ${note.era || 'Język polski'}. Motywy, konteksty i najważniejsze zagadnienia do matury.">
+      <link rel="canonical" href="https://wiedzaszytanamiare.pl/notes/${slug}">
       <style>
-        /* 1. Globalne tło Cozy Dark */
         html, body {
           background-color: #120e0c !important;
           background-image: none !important;
@@ -121,42 +121,22 @@ export async function GET(
           padding: 0 !important;
           min-height: 100vh !important;
         }
-
-        /* 2. Zwijanie zawartości sekcji */
-        .collapsible-content, 
-        .section-content, 
-        .accordion-content, 
-        [id*="content"], 
-        [class*="content-body"],
-        details > :not(summary) {
+        .collapsible-content, .section-content, .accordion-content, [id*="content"], [class*="content-body"], details > :not(summary) {
           display: none !important;
         }
-
-        /* 3. Ujednolicenie kart i nagłówków */
         .header-card, .info-card, .card, [class*="card"], [class*="hero"], [class*="box"] {
           background-color: rgba(26, 21, 18, 0.85) !important;
           border: 1px solid rgba(198, 138, 76, 0.25) !important;
           color: #f5f0eb !important;
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
         }
-
-        /* 4. Paski sekcji */
         .section-header, .accordion-header, [class*="section-item"], [class*="row-item"] {
           background-color: rgba(22, 17, 14, 0.95) !important;
           border: 1px solid rgba(212, 197, 185, 0.15) !important;
           border-radius: 16px !important;
           color: #f5f0eb !important;
         }
-
-        /* 5. Kolory tekstów */
-        h1, h2, h3, h4, h5, h6, strong, [class*="title"] {
-          color: #f5f0eb !important;
-        }
-        p, span, small, [class*="subtitle"], [class*="desc"] {
-          color: #a89f91 !important;
-        }
-
-        /* 6. Przyciski zablokowane */
+        h1, h2, h3, h4, h5, h6, strong, [class*="title"] { color: #f5f0eb !important; }
+        p, span, small, [class*="subtitle"], [class*="desc"] { color: #a89f91 !important; }
         button, .btn, [onclick*="toggle"], [onclick*="pokaz"] {
           pointer-events: none !important;
           cursor: not-allowed !important;
@@ -167,10 +147,7 @@ export async function GET(
           padding: 6px 14px !important;
           font-size: 11px !important;
           font-weight: 700 !important;
-          opacity: 0.9 !important;
         }
-
-        /* 7. Górny pasek nawigacji */
         .preview-nav-bar {
           padding: 14px 24px;
           background: rgba(18, 14, 12, 0.95);
@@ -184,17 +161,13 @@ export async function GET(
           z-index: 999;
           backdrop-filter: blur(8px);
         }
-
         .preview-nav-bar a {
           color: #c68a4c;
           text-decoration: none;
           font-size: 13px;
           font-weight: 700;
           pointer-events: auto !important;
-          opacity: 1 !important;
         }
-
-        /* 8. Dolny Paywall */
         .preview-paywall-container {
           margin: 40px auto 70px auto;
           max-width: 850px;
@@ -207,7 +180,6 @@ export async function GET(
           position: relative;
           z-index: 100;
         }
-
         .preview-paywall-badge {
           display: inline-block;
           background: rgba(198, 138, 76, 0.15);
@@ -221,7 +193,6 @@ export async function GET(
           border: 1px solid rgba(198, 138, 76, 0.3);
           margin-bottom: 16px;
         }
-
         .preview-paywall-btn {
           display: inline-block;
           background: #c68a4c;
@@ -234,16 +205,9 @@ export async function GET(
           margin-top: 20px;
           transition: transform 0.2s, background 0.2s;
           pointer-events: auto !important;
-          opacity: 1 !important;
           box-shadow: 0 10px 25px rgba(198, 138, 76, 0.25);
         }
-
-        .preview-paywall-btn:hover {
-          background: #dba062;
-          transform: scale(1.03);
-        }
       </style>
-
       <div class="preview-nav-bar">
         <a href="/notes">← Wróć do bazy notatek</a>
         <a href="/">📖 Wiedza Szyta na Miarę</a>
@@ -266,10 +230,14 @@ export async function GET(
       </div>
     `;
 
-    // Wstrzykujemy nawigację i ciemne style do <body>
-    html = html.replace(/<body[^>]*>/i, (match) => `${match}${lockStylesAndNav}`);
+    // Wstrzykujemy tagi SEO do <head>
+    if (html.includes('</head>')) {
+      html = html.replace('</head>', `${seoMetaAndStyles}</head>`);
+    } else {
+      html = seoMetaAndStyles + html;
+    }
 
-    // Podmieniamy przyciski na kłódeczki
+    // Podmieniamy przyciski na kłódki
     html = html.replace(/Pokaż\s*\/\s*ukryj/gi, '🔒 Zablokowane');
 
     // Wstrzykujemy dolny paywall
