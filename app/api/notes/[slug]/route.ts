@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseServer } from '@/app/lib/supabaseServer'
 import { createClient } from '@supabase/supabase-js'
 
-// Tworzymy klienta admina, który bezpiecznie omija RLS do odczytu profili
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -37,20 +36,17 @@ export async function GET(
       return new NextResponse('Brak dostępu: Zaloguj się!', { status: 401 })
     }
 
-    // Pobieramy profil wraz z datą wygaśnięcia, aby zweryfikować status płatności
     const { data: profile } = await supabaseAdmin
       .from('profiles')
-      .select('subscription_status, expires_at') // <--- Pobieramy status oraz expires_at
+      .select('subscription_status, expires_at')
       .eq('id', user.id)
       .single()
 
-    // Logika weryfikacji dostępu dla wielu pakietów
     let hasAccess = false
     if (profile) {
       const activeStatuses = ['mini', 'medium', 'premium', 'admin', 'paid']
       const isStatusActive = activeStatuses.includes(profile.subscription_status)
       
-      // Sprawdzamy w czasie rzeczywistym, czy data ważności już minęła
       let isExpired = false
       if (profile.expires_at) {
         const expirationTime = new Date(profile.expires_at).getTime()
@@ -58,7 +54,6 @@ export async function GET(
         isExpired = currentTime > expirationTime
       }
       
-      // Dostęp jest aktywny tylko gdy status się zgadza i pakiet nie wygasł
       if (isStatusActive && !isExpired) {
         hasAccess = true
       }
@@ -69,11 +64,10 @@ export async function GET(
     }
   }
 
-  // 3. Jeśli użytkownik ma dostęp lub notatka jest darmowa -> odczytujemy i zwracamy plik HTML z GitHub API
+  // 3. Pobieranie pliku HTML z GitHuba
   try {
     const owner = "skapon6"
     const repo = "Notatki-Private-Matura-Projekt"
-    
     const gitHubPath = data.file_path 
 
     const response = await fetch(
@@ -94,25 +88,25 @@ export async function GET(
 
     const html = await response.text()
 
-    // Definiujemy politykę CSP dla kodu HTML notatki pobranej z GitHuba
+    // Czysta, poprawna polityka CSP
     const cspHeader = `
       default-src 'self';
       script-src 'self' 'unsafe-inline';
       style-src 'self' 'unsafe-inline';
-      img-src 'self' blob: data: https://kgycvgcvceaaaopjhato.supabase.co https://upload.wikimedia.org; -- OTO POPRAWKA (DODANA DOMENA WIKIPEDII)
+      img-src 'self' blob: data: https://kgycvgcvceaaaopjhato.supabase.co https://upload.wikimedia.org https://commons.wikimedia.org;
       font-src 'self';
       object-src 'none';
       base-uri 'self';
       form-action 'self';
-      frame-ancestors 'none';
+      frame-ancestors 'self';
     `.replace(/\s{2,}/g, ' ').trim();
 
     return new NextResponse(html, {
       headers: { 
         'Content-Type': 'text/html; charset=utf-8',
-        'Content-Security-Policy': cspHeader,      // Usuwa błąd "CSP Header Not Set" w ZAP
-        'X-Frame-Options': 'DENY',                 // Chroni przed osadzaniem w ramkach (Clickjacking)
-        'X-Content-Type-Options': 'nosniff',       // Blokuje próby MIME sniffingu
+        'Content-Security-Policy': cspHeader,
+        'X-Frame-Options': 'SAMEORIGIN',
+        'X-Content-Type-Options': 'nosniff',
       }
     })
   } catch (err) {
