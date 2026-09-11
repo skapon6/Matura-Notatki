@@ -63,7 +63,7 @@ export async function GET(
 
   const canViewFullNote = isNoteFree || hasAccess;
 
-  // 3. POBIERAMY ORYGINALNY PLIK HTML Z GITHUBA DLA KAŻDEGO
+  // 3. POBIERAMY ORYGINALNY PLIK HTML Z GITHUBA
   try {
     const owner = 'skapon6';
     const repo = 'Notatki-Private-Matura-Projekt';
@@ -86,7 +86,7 @@ export async function GET(
     let html = await response.text();
 
     // -------------------------------------------------------------
-    // WARIANT A: UŻYTKOWNIK ZALOGOWANY Z PAKIETEM -> PEŁNA NOTATKA
+    // WARIANT A: ZALOGOWANY Z PAKIETEM -> PEŁNA TREŚĆ
     // -------------------------------------------------------------
     if (canViewFullNote) {
       return new NextResponse(html, {
@@ -96,13 +96,30 @@ export async function GET(
     }
 
     // -------------------------------------------------------------
-    // WARIANT B: GOŚĆ / BOT GOOGLE -> ORYGINALNY NAGŁÓWEK + ZABLOKOWANE SEKCJE + PAYWALL
+    // WARIANT B: GOŚĆ / BOT GOOGLE -> WYCZYSZCZENIE TREŚCI + COZY DARK THEME
     // -------------------------------------------------------------
     
-    // Styl i baner paywalla wstrzykiwany do oryginalnego HTML-a
-    const lockStylesAndPaywall = `
+    // 1. Bezpiecznie usuwamy treść merytoryczną z wnętrza sekcji (Zero wycieku)
+    html = html.replace(/<(div|section)[^>]*(class|id)=["'][^"']*(content|body|accordion-body|collapsible|panel|inner|details)[^"']*["'][^>]*>[\s\S]*?<\/\1>/gi, '<div class="locked-placeholder" style="display:none;"></div>');
+    
+    // 2. Usuwamy wszelkie skrypty rozwijania
+    html = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+
+    // 3. Wymuszamy jednolity, luksusowy ciemny motyw na CAŁEJ stronie
+    const unifiedDarkStylesAndNav = `
       <style>
-        /* Blokujemy rozwijanie treści dla niezalogowanych */
+        /* 1. Globalny reset pod Cozy Dark Academic */
+        html, body {
+          background-color: #120e0c !important;
+          background-image: none !important;
+          color: #d4c5b9 !important;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          min-height: 100vh !important;
+        }
+
+        /* 2. Ukrywanie zawartości sekcji */
         .collapsible-content, 
         .section-content, 
         .accordion-content, 
@@ -112,26 +129,79 @@ export async function GET(
           display: none !important;
         }
 
-        /* Zmieniamy przyciski rozwijania na kłódki */
-        button, .btn, [onclick*="toggle"], [onclick*="pokaz"] {
-          pointer-events: none !important;
-          opacity: 0.65 !important;
-          cursor: not-allowed !important;
-          background: rgba(30, 24, 20, 0.8) !important;
-          color: #c68a4c !important;
-          border-color: rgba(198, 138, 76, 0.3) !important;
+        /* 3. Ujednolicenie kart i nagłówków */
+        .header-card, .info-card, .card, [class*="card"], [class*="hero"], [class*="box"] {
+          background-color: rgba(26, 21, 18, 0.75) !important;
+          border: 1px solid rgba(198, 138, 76, 0.25) !important;
+          color: #f5f0eb !important;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
         }
 
-        /* Dolny kontener Paywalla */
+        /* 4. Paski sekcji (1-8) */
+        .section-header, .accordion-header, [class*="section-item"], [class*="row-item"] {
+          background-color: rgba(22, 17, 14, 0.9) !important;
+          border: 1px solid rgba(212, 197, 185, 0.12) !important;
+          border-radius: 16px !important;
+          color: #f5f0eb !important;
+          margin-bottom: 12px !important;
+        }
+
+        /* 5. Wyraziste kolory tekstów */
+        h1, h2, h3, h4, h5, h6, strong, [class*="title"] {
+          color: #f5f0eb !important;
+        }
+        p, span, small, [class*="subtitle"], [class*="desc"] {
+          color: #a89f91 !important;
+        }
+
+        /* 6. Przyciski zablokowane */
+        button, .btn, [onclick*="toggle"], [onclick*="pokaz"] {
+          pointer-events: none !important;
+          cursor: not-allowed !important;
+          background: rgba(35, 27, 22, 0.9) !important;
+          color: #c68a4c !important;
+          border: 1px solid rgba(198, 138, 76, 0.3) !important;
+          border-radius: 10px !important;
+          padding: 6px 14px !important;
+          font-size: 11px !important;
+          font-weight: 700 !important;
+          opacity: 0.9 !important;
+        }
+
+        /* 7. Górny pasek nawigacji */
+        .preview-nav-bar {
+          padding: 14px 24px;
+          background: rgba(18, 14, 12, 0.95);
+          border-bottom: 1px solid rgba(212, 197, 185, 0.1);
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-family: sans-serif;
+          position: sticky;
+          top: 0;
+          z-index: 999;
+          backdrop-filter: blur(8px);
+        }
+
+        .preview-nav-bar a {
+          color: #c68a4c;
+          text-decoration: none;
+          font-size: 13px;
+          font-weight: 700;
+          pointer-events: auto !important;
+          opacity: 1 !important;
+        }
+
+        /* 8. Dolny Paywall */
         .preview-paywall-container {
-          margin: 40px auto 60px auto;
+          margin: 40px auto 70px auto;
           max-width: 850px;
           background: linear-gradient(180deg, rgba(28, 22, 18, 0.95), rgba(16, 12, 10, 0.98));
           border: 1px solid rgba(198, 138, 76, 0.35);
           border-radius: 28px;
-          padding: 40px 24px;
+          padding: 45px 24px;
           text-align: center;
-          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
           position: relative;
           z-index: 100;
         }
@@ -170,25 +240,6 @@ export async function GET(
           background: #dba062;
           transform: scale(1.03);
         }
-
-        .preview-nav-bar {
-          padding: 14px 24px;
-          background: rgba(18, 14, 12, 0.95);
-          border-bottom: 1px solid rgba(212, 197, 185, 0.1);
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          font-family: sans-serif;
-        }
-
-        .preview-nav-bar a {
-          color: #c68a4c;
-          text-decoration: none;
-          font-size: 13px;
-          font-weight: 700;
-          pointer-events: auto !important;
-          opacity: 1 !important;
-        }
       </style>
 
       <div class="preview-nav-bar">
@@ -205,7 +256,7 @@ export async function GET(
           Odblokuj całą treść notatki z ${note.title}
         </h2>
         <p style="color: #a89f91; font-size: 14px; max-width: 540px; margin: 0 auto; line-height: 1.6;">
-          Zaloguj się lub odblokuj pakiet dostępu, aby czytać pełne streszczenia, motywy, konteksty, rozwiązywać quizy oraz sprawdzać wypracowania przez AI.
+          Zaloguj się lub odblokuj pakiet dostępu, aby czytać pełne opracowania, motywy, konteksty, rozwiązywać quizy oraz sprawdzać wypracowania przez AI.
         </p>
         <a href="/" class="preview-paywall-btn">
           🚀 Przejdź do Pulpitu i Odblokuj Dostęp
@@ -213,13 +264,13 @@ export async function GET(
       </div>
     `;
 
-    // 1. Wstrzykujemy pasek nawigacji i style na początek <body>
-    html = html.replace(/<body[^>]*>/i, (match) => `${match}${lockStylesAndPaywall}`);
+    // Wstrzykujemy nawigację i ciemne style do <body>
+    html = html.replace(/<body[^>]*>/i, (match) => `${match}${unifiedDarkStylesAndNav}`);
 
-    // 2. Podmieniamy tekst na przyciskach na kłódeczki 🔒
+    // Podmieniamy tekst przycisków na kłódeczki
     html = html.replace(/Pokaż\s*\/\s*ukryj/gi, '🔒 Zablokowane');
 
-    // 3. Wstrzykujemy baner paywalla przed końcem </body>
+    // Wstrzykujemy dolny paywall
     if (html.includes('</body>')) {
       html = html.replace('</body>', `${paywallHtml}</body>`);
     } else {
