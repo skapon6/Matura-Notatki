@@ -31,7 +31,8 @@ const nextConfig: NextConfig = {
           // 5. POPRAWKA 1: Dodany brakujący Permissions-Policy
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=(), browsing-topics=()",
+            // ✅ Zezwolenie dla własnej domeny:
+            value: "camera=(), microphone=(self), geolocation=(), browsing-topics=()",
           },
           // 6. POPRAWKA 2 i 3: Naprawiony syntax CSP + wymogi Mozilla Observatory
           {
