@@ -19,7 +19,7 @@ export async function GET(
   // 1. Pobieramy notatkę z bazy Supabase
   const { data: note, error } = await supabaseAdmin
     .from('notes')
-    .select('title, era, difficulty, read_time, file_path, is_free, chips, content')
+    .select('title, era, type, difficulty, read_time, file_path, is_free, chips, content')
     .eq('slug', slug)
     .single();
 
@@ -99,47 +99,45 @@ export async function GET(
   }
 
   // -------------------------------------------------------------
-  // WARIANT B: GOŚĆ / BOT GOOGLE -> AUTORSKI, BEZPIECZNY PODGLĄD BEZ WYCIEKU TREŚCI
+  // WARIANT B: GOŚĆ / BOT GOOGLE -> PERFEKCYJNY AUTORSKI PODGLĄD BEZ BŁĘDÓW CSS
   // -------------------------------------------------------------
-  
-  // Pobieramy plik z GitHuba TYLKO po to, aby wyciągnąć same nazwy sekcji (np. "1. Informacje podstawowe...")
+
+  // Inteligentny dobór sekcji w zależności od typu notatki
   let sectionTitles: string[] = [];
-  try {
-    const owner = 'skapon6';
-    const repo = 'Notatki-Private-Matura-Projekt';
+  const noteType = (note.type || '').toLowerCase();
 
-    const res = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/contents/${note.file_path}`,
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.GITHUB_NOTES_PAT}`,
-          Accept: 'application/vnd.github.v3.raw',
-        },
-        cache: 'no-store',
-      }
-    );
-
-    if (res.ok) {
-      const fullText = await res.text();
-      // Wyciągamy nagłówki sekcji typu "1. ...", "2. ..."
-      const matches = fullText.match(/(?:[1-8]\.\s*[^<>\n\r]{4,80})/g);
-      if (matches && matches.length > 0) {
-        sectionTitles = Array.from(new Set(matches.map(s => s.trim()))).slice(0, 8);
-      }
-    }
-  } catch (_) {}
-
-  // Jeśli nie udało się wyciągnąć, podajemy standardowe, profesjonalne sekcje maturalne
-  if (sectionTitles.length === 0) {
+  if (noteType === 'epoka') {
     sectionTitles = [
-      "1. Informacje podstawowe, geneza i tło historyczne",
-      "2. Kluczowe motywy literackie i toposy",
-      "3. Szczegółowa analiza problematyki i wątków",
-      "4. Charakterystyka głównych i drugoplanowych bohaterów",
-      "5. Konteksty kulturowe, filozoficzne i biograficzne",
-      "6. Złote cytaty i frazy kluczowe do wypracowania",
-      "7. Wzorcowe konspekty rozprawek i tezy maturalne",
-      "8. Maturalny test sprawdzający wiedzę z odpowiedziami"
+      "1. Ramy czasowe, tło historyczne i nazwa epoki",
+      "2. Główne nurty filozoficzne i światopogląd epoki",
+      "3. Kluczowe motywy literackie, toposy i symbole",
+      "4. Przegląd najważniejszych arcydzieł i twórców",
+      "5. Gatunki literackie, styl i estetyka epoki",
+      "6. Złote cytaty i hasła przydatne w wypracowaniu",
+      "7. Przykładowe pytania do matury ustnej CKE",
+      "8. Maturalny test powtórkowy z odpowiedziami"
+    ];
+  } else if (noteType === 'lektura') {
+    sectionTitles = [
+      "1. Geneza utworu, czas i miejsce akcji",
+      "2. Szczegółowe streszczenie i kluczowe wątki fabuły",
+      "3. Charakterystyka bohaterów głównych i drugoplanowych",
+      "4. Główne motywy literackie i problematyka dzieła",
+      "5. Funkcjonalne konteksty (filozoficzne, biograficzne, kulturowe)",
+      "6. Złote cytaty do wykorzystania w rozprawce",
+      "7. Wzorcowe tezy i konspekty wypracowań CKE",
+      "8. Pytania sprawdzające i test wiedzy z lektury"
+    ];
+  } else {
+    sectionTitles = [
+      "1. Wprowadzenie i najważniejsze założenia",
+      "2. Struktura i wymogi formalne według kryteriów CKE",
+      "3. Zestawienie kluczowych pojęć i motywów",
+      "4. Przykłady funkcjonalnego zastosowania w pracach",
+      "5. Najczęstsze błędy językowe, stylistyczne i merytoryczne",
+      "6. Wzorcowe schematy i gotowe szablony argumentacji",
+      "7. Wskazówki egzaminatora maturalnego",
+      "8. Praktyczne zadania i pytania kontrolne"
     ];
   }
 
@@ -148,7 +146,6 @@ export async function GET(
     ? note.chips.map((c: string) => `<span class="tag">#${c}</span>`).join(' ')
     : `<span class="tag">#matura</span> <span class="tag">#język polski</span> <span class="tag">#lektura</span>`;
 
-  // W 100% Czysty, nowoczesny szablon HTML dla podglądu
   const safePreviewHtml = `
 <!DOCTYPE html>
 <html lang="pl">
@@ -189,7 +186,7 @@ export async function GET(
       font-size: 13px;
     }
     .container {
-      max-width: 900px;
+      max-width: 860px;
       margin: 0 auto;
       padding: 36px 20px;
       width: 100%;
@@ -226,7 +223,7 @@ export async function GET(
     .subtitle {
       color: #a89f91;
       font-size: 15px;
-      line-height: 1.5;
+      line-height: 1.6;
       margin: 0 0 18px 0;
     }
     .tags {
@@ -236,8 +233,8 @@ export async function GET(
     }
     .tag {
       background: rgba(30, 24, 20, 0.8);
-      color: #8c827a;
-      border: 1px solid rgba(212, 197, 185, 0.1);
+      color: #a89f91;
+      border: 1px solid rgba(212, 197, 185, 0.12);
       padding: 4px 10px;
       border-radius: 8px;
       font-size: 12px;
@@ -274,6 +271,7 @@ export async function GET(
       text-transform: uppercase;
       letter-spacing: 0.5px;
       user-select: none;
+      white-space: nowrap;
     }
     .paywall-box {
       background: linear-gradient(180deg, rgba(28, 22, 18, 0.95), rgba(16, 12, 10, 0.98));
@@ -317,10 +315,10 @@ export async function GET(
 
   <div class="container">
     <div class="hero-card">
-      <span class="badge">📍 ${note.era || 'Język Polski'} • Poziom: ${note.difficulty || 'Średni'}</span>
+      <span class="badge">📍 ${note.era || 'Język Polski'} • Czas: ${note.read_time || 15} min • Poziom: ${note.difficulty || 'Średni'}</span>
       <h1>${note.title}</h1>
       <p class="subtitle">
-        ${typeof note.content === 'string' && note.content.length > 0 ? note.content : 'Kompleksowe opracowanie maturalne z epoki ' + (note.era || 'Język Polski') + ' zawierające motywy, konteksty i wzorce wypracowań.'}
+        ${typeof note.content === 'string' && note.content.length > 0 ? note.content : 'Kompleksowe opracowanie maturalne z epoki ' + (note.era || 'Język Polski') + ' zawierające motywy, konteksty, streszczenie i wzorce wypracowań.'}
       </p>
       <div class="tags">${chipsHtml}</div>
     </div>
