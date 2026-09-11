@@ -30,7 +30,7 @@ export async function GET(
   const isNoteFree = Boolean(note.is_free);
   let hasAccess = false;
 
-  // 2. Weryfikacja sesji użytkownika
+  // 2. Weryfikacja sesji użytkownika na serwerze
   try {
     const supabase = await getSupabaseServer();
     const { data: { user } } = await supabase.auth.getUser();
@@ -86,7 +86,7 @@ export async function GET(
     let html = await response.text();
 
     // -------------------------------------------------------------
-    // WARIANT A: ZALOGOWANY Z PAKIETEM -> PEŁNA TREŚĆ
+    // WARIANT A: ZALOGOWANY Z PAKIETEM -> 100% PEŁNA NOTATKA
     // -------------------------------------------------------------
     if (canViewFullNote) {
       return new NextResponse(html, {
@@ -96,19 +96,22 @@ export async function GET(
     }
 
     // -------------------------------------------------------------
-    // WARIANT B: GOŚĆ / BOT GOOGLE -> WYCZYSZCZENIE TREŚCI + COZY DARK THEME
+    // WARIANT B: GOŚĆ / BOT GOOGLE -> PANCERNY PODGLĄD BEZ ROZJEŻDŻANIA STRONY
     // -------------------------------------------------------------
     
-    // 1. Bezpiecznie usuwamy treść merytoryczną z wnętrza sekcji (Zero wycieku)
-    html = html.replace(/<(div|section)[^>]*(class|id)=["'][^"']*(content|body|accordion-body|collapsible|panel|inner|details)[^"']*["'][^>]*>[\s\S]*?<\/\1>/gi, '<div class="locked-placeholder" style="display:none;"></div>');
-    
+    // 1. Serwerowe usuwanie prawdziwej treści (zastępujemy tekst bezpieczną atrapą)
+    // Zostawiamy nagłówki i strukturę, ale czyścimy całą treść szczegółową
+    html = html.replace(/<p\b[^>]*>[\s\S]*?<\/p>/gi, '<p style="color:#6b5f54; font-style:italic; filter:blur(3px); user-select:none; margin:8px 0;">Treść merytoryczna zablokowana. Dostępna po odblokowaniu pakietu na platformie Wiedza Szyta na Miarę...</p>');
+    html = html.replace(/<li\b[^>]*>[\s\S]*?<\/li>/gi, '<li style="color:#6b5f54; filter:blur(3px); user-select:none;">Punkt opracowania zablokowany (wymaga aktywnego pakietu).</li>');
+    html = html.replace(/<blockquote\b[^>]*>[\s\S]*?<\/blockquote>/gi, '<blockquote style="color:#6b5f54; filter:blur(3px);">Cytat i omówienie zablokowane.</blockquote>');
+
     // 2. Usuwamy wszelkie skrypty rozwijania
     html = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
 
-    // 3. Wymuszamy jednolity, luksusowy ciemny motyw na CAŁEJ stronie
-    const unifiedDarkStylesAndNav = `
+    // 3. Wstrzykujemy bezpieczny arkusz stylów i nawigację
+    const lockStylesAndNav = `
       <style>
-        /* 1. Globalny reset pod Cozy Dark Academic */
+        /* 1. Globalne tło Cozy Dark */
         html, body {
           background-color: #120e0c !important;
           background-image: none !important;
@@ -119,7 +122,7 @@ export async function GET(
           min-height: 100vh !important;
         }
 
-        /* 2. Ukrywanie zawartości sekcji */
+        /* 2. Zwijanie zawartości sekcji */
         .collapsible-content, 
         .section-content, 
         .accordion-content, 
@@ -131,22 +134,21 @@ export async function GET(
 
         /* 3. Ujednolicenie kart i nagłówków */
         .header-card, .info-card, .card, [class*="card"], [class*="hero"], [class*="box"] {
-          background-color: rgba(26, 21, 18, 0.75) !important;
+          background-color: rgba(26, 21, 18, 0.85) !important;
           border: 1px solid rgba(198, 138, 76, 0.25) !important;
           color: #f5f0eb !important;
           box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
         }
 
-        /* 4. Paski sekcji (1-8) */
+        /* 4. Paski sekcji */
         .section-header, .accordion-header, [class*="section-item"], [class*="row-item"] {
-          background-color: rgba(22, 17, 14, 0.9) !important;
-          border: 1px solid rgba(212, 197, 185, 0.12) !important;
+          background-color: rgba(22, 17, 14, 0.95) !important;
+          border: 1px solid rgba(212, 197, 185, 0.15) !important;
           border-radius: 16px !important;
           color: #f5f0eb !important;
-          margin-bottom: 12px !important;
         }
 
-        /* 5. Wyraziste kolory tekstów */
+        /* 5. Kolory tekstów */
         h1, h2, h3, h4, h5, h6, strong, [class*="title"] {
           color: #f5f0eb !important;
         }
@@ -265,9 +267,9 @@ export async function GET(
     `;
 
     // Wstrzykujemy nawigację i ciemne style do <body>
-    html = html.replace(/<body[^>]*>/i, (match) => `${match}${unifiedDarkStylesAndNav}`);
+    html = html.replace(/<body[^>]*>/i, (match) => `${match}${lockStylesAndNav}`);
 
-    // Podmieniamy tekst przycisków na kłódeczki
+    // Podmieniamy przyciski na kłódeczki
     html = html.replace(/Pokaż\s*\/\s*ukryj/gi, '🔒 Zablokowane');
 
     // Wstrzykujemy dolny paywall
