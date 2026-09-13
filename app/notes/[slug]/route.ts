@@ -89,7 +89,141 @@ export async function GET(
     // WARIANT A: ZALOGOWANY Z PAKIETEM -> 100% PEŁNA NOTATKA
     // -------------------------------------------------------------
     if (canViewFullNote) {
-      return new NextResponse(rawHtml, {
+      // Dynamiczny, nowoczesny skrypt z automatycznym tytułem z bazy oraz obsługą punktorów
+      const noteTitleEscaped = JSON.stringify(note.title || 'Lektura');
+
+      const modernStarScript = `
+<script>
+  (function() {
+    const starBtn = document.getElementById('floating-star');
+    let textToSave = "";
+    let isSaving = false;
+
+    // Blokada kopiowania
+    document.addEventListener('copy', function(e) { e.preventDefault(); });
+    document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+
+    // Funkcja zachowująca strukturę punktorów i enterów
+    function getFormattedSelection(selection) {
+      if (!selection || selection.rangeCount === 0) return '';
+      const range = selection.getRangeAt(0);
+      const container = document.createElement('div');
+      container.appendChild(range.cloneContents());
+
+      // Zamiana elementów li na estetyczne punkty z nową linią
+      container.querySelectorAll('li').forEach(function(li) {
+        li.textContent = '\\n• ' + (li.textContent || '').trim();
+      });
+      // Zamiana bloków tekstowych na nowe linie
+      container.querySelectorAll('p, h1, h2, h3, h4, h5, h6').forEach(function(el) {
+        el.textContent = (el.textContent || '').trim() + '\\n';
+      });
+
+      let text = (container.innerText || container.textContent || '').trim();
+      return text.replace(/\\n{3,}/g, '\\n\\n');
+    }
+
+    function handleSelection(target) {
+      if (target === starBtn) return;
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
+        if (starBtn) starBtn.style.display = 'none';
+        return;
+      }
+
+      const formattedText = getFormattedSelection(selection);
+      if (formattedText.length >= 5 && formattedText.length <= 500) {
+        textToSave = formattedText;
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        if (starBtn) {
+          starBtn.style.left = (rect.left + window.scrollX + (rect.width / 2) - 18) + 'px';
+          starBtn.style.top = (rect.top + window.scrollY - 48) + 'px';
+          starBtn.style.display = 'flex';
+        }
+      } else {
+        if (starBtn) starBtn.style.display = 'none';
+      }
+    }
+
+    document.addEventListener('mouseup', function(e) { handleSelection(e.target); });
+    document.addEventListener('keyup', function() { handleSelection(); });
+    document.addEventListener('touchend', function(e) {
+      setTimeout(function() { handleSelection(e.target); }, 100);
+    });
+
+    async function saveNote() {
+      if (isSaving || !textToSave || !starBtn) return;
+      isSaving = true;
+      starBtn.innerText = "⏳";
+      starBtn.disabled = true;
+
+      try {
+        // Obsługa endpointu (sprawdza standardowy URL)
+        const response = await fetch('/api/personal-notes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: textToSave,
+            source_note: ${noteTitleEscaped}
+          })
+        });
+
+        if (response.ok) {
+          starBtn.innerText = "✅";
+          setTimeout(function() {
+            if (starBtn) {
+              starBtn.style.display = 'none';
+              starBtn.innerText = "⭐";
+              starBtn.disabled = false;
+            }
+            textToSave = "";
+            isSaving = false;
+            if (window.getSelection) {
+              window.getSelection().removeAllRanges();
+            }
+          }, 1000);
+        } else {
+          starBtn.innerText = "❌";
+          setTimeout(function() {
+            if (starBtn) {
+              starBtn.innerText = "⭐";
+              starBtn.disabled = false;
+            }
+            isSaving = false;
+          }, 1500);
+        }
+      } catch (err) {
+        if (starBtn) {
+          starBtn.innerText = "❌";
+          starBtn.disabled = false;
+        }
+        isSaving = false;
+      }
+    }
+
+    if (starBtn) {
+      starBtn.addEventListener('mousedown', function(e) { e.preventDefault(); e.stopPropagation(); });
+      starBtn.addEventListener('touchstart', function(e) { e.preventDefault(); e.stopPropagation(); saveNote(); });
+      starBtn.addEventListener('click', function(e) { e.preventDefault(); e.stopPropagation(); saveNote(); });
+    }
+  })();
+</script>
+`;
+
+      // 🪄 Podmieniamy stary skrypt z Barokiem w locie dla wszystkich 43 notatek naraz:
+      let processedHtml = rawHtml;
+      const scriptRegex = /<script\b[^>]*>[\s\S]*?saveNote[\s\S]*?<\/script>/gi;
+
+      if (scriptRegex.test(processedHtml)) {
+        processedHtml = processedHtml.replace(scriptRegex, modernStarScript);
+      } else if (processedHtml.includes('</body>')) {
+        processedHtml = processedHtml.replace('</body>', `${modernStarScript}\n</body>`);
+      } else {
+        processedHtml += modernStarScript;
+      }
+
+      return new NextResponse(processedHtml, {
         status: 200,
         headers: { 'Content-Type': 'text/html; charset=utf-8' },
       });
@@ -111,11 +245,9 @@ export async function GET(
 
     for (let i = 0; i < chunks.length - 1; i++) {
       const chunk = chunks[i];
-      // Bierzemy końcówkę bloku i czyścimy ze znaczników HTML
       const cleanText = chunk.slice(-450).replace(/<[^>]+>/g, '\n').trim();
       const lines = cleanText.split('\n').map(l => l.trim()).filter(Boolean);
 
-      // Szukamy linijki z numeracją (np. "1.", "2.", "3.")
       const numIndex = lines.findIndex(l => /(?:^|\s)[1-9]\d?\./.test(l));
       if (numIndex !== -1) {
         const title = lines[numIndex];
@@ -141,7 +273,7 @@ export async function GET(
       ? note.chips.map((c: string) => `<span class="tag">#${c}</span>`).join(' ')
       : `<span class="tag">#matura</span> <span class="tag">#język polski</span> <span class="tag">#lektura</span>`;
 
-    // Czysty, luksusowy szablon z PRAWDZIWYMI tytułami
+    // Czysty szablon podglądu SEO dla gości
     const safePreviewHtml = `
 <!DOCTYPE html>
 <html lang="pl">
