@@ -89,150 +89,7 @@ export async function GET(
     // WARIANT A: ZALOGOWANY Z PAKIETEM -> 100% PEŁNA NOTATKA
     // -------------------------------------------------------------
     if (canViewFullNote) {
-      const noteTitleEscaped = JSON.stringify(note.title || 'Lektura');
-
-      const modernStarScript = `
-<script>
-  (function() {
-    // 1. Zapewniamy istnienie przycisku gwiazdki w DOM
-    let starBtn = document.getElementById('floating-star');
-    if (!starBtn) {
-      starBtn = document.createElement('button');
-      starBtn.id = 'floating-star';
-      starBtn.innerHTML = '⭐';
-      starBtn.style.cssText = 'display:none;position:absolute;background:#c68a4c;color:#14100e;border:none;border-radius:50%;width:36px;height:36px;font-size:18px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.4);z-index:99999;align-items:center;justify-content:center;transition:transform 0.1s ease;';
-      document.body.appendChild(starBtn);
-    }
-
-    let rawSelectedText = "";
-    let isSaving = false;
-
-    // Blokady kopiowania
-    document.addEventListener('copy', function(e) { e.preventDefault(); });
-    document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
-
-    // 2. Formatowanie listy przy zapisie (zamiana podpunktów na • )
-    function formatTextWithBullets(text) {
-      if (!text) return '';
-      const lines = text.split(/\\r?\\n/).map(function(l) { return l.trim(); }).filter(Boolean);
-      if (lines.length <= 1) return text.trim();
-
-      return lines.map(function(line, idx) {
-        // Jeśli linijka to nagłówek (np. "Podstawowe pojęcia:"), zostawiamy bez kropki
-        if (idx === 0 && line.endsWith(':')) {
-          return line;
-        }
-        // Dodajemy punktor, jeśli linijka go jeszcze nie ma
-        if (!line.startsWith('•') && !line.startsWith('-') && !line.startsWith('*')) {
-          return '• ' + line;
-        }
-        return line;
-      }).join('\\n');
-    }
-
-    // 3. Super stabilne wykrywanie zaznaczenia (nie wywala błędów w konsoli)
-    function handleSelection(target) {
-      if (target === starBtn) return;
-      const selection = window.getSelection();
-
-      if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
-        starBtn.style.display = 'none';
-        return;
-      }
-
-      const text = selection.toString().trim();
-
-      // Zakres 4 do 700 znaków
-      if (text.length >= 4 && text.length <= 700) {
-        rawSelectedText = text;
-        try {
-          const range = selection.getRangeAt(0);
-          const rect = range.getBoundingClientRect();
-          if (rect.width > 0 || rect.height > 0) {
-            starBtn.style.left = (rect.left + window.scrollX + (rect.width / 2) - 18) + 'px';
-            starBtn.style.top = (rect.top + window.scrollY - 48) + 'px';
-            starBtn.style.display = 'flex';
-          }
-        } catch (e) {
-          starBtn.style.display = 'none';
-        }
-      } else {
-        starBtn.style.display = 'none';
-      }
-    }
-
-    document.addEventListener('mouseup', function(e) { handleSelection(e.target); });
-    document.addEventListener('keyup', function() { handleSelection(); });
-    document.addEventListener('touchend', function(e) {
-      setTimeout(function() { handleSelection(e.target); }, 120);
-    });
-
-    // 4. Zapis do bazy
-    async function saveNote() {
-      if (isSaving || !rawSelectedText) return;
-      isSaving = true;
-      starBtn.innerText = "⏳";
-      starBtn.disabled = true;
-
-      const formatted = formatTextWithBullets(rawSelectedText);
-
-      try {
-        const response = await fetch('/api/personal-notes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text: formatted,
-            source_note: ${noteTitleEscaped}
-          })
-        });
-
-        if (response.ok) {
-          starBtn.innerText = "✅";
-          setTimeout(function() {
-            starBtn.style.display = 'none';
-            starBtn.innerText = "⭐";
-            starBtn.disabled = false;
-            rawSelectedText = "";
-            isSaving = false;
-            if (window.getSelection) {
-              window.getSelection().removeAllRanges();
-            }
-          }, 1000);
-        } else {
-          starBtn.innerText = "❌";
-          setTimeout(function() {
-            starBtn.innerText = "⭐";
-            starBtn.disabled = false;
-            isSaving = false;
-          }, 1500);
-        }
-      } catch (err) {
-        starBtn.innerText = "❌";
-        starBtn.disabled = false;
-        isSaving = false;
-      }
-    }
-
-    starBtn.addEventListener('mousedown', function(e) { e.preventDefault(); e.stopPropagation(); });
-    starBtn.addEventListener('touchstart', function(e) { e.preventDefault(); e.stopPropagation(); saveNote(); });
-    starBtn.addEventListener('click', function(e) { e.preventDefault(); e.stopPropagation(); saveNote(); });
-  })();
-</script>
-`;
-
-      // 🛡️ Precyzyjna podmiana tylko starego skryptu saveNote
-      const safeScriptRegex = /<script\b[^>]*>(?:(?!<\/script>)[\s\S])*?saveNote[\s\S]*?<\/script>/i;
-
-      let processedHtml = rawHtml;
-      if (safeScriptRegex.test(processedHtml)) {
-        processedHtml = processedHtml.replace(safeScriptRegex, modernStarScript);
-      } else if (processedHtml.includes('</body>')) {
-        processedHtml = processedHtml.replace('</body>', `${modernStarScript}\n</body>`);
-      } else {
-        processedHtml += modernStarScript;
-      }
-
-      return new NextResponse(processedHtml, {
+      return new NextResponse(rawHtml, {
         status: 200,
         headers: { 'Content-Type': 'text/html; charset=utf-8' },
       });
@@ -241,19 +98,24 @@ export async function GET(
     // -------------------------------------------------------------
     // WARIANT B: GOŚĆ / BOT GOOGLE -> POBIERAMY PRAWDZIWE TYTUŁY I PODTYTUŁY
     // -------------------------------------------------------------
+    
+    // 1. Całkowicie usuwamy head, style i skrypty, aby wyczyścić plik ze śmieci CSS
     const bodyOnly = rawHtml
       .replace(/<head\b[^<]*(?:(?!<\/head>)<[^<]*)*<\/head>/gi, '')
       .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
 
+    // 2. Wyciągamy dokładnie te bloki, które znajdują się przed przyciskami "Pokaż / ukryj"
     const parsedSections: { title: string; desc: string }[] = [];
     const chunks = bodyOnly.split(/Pokaż\s*\/\s*ukryj/gi);
 
     for (let i = 0; i < chunks.length - 1; i++) {
       const chunk = chunks[i];
+      // Bierzemy końcówkę bloku i czyścimy ze znaczników HTML
       const cleanText = chunk.slice(-450).replace(/<[^>]+>/g, '\n').trim();
       const lines = cleanText.split('\n').map(l => l.trim()).filter(Boolean);
 
+      // Szukamy linijki z numeracją (np. "1.", "2.", "3.")
       const numIndex = lines.findIndex(l => /(?:^|\s)[1-9]\d?\./.test(l));
       if (numIndex !== -1) {
         const title = lines[numIndex];
@@ -262,6 +124,7 @@ export async function GET(
       }
     }
 
+    // Fallback gdyby plik miał inną strukturę
     if (parsedSections.length === 0) {
       parsedSections.push(
         { title: "1. Informacje podstawowe i geneza", desc: "tło historyczne, światopogląd, ramy czasowe" },
@@ -273,10 +136,12 @@ export async function GET(
       );
     }
 
+    // Tagi
     const chipsHtml = Array.isArray(note.chips) && note.chips.length > 0
       ? note.chips.map((c: string) => `<span class="tag">#${c}</span>`).join(' ')
       : `<span class="tag">#matura</span> <span class="tag">#język polski</span> <span class="tag">#lektura</span>`;
 
+    // Czysty, luksusowy szablon z PRAWDZIWYMI tytułami
     const safePreviewHtml = `
 <!DOCTYPE html>
 <html lang="pl">
