@@ -89,7 +89,6 @@ export async function GET(
     // WARIANT A: ZALOGOWANY Z PAKIETEM -> 100% PEŁNA NOTATKA
     // -------------------------------------------------------------
     if (canViewFullNote) {
-      // Dynamiczny, nowoczesny skrypt z automatycznym tytułem z bazy oraz obsługą punktorów
       const noteTitleEscaped = JSON.stringify(note.title || 'Lektura');
 
       const modernStarScript = `
@@ -110,11 +109,9 @@ export async function GET(
       const container = document.createElement('div');
       container.appendChild(range.cloneContents());
 
-      // Zamiana elementów li na estetyczne punkty z nową linią
       container.querySelectorAll('li').forEach(function(li) {
         li.textContent = '\\n• ' + (li.textContent || '').trim();
       });
-      // Zamiana bloków tekstowych na nowe linie
       container.querySelectorAll('p, h1, h2, h3, h4, h5, h6').forEach(function(el) {
         el.textContent = (el.textContent || '').trim() + '\\n';
       });
@@ -159,7 +156,6 @@ export async function GET(
       starBtn.disabled = true;
 
       try {
-        // Obsługa endpointu (sprawdza standardowy URL)
         const response = await fetch('/api/personal-notes', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -211,12 +207,13 @@ export async function GET(
 </script>
 `;
 
-      // 🪄 Podmieniamy stary skrypt z Barokiem w locie dla wszystkich 43 notatek naraz:
-      let processedHtml = rawHtml;
-      const scriptRegex = /<script\b[^>]*>[\s\S]*?saveNote[\s\S]*?<\/script>/gi;
+      // 🛡️ BEZPIECZNY REGEX: Podmienia TYLKO ten skrypt, który zawiera "saveNote",
+      // nie naruszając innych skryptów z "Pokaż / ukryj"!
+      const safeScriptRegex = /<script\b[^>]*>(?:(?!<\/script>)[\s\S])*?saveNote[\s\S]*?<\/script>/i;
 
-      if (scriptRegex.test(processedHtml)) {
-        processedHtml = processedHtml.replace(scriptRegex, modernStarScript);
+      let processedHtml = rawHtml;
+      if (safeScriptRegex.test(processedHtml)) {
+        processedHtml = processedHtml.replace(safeScriptRegex, modernStarScript);
       } else if (processedHtml.includes('</body>')) {
         processedHtml = processedHtml.replace('</body>', `${modernStarScript}\n</body>`);
       } else {
@@ -273,7 +270,7 @@ export async function GET(
       ? note.chips.map((c: string) => `<span class="tag">#${c}</span>`).join(' ')
       : `<span class="tag">#matura</span> <span class="tag">#język polski</span> <span class="tag">#lektura</span>`;
 
-    // Czysty szablon podglądu SEO dla gości
+    // Czysty, luksusowy szablon z PRAWDZIWYMI tytułami
     const safePreviewHtml = `
 <!DOCTYPE html>
 <html lang="pl">
