@@ -96,35 +96,75 @@ export async function GET(
     }
 
     // -------------------------------------------------------------
-    // WARIANT B: GOŚĆ / BOT GOOGLE -> POBIERAMY PRAWDZIWE TYTUŁY I PODTYTUŁY
+    // WARIANT B: GOŚĆ / BOT GOOGLE -> CZYSTY, WYSPECJALIZOWANY PODGLĄD
     // -------------------------------------------------------------
     
-    // 1. Całkowicie usuwamy head, style i skrypty, aby wyczyścić plik ze śmieci CSS
+    // 1. Usuwamy head, style i skrypty
     const bodyOnly = rawHtml
       .replace(/<head\b[^<]*(?:(?!<\/head>)<[^<]*)*<\/head>/gi, '')
       .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
 
-    // 2. Wyciągamy dokładnie te bloki, które znajdują się przed przyciskami "Pokaż / ukryj"
+    // 2. Inteligentne wyciąganie sekcji z ignorowaniem ramek z instrukcjami
     const parsedSections: { title: string; desc: string }[] = [];
+    const seenNumbers = new Set<string>();
     const chunks = bodyOnly.split(/Pokaż\s*\/\s*ukryj/gi);
+
+    const isGarbageLine = (line: string) => {
+      const lower = line.toLowerCase();
+      return (
+        lower.includes('klikaj') ||
+        lower.includes('kliknij') ||
+        lower.includes('spróbuj') ||
+        lower.includes('przypomnij') ||
+        lower.includes('przypomnieć') ||
+        lower.includes('wskazówk') ||
+        lower.includes('samodzielnie') ||
+        lower.includes('dopiero potem') ||
+        line.trim() === '"' ||
+        line.trim() === '„' ||
+        line.trim().length < 4
+      );
+    };
 
     for (let i = 0; i < chunks.length - 1; i++) {
       const chunk = chunks[i];
-      // Bierzemy końcówkę bloku i czyścimy ze znaczników HTML
-      const cleanText = chunk.slice(-450).replace(/<[^>]+>/g, '\n').trim();
-      const lines = cleanText.split('\n').map(l => l.trim()).filter(Boolean);
+      const cleanText = chunk.slice(-500).replace(/<[^>]+>/g, '\n').trim();
+      const rawLines = cleanText.split('\n').map(l => l.trim()).filter(Boolean);
 
-      // Szukamy linijki z numeracją (np. "1.", "2.", "3.")
-      const numIndex = lines.findIndex(l => /(?:^|\s)[1-9]\d?\./.test(l));
-      if (numIndex !== -1) {
-        const title = lines[numIndex];
-        const desc = lines.slice(numIndex + 1).join(' • ').slice(0, 160);
+      // Szukamy nagłówka od końca chunk-a (najbliżej przycisku "Pokaż / ukryj")
+      let titleIndex = -1;
+      for (let j = rawLines.length - 1; j >= 0; j--) {
+        const line = rawLines[j];
+        if (isGarbageLine(line)) continue;
+
+        // Linia z numerem rozdziału, np. "1. Antyk", "2. Mitologia", "10. Test"
+        if (/^[^\w\d]*\d{1,2}\.\s+[A-ZĄĆĘŁŃÓŚŹŻ]/.test(line)) {
+          titleIndex = j;
+          break;
+        }
+      }
+
+      if (titleIndex !== -1) {
+        let title = rawLines[titleIndex].replace(/^[^\w\d]*(?=\d)/, '').trim();
+        const numMatch = title.match(/^(\d{1,2})\./);
+        const sectionNum = numMatch ? numMatch[1] : null;
+
+        // Jeśli ten numer rozdziału już dodaliśmy, ignorujemy duplikat
+        if (sectionNum && seenNumbers.has(sectionNum)) {
+          continue;
+        }
+
+        // Linie poniżej tytułu to podtytuł/opis
+        const descLines = rawLines.slice(titleIndex + 1).filter(l => !isGarbageLine(l));
+        const desc = descLines.join(' • ').slice(0, 160).trim();
+
+        if (sectionNum) seenNumbers.add(sectionNum);
         parsedSections.push({ title, desc });
       }
     }
 
-    // Fallback gdyby plik miał inną strukturę
+    // Fallback gdyby plik miał nietypową strukturę
     if (parsedSections.length === 0) {
       parsedSections.push(
         { title: "1. Informacje podstawowe i geneza", desc: "tło historyczne, światopogląd, ramy czasowe" },
@@ -141,7 +181,7 @@ export async function GET(
       ? note.chips.map((c: string) => `<span class="tag">#${c}</span>`).join(' ')
       : `<span class="tag">#matura</span> <span class="tag">#język polski</span> <span class="tag">#lektura</span>`;
 
-    // Czysty, luksusowy szablon z PRAWDZIWYMI tytułami
+    // Czysty, profesjonalny szablon z kłódkami
     const safePreviewHtml = `
 <!DOCTYPE html>
 <html lang="pl">
