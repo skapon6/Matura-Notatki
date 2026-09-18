@@ -42,7 +42,18 @@ export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
   // Stany dla dziennego celu nauki
   const [studyGoal, setStudyGoal] = useState<number>(25);
 
-  // Automatyczne przełączanie na żądaną zakładkę przy każdym otwarciu
+  // 🎯 1. Nasłuchiwanie zdarzenia z paska nawigacji (np. po kliknięciu w Twój login)
+  useEffect(() => {
+    const handleSetTab = (event: any) => {
+      if (event.detail) {
+        setActiveTab(event.detail);
+      }
+    };
+    window.addEventListener("set-settings-tab", handleSetTab);
+    return () => window.removeEventListener("set-settings-tab", handleSetTab);
+  }, []);
+
+  // 🎯 2. Automatyczne przełączenie przy otwarciu z poziomu propsów
   useEffect(() => {
     if (isOpen && initialTab) {
       setActiveTab(initialTab);
@@ -67,13 +78,11 @@ export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Sprawdzamy zgodność powtórzonego hasła
     if (newPassword !== confirmPassword) {
       triggerNotification("Nowe hasła nie są identyczne. Upewnij się, że wpisałeś je poprawnie.", "error");
       return;
     }
 
-    // Sprawdzamy siłę hasła (min. 8 znaków, cyfra, litera)
     const passwordError = validatePasswordStrength(newPassword);
     if (passwordError) {
       triggerNotification(passwordError, "error");
@@ -82,7 +91,6 @@ export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
 
     setLoading(true);
     try {
-      // Weryfikacja starego hasła przez ponowne uwierzytelnienie
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: user?.email,
         password: oldPassword,
@@ -94,7 +102,6 @@ export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
         return;
       }
 
-      // Aktualizacja hasła na nowe
       const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword,
       });
@@ -116,7 +123,7 @@ export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
     }
   };
 
-  // 2. USUWANIE KONTA (Przez bezpieczne API serwera)
+  // 2. USUWANIE KONTA
   const handleDeleteAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     if (deleteConfirmText.trim().toUpperCase() !== "USUŃ") {
@@ -365,7 +372,6 @@ export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
   );
 };
 
-// Pomocnicza funkcja motywów
 function getThemeClasses(theme: CozyTheme) {
   switch (theme) {
     case "rainy":
