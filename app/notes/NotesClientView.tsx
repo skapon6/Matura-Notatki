@@ -40,7 +40,8 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEra, setSelectedEra] = useState("Wszystkie");
-  const [selectedType, setSelectedType] = useState<"all" | "epoka" | "lektura" | "inne">("all");
+  // 🎯 Typ notatki: lektura / epoka / pomocnik
+  const [selectedType, setSelectedType] = useState<"all" | "lektura" | "epoka" | "pomocnik">("all");
   const [showOnlyFree, setShowOnlyFree] = useState(false);
   const [readFilter, setReadFilter] = useState<"all" | "read" | "unread">("all");
   const [readNotes, setReadNotes] = useState<number[]>([]);
@@ -48,14 +49,6 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
   const [cozyNotification, setCozyNotification] = useState<{
     message: string; type: "success" | "error" | "info";
   } | null>(null);
-
-  const triggerNotification = (message: string, type: "success" | "error" | "info" = "info") => {
-    setCozyNotification({ message, type });
-    if (type === "success") playSound("success");
-    else if (type === "error") playSound("error");
-    else playSound("click");
-    setTimeout(() => setCozyNotification(null), 4500);
-  };
 
   const eras = [
     "Wszystkie", "Antyk", "Średniowiecze", "Renesans", "Barok", "Oświecenie", "Romantyzm", "Pozytywizm", "Młoda Polska", "Dwudziestolecie", "Wojna i Okupacja", "Współczesność",
@@ -149,10 +142,20 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
     return "💡 Pomocnik naukowy";
   };
 
+  // Filtrowanie
   const filteredNotes = notes.filter((note) => {
     if (!hasAccess && showOnlyFree && !note.is_free) return false;
     if (readFilter === "read" && !readNotes.includes(note.id)) return false;
     if (readFilter === "unread" && readNotes.includes(note.id)) return false;
+
+    // Filtrowanie po typie (lektura / epoka / pomocnik)
+    if (selectedType !== "all") {
+      if (selectedType === "pomocnik") {
+        if (note.type === "epoka" || note.type === "lektura") return false;
+      } else if (note.type !== selectedType) {
+        return false;
+      }
+    }
 
     if (selectedEra !== "Wszystkie") {
       const eraMatch = note.era?.toLowerCase() === selectedEra.toLowerCase();
@@ -161,11 +164,7 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
         (selectedEra === "Współczesność" && note.era?.toLowerCase().includes("współczesność"));
       if (!eraMatch && !specialMatch) return false;
     }
-    if (selectedType !== "all") {
-      if (selectedType === "inne") {
-        if (note.type === "epoka" || note.type === "lektura") return false;
-      } else if (note.type !== selectedType) return false;
-    }
+
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const titleMatch = note.title?.toLowerCase().includes(query);
@@ -186,15 +185,6 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-500 ${currentTheme.bg} text-stone-200 font-sans`}>
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes slideIn {
-          0% { transform: translateY(30px) scale(0.95); opacity: 0; }
-          100% { transform: translateY(0) scale(1); opacity: 1; }
-        }
-        .animate-slide-in { animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-      `}} />
-
-      {/* HEADER Z ORYGINALNYM ODTWARZACZEM LO-FI */}
       <header className={`border-b ${currentTheme.cardBorder} px-4 sm:px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 backdrop-blur-md sticky top-0 z-40 transition-colors duration-500`}>
         <div className="flex w-full md:w-auto items-center justify-between md:justify-start gap-4">
           <button onClick={() => { playSound("click"); router.push("/"); }} className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 transition-all text-xs font-medium ${currentTheme.subText} hover:text-stone-100 cursor-pointer`}>
@@ -211,7 +201,6 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
           </div>
         </div>
 
-        {/* ORYGINALNY ODTWARZACZ LO-FI Z IKONAMI SVG I SUWAKIEM GŁOŚNOŚCI */}
         <div className="flex w-full md:w-auto items-center justify-between md:justify-end gap-3 sm:gap-4 border-t md:border-t-0 border-stone-800/40 pt-3 md:pt-0">
           <div className={`flex items-center gap-1 sm:gap-1.5 px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} transition-all duration-300 select-none shadow-md hover:border-amber-500/20 hover:bg-stone-900/30 hover:shadow-lg hover:shadow-amber-500/5`}>
             
@@ -243,7 +232,6 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
               </svg>
             </button>
             
-            {/* Suwak głośności */}
             <div className="hidden sm:flex items-center gap-1.5 sm:gap-2 ml-1 border-l border-stone-800/80 pl-2 sm:pl-3">
               <svg className="w-4 h-4 text-stone-500" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 12H3a1 1 0 01-1-1V9a1 1 0 011-1h1.586l3.707-3.707a1 1 0 011.09-.217z" clipRule="evenodd" />
@@ -259,16 +247,16 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
                 style={{ WebkitAppearance: "none" }}
               />
             </div>
-
           </div>
         </div>
       </header>
 
-      {/* GŁÓWNY WIDOK */}
+      {/* GŁÓWNY PANEL FILTROWANIA */}
       <main className="max-w-7xl mx-auto w-full p-6 flex flex-col gap-6 flex-1 select-none animate-slide-in">
-        <div className={`p-6 rounded-3xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} shadow-md flex flex-col gap-4`}>
+        <div className={`p-6 rounded-3xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} shadow-md flex flex-col gap-3.5`}>
           
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 border-b border-stone-800/40 pb-3 mb-1">
+          {/* 🎯 1. FILTR STATUSU */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 border-b border-stone-800/40 pb-3">
             <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider pl-1">Status:</span>
             <div className="flex gap-1.5 flex-wrap">
               {[
@@ -279,7 +267,7 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
                 <button 
                   key={status.id} 
                   onClick={() => { playSound("click"); setReadFilter(status.id); }} 
-                  className={`text-[10px] px-3.5 py-1.5 rounded-xl border font-bold uppercase transition-all cursor-pointer ${readFilter === status.id ? "bg-amber-500/20 text-amber-400 border-amber-500/40 font-bold" : "border-stone-800/60 bg-stone-950/40 text-stone-400"}`}
+                  className={`text-[10px] px-3.5 py-1.5 rounded-xl border font-bold uppercase transition-all cursor-pointer ${readFilter === status.id ? "bg-amber-500/20 text-amber-400 border-amber-500/40 font-bold" : "border-stone-800/60 bg-stone-950/40 text-stone-400 hover:border-stone-700 hover:text-stone-200"}`}
                 >
                   {status.label}
                 </button>
@@ -287,18 +275,41 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2 pt-1">
+          {/* 🎯 2. NOWY FILTR TYPU (Lektury / Epoki / Pomocniki) */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 border-b border-stone-800/40 pb-3">
+            <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider pl-1">Typ materiału:</span>
+            <div className="flex gap-1.5 flex-wrap">
+              {[
+                { id: "all" as const, label: "Wszystkie typy" },
+                { id: "lektura" as const, label: "📖 Lektury" },
+                { id: "epoka" as const, label: "📜 Epoki" },
+                { id: "pomocnik" as const, label: "💡 Pomocniki" },
+              ].map((type) => (
+                <button 
+                  key={type.id} 
+                  onClick={() => { playSound("click"); setSelectedType(type.id); }} 
+                  className={`text-[10px] px-3.5 py-1.5 rounded-xl border font-bold uppercase transition-all cursor-pointer ${selectedType === type.id ? "bg-amber-500/20 text-amber-400 border-amber-500/40 font-bold" : "border-stone-800/60 bg-stone-950/40 text-stone-400 hover:border-stone-700 hover:text-stone-200"}`}
+                >
+                  {type.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 🎯 3. FILTR EPOK */}
+          <div className="flex flex-wrap gap-2 pt-0.5">
             {eras.map((era) => (
-              <button key={era} onClick={() => setSelectedEra(era)} className={`text-xs px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${selectedEra === era ? "bg-amber-500/20 text-amber-400 border-amber-500/40 font-bold" : "border-stone-800/60 bg-stone-950/40 text-stone-400"}`}>{era}</button>
+              <button key={era} onClick={() => { playSound("click"); setSelectedEra(era); }} className={`text-xs px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${selectedEra === era ? "bg-amber-500/20 text-amber-400 border-amber-500/40 font-bold" : "border-stone-800/60 bg-stone-950/40 text-stone-400 hover:border-stone-700 hover:text-stone-200"}`}>{era}</button>
             ))}
           </div>
           
+          {/* WYSZUKIWARKA */}
           <input 
             type="text" 
             placeholder="Wyszukaj lekturę, motyw lub epokę..." 
             value={searchQuery} 
             onChange={(e) => setSearchQuery(e.target.value)} 
-            className="w-full bg-stone-950/80 border border-stone-800/80 rounded-2xl py-3 px-5 text-sm text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60" 
+            className="w-full bg-stone-950/80 border border-stone-800/80 rounded-2xl py-3 px-5 text-sm text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60 mt-1" 
           />
         </div>
 
@@ -327,7 +338,7 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
                         : note.type === "lektura" ? "bg-amber-950/40 border-amber-900/50 text-amber-400" 
                         : "bg-blue-950/40 border-blue-900/50 text-blue-300"
                       }`}>
-                        {note.type === "epoka" ? "📜 Epoka" : note.type === "lektura" ? "📖 Lektura" : "📝 Pomocnik"}
+                        {note.type === "epoka" ? "📜 Epoka" : note.type === "lektura" ? "📖 Lektura" : "💡 Pomocnik"}
                       </span>
                       {isFreeNote && (
                         <span className="bg-emerald-950/90 text-emerald-300 border border-emerald-600/50 text-[9px] uppercase font-extrabold px-2.5 py-0.5 rounded-md tracking-wider animate-pulse shadow-sm shadow-emerald-900/50">

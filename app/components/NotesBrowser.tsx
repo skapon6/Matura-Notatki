@@ -103,6 +103,9 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("Wszystkie");
   
+  // 🎯 Nowy stan: Lektura / Epoka / Pomocnik
+  const [selectedType, setSelectedType] = useState<"all" | "lektura" | "epoka" | "pomocnik">("all");
+
   const [showOnlyFree, setShowOnlyFree] = useState(false);
   const [readFilter, setReadFilter] = useState<"all" | "read" | "unread">("all");
   const [readNotes, setReadNotes] = useState<number[]>([]);
@@ -176,6 +179,16 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
     if (readFilter === "read" && !readNotes.includes(note.id)) return false;
     if (readFilter === "unread" && readNotes.includes(note.id)) return false;
 
+    // 🎯 Filtr po typie materiału
+    if (selectedType !== "all") {
+      if (selectedType === "pomocnik") {
+        if (note.type === "epoka" || note.type === "lektura") return false;
+      } else if (note.type !== selectedType) {
+        return false;
+      }
+    }
+
+    // Filtr po epoce
     if (selectedSubject === "Inne (Pomocniki)") {
       if (note.type === "epoka" || note.type === "lektura") return false;
     } else if (selectedSubject !== "Wszystkie") {
@@ -192,11 +205,12 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
       if (!eraMatch && !specialMatch) return false;
     }
 
+    // Wyszukiwarka
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       const titleMatch = (note.title || "").toLowerCase().includes(q);
       const eraMatch = (note.era || "").toLowerCase().includes(q);
-      const chipsMatch = Array.isArray(note.chips) && note.chips.some((chip: string) => chip.toLowerCase().includes(q));
+      const chipsMatch = Array.isArray(note.chips) && note.chips.some((chip: string) => chip.toLowerCase().includes(querySafe(q)));
       const contentString = typeof note.content === 'string' ? note.content : JSON.stringify(note.content || "");
       const contentMatch = contentString.toLowerCase().includes(q);
 
@@ -206,7 +220,11 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
     return true;
   });
 
-  // SORTOWANIE: DLA NIEZALOGOWANYCH DARMOWE NOTATKI TRAFIAJĄ NA SAMĄ GÓRĘ
+  function querySafe(q: string) {
+    return q;
+  }
+
+  // Sortowanie dla darmowych użytkowników
   const sortedNotes = [...filteredNotes].sort((a, b) => {
     if (!hasAccess) {
       if (a.is_free && !b.is_free) return -1;
@@ -220,6 +238,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
   return (
     <>
       <CozyGlowCard currentTheme={currentTheme} className="p-4 flex flex-col gap-3.5">
+        {/* WYSZUKIWARKA */}
         <div className="relative">
           <input
             type="text"
@@ -238,7 +257,7 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
           )}
         </div>
 
-        {/* FILTRY STATUSU I DOSTĘPU */}
+        {/* 🎯 1. FILTR STATUSU I DOSTĘPU */}
         <div className="flex flex-col sm:flex-row gap-3 pt-2 mt-1 border-t border-stone-800/40">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider mr-1">Status:</span>
@@ -272,8 +291,31 @@ export const NotesBrowser: React.FC<NotesBrowserProps> = ({
           </div>
         </div>
 
-        {/* FILTRY EPOK LITERACKICH */}
-        <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-stone-800/40">
+        {/* 🎯 2. NOWY FILTR TYPU (Lektury / Epoki / Pomocniki) */}
+        <div className="flex flex-wrap items-center gap-2 pt-2.5 border-t border-stone-800/40">
+          <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider mr-1">Typ:</span>
+          {[
+            { id: "all", label: "Wszystkie" },
+            { id: "lektura", label: "📖 Lektury" },
+            { id: "epoka", label: "📜 Epoki" },
+            { id: "pomocnik", label: "💡 Pomocniki" }
+          ].map(type => (
+            <button
+              key={type.id}
+              onClick={() => setSelectedType(type.id as any)}
+              className={`text-xs px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${
+                selectedType === type.id
+                  ? `${currentTheme.accentBg || "bg-amber-500/20 text-amber-400"} font-bold border-transparent`
+                  : "border-stone-800/60 bg-stone-950/40 text-stone-400 hover:border-stone-700 hover:text-stone-200"
+              }`}
+            >
+              {type.label}
+            </button>
+          ))}
+        </div>
+
+        {/* 🎯 3. FILTR EPOK LITERACKICH */}
+        <div className="flex flex-wrap items-center gap-2 pt-2.5 border-t border-stone-800/40">
           <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider mr-1">Kategoria:</span>
           {[
             "Wszystkie", "Antyk", "Średniowiecze", "Renesans", "Barok", "Oświecenie", "Romantyzm", "Pozytywizm", "Młoda Polska", "Dwudziestolecie", "Wojna i okupacja", "Współczesność", "Inne (Pomocniki)"
