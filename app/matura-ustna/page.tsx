@@ -772,16 +772,38 @@ export default function MaturaUstnaPage() {
             </div>
 
             {/* Kryteria szczegółowe CKE w siatce dwukolumnowej */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {evaluationResult.details?.map((detail: any, idx: number) => (
-                <div key={idx} className="p-4 rounded-2xl bg-stone-950/60 border border-stone-900 hover:border-amber-500/20 transition-all flex flex-col justify-between">
-                  <div className="flex justify-between font-bold text-[10px] uppercase tracking-wider text-stone-200 mb-2">
-                    <span>{detail.criterion}</span>
-                    <span className="text-amber-500 font-mono">{detail.points}</span>
+            {/* Kryteria szczegółowe CKE w siatce dwukolumnowej */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+              {evaluationResult.details?.map((detail: any, idx: number) => {
+                // 🎯 Zabezpieczenie przed połówkami punktów (np. 3.5/4 -> 4/4)
+                let formattedPoints = detail.points;
+                if (typeof detail.points === "string") {
+                  const match = detail.points.match(/^(\d+(?:\.\d+)?)\s*\/\s*(\d+)$/);
+                  if (match) {
+                    formattedPoints = `${Math.round(parseFloat(match[1]))}/${match[2]}`;
+                  }
+                }
+
+                return (
+                  <div 
+                    key={idx} 
+                    className="p-5 rounded-2xl bg-stone-950/70 border border-stone-900 hover:border-amber-500/20 transition-all flex flex-col gap-2.5 shadow-sm"
+                  >
+                    <div className="flex items-center justify-between font-bold text-[10px] uppercase tracking-wider text-stone-200 pb-2 border-b border-stone-850">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500/80" />
+                        {detail.criterion}
+                      </span>
+                      <span className="text-amber-400 font-mono text-xs px-2 py-0.5 rounded-md bg-stone-900 border border-stone-800 font-bold">
+                        {formattedPoints}
+                      </span>
+                    </div>
+                    <p className="text-[12px] text-stone-300 leading-relaxed font-sans">
+                      {detail.comment}
+                    </p>
                   </div>
-                  <p className="text-[11.5px] text-stone-400 leading-relaxed font-sans">{detail.comment}</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Analiza materiału bodźcowego i Podsumowanie komisji */}
