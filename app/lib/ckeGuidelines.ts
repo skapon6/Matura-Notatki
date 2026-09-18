@@ -1,4 +1,4 @@
-// lib/ckeGuidelines.ts/
+// lib/ckeGuidelines.ts
 
 export const ckeGuidelines = `
 === CKE MATURA 2025 – ZASADY OCENIANIA WYPRACOWANIA (POZIOM PODSTAWOWY) ===
