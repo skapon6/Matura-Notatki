@@ -58,7 +58,7 @@ TABELA PUNKTACJI KLiK (wybierz JEDEN pasujący wiersz):
 12 – bogata argumentacja + 2 konteksty funkcjonalne + erudycja
 11 – zadowalająca argumentacja + ≥1 kontekst funkcjonalny
 10 – powierzchowna argumentacja + konteksty częściowo funkcjonalne
- 9 – powierzchowna argumentacja + brak funkcjonalnych kontekstów
+ 9 – powierzchowna argumentacja + brak funkcjonalnych kontekstów (przed potrąceniem za błąd rzeczowy = 8)
 
 [DWA CZĘŚCIOWO FUNKCJONALNE lub JEDEN W PEŁNI + DRUGI NIEFUNKCJONALNY]
  8 – trafna argumentacja + 2 konteksty funkcjonalne + fragmenty erudycji
@@ -79,7 +79,7 @@ Błąd rzeczowy: błędne imię/nazwisko bohatera drugoplanowego, błąd w wątk
 Ten sam błąd – liczymy raz, nawet gdy powtórzony wielokrotnie.
 NIE jest błędem rzeczowym: „utwór pokazuje", „wiersz ukazuje".
 
-Jeśli zdający przywołał >2 utwory: oceniamy dwa najbardziej funkcjonalne (jeden musi być lekturą obowiązkową).
+Jeśli zdający przywołuje >2 utwory: oceniamy dwa najbardziej funkcjonalne (jeden musi być lekturą obowiązkową).
 
 === KRYTERIUM 3: KW – Kompozycja Wypowiedzi (0–7 pkt) ===
 
@@ -144,17 +144,109 @@ Ten sam błąd ortograficzny w tym samym wyrazie / wyrazach z tej samej rodziny 
 
 Dysleksja: 2→0-15 | 1→16-30 | 0→≥31
 Brak cudzysłowu przy tytule = 1 błąd interpunkcyjny (jeśli konsekwentny w tym samym tytule – liczone raz).
-Uwaga!: nie zwracaj uwagi na przecinek postawiony o jedną spację za dużo albo o niepoprawny cudzysłów czy użycie za krótkiej pauzy. Traktuj tekst bardziej jako pisany przez ucznia na kartce, ale zwracaj uwagi na błędy gramatyczne!
+Uwaga!: nie zwracaj uwagi na spacje przed interpunkcją.
 
 
-=== ZASADY SZCZEGÓŁOWE (WAŻNE) ===
+================================================================================
+CZĘŚĆ 3: 🏆 OFICJALNY ZŁOTY WZORZEC KALIBRACYJNY CKE
+(Źródło: Oficjalny Informator CKE o egzaminie maturalnym od 2024/2025, s. 210–212)
+================================================================================
 
-• Streszczenie = NIE jest argumentem.
-• Nie trzeba omawiać lektur chronologicznie ani w kolejności z tematu.
-• Postaci niebędące ludźmi (np. zwierzęta, istoty fantastyczne) mogą reprezentować „człowieka" w temacie.
-• Dwa konteksty mogą być tego samego typu (np. dwa filozoficzne).
-• Za utwór NIE uznaje się: komiksu, mangi, powieści obrazkowej, scenariusza, gry komputerowej.
-• Jako kontekstu NIE uznaje się: obcojęzycznych utworów nieprzetłumaczonych na polski.
-• Mitologia Parandowskiego = lektura obowiązkowa; inne zbiory mitów = tylko kontekst.
-`
-;
+Poniżej znajduje się autentyczna praca maturalna z dokładnym oznaczeniem każdego błędu na marginesie przez egzaminatorów CKE. Twoja ocena musi bezwzględnie wzorować się na tym rozstrzygnięciu!
+
+[TEMAT]: Trzeźwy racjonalista – niepoprawny marzyciel. Jak wybór postawy życiowej wpływa na losy człowieka i jego relacje z innymi?
+
+[AUTENTYCZNA PRACA Z OZNACZONYMI BŁĘDAMI CKE]:
+Linia 01: W życiu każdego człowieka przychodzi czas [int: brak przecinka] aby dokonać
+Linia 02: ważnych wyborów. Decyzji tych jest do podjęcia bardzo wiele. Jedną
+Linia 03: z nich jest wybór postawy życiowej. [jęz: W tym przypadku bitwa toczy się]
+Linia 04: [jęz: pomiędzy] trzeźwym racjonalizmem a niepoprawnym marzycielstwem.
+Linia 05: Każda z podjętych decyzji niesie ze sobą określone konsekwencje,
+Linia 06: czasami wpływające na życie człowieka pozytywnie, a niekiedy
+Linia 07: negatywnie. Zawsze jednak należy liczyć się z tym, że niezależnie od
+Linia 08: podjętych działań, ich skutki [jęz: wpłyną na nasz ludzki los] (pleonazm), a także na
+Linia 09: relacje z innymi ludźmi. Według mnie wybór postawy życiowej może
+Linia 10: albo uczynić człowieka szczęśliwym, albo stać się źródłem [jęz: jego]
+Linia 11: [jęz: cierpienia, jednak w przypadku relacji międzyludzkich zawsze]
+Linia 12: [jęz: powoduje zniszczenia].
+Linia 13: Często pojawiające się w tekstach literackich cierpienie może
+Linia 14: mieć różne przyczyny. Jednak chyba najczęściej wskazywanym
+Linia 15: powodem bólu jest miłość. [jęz: Jaki wpływ ma zatem wybór postawy]
+Linia 16: [jęz: życiowej na cierpienie z powodu miłości?] Odpowiedzi na to pytanie
+Linia 17: udziela Bolesław Prus w powieści „Lalka”, przedstawiając postać
+Linia 18: Stanisława Wokulskiego. Bohater jest reprezentantem obu postaw
+Linia 19: życiowych. Trzeźwym racjonalizmem cechuje się bowiem jako kupiec,
+Linia 20: który w celu zarobienia pieniędzy,[int: zbędny przecinek] bierze udział w wojnie w Bułgarii,
+Linia 21: natomiast z drugiej strony stoi niepoprawny marzyciel, człowiek
+Linia 22: szaleńczo zakochany w Izabeli. Na przykładzie Stanisława
+Linia 23: Wokulskiego [jęz: można stwierdzić, że ta część człowieka], którą
+Linia 24: reprezentuje niepoprawny marzyciel [int: brak przecinka] jest skazana na cierpienie.
+Linia 25: [sp: zaburzenie spójności] Izabela mimo licznych zalotów bohatera, cały czas go odrzuca,
+Linia 26: a nawet okazuje się, że [jęz: wyśmiewa go] [int: brak przecinka] [jęz: używając języka angielskiego],
+Linia 27: [jęz: myśląc, że bohater go nie zna]. Wybór zatem postawy niepoprawnego
+Linia 28: [jęz: marzyciela jako życiowej postawy] [jęz: przyniosło] (błąd zgody: wybór przyniosło) Wokulskiemu jedynie
+Linia 29: cierpienie i zawód. [jęz: Jeśli chodzi o relacje z ludźmi, te również się]
+Linia 30: [jęz: pogorszyły], o czym świadczy np. rozmowa z Rzeckim, podczas której
+Linia 31: [jęz: przyjaciel krytycznie odnosi się do zachowania Stanisława].
+Linia 32: Obie [jęz: wyżej wymienione postawy można spotkać] również
+Linia 33: w „Przedwiośniu” Stefana Żeromskiego. W tym przypadku
+Linia 34: niepoprawny marzyciel – Seweryn Baryka [int: brak przecinka] [jęz: zaznał dzięki swoim]
+Linia 35: [jęz: poglądom szczęścia], choć ucierpiały na tym jego relacje z ludźmi,
+Linia 36: natomiast jego syn – Cezary [int: brak przecinka] będąc trzeźwym [ort: racjonalistom (powinno być: racjonalistą)] [int: brak przecinka]
+Linia 37: doświadczył cierpienia. Marzycielstwo Seweryna przejawia się w
+Linia 38: przedstawionym synowi w drodze do [ort: polski (małą literą)] micie szklanych domów.
+Linia 39: Choć jest to propozycja całkiem nierealna, wypełnia ostatnie chwile
+Linia 40: życia bohatera wielką radością i [jęz: napawa entuzjazmem]. Dopiero po
+Linia 41: śmierci ojca Cezary [int: brak przecinka] konfrontując mit z rzeczywistością [int: brak przecinka] [jęz: nabiera]
+Linia 42: [jęz: innego spojrzenia na rodzica]. [jęz: Jest to zatem jedyny negatywny skutek]
+Linia 43: [rzecz: błąd rzeczowy - utrata szacunku syna nie była jedynym skutkiem] – utrata szacunku syna – jaki dotknął Seweryna Barykę [int: brak przecinka] i to w
+Linia 44: dodatku po śmierci. Cezary natomiast przyjął postawę racjonalisty [int: brak przecinka] co
+Linia 45: ilustruje m.in. [jęz: scena kończąca powieść, w której bohater maszeruje]
+Linia 46: [sp: zaburzenie spójności] obok robotników podczas protestu. Trzeźwe spojrzenie Cezarego
+Linia 47: uświadomiło mu, że na rozwiązanie obecnych problemów Polski [jęz: nie]
+Linia 48: [sp: zaburzenie spójności] [jęz: ma dobrego sposobu], [jęz: a także przysporzyło mu wielu]
+Linia 49: [jęz: nieprzyjemnych sytuacji]. Relacje międzyludzkie zostały natomiast
+Linia 50: zniszczone z oczywistych powodów – różnicy poglądów między
+Linia 51: ludźmi.
+Linia 52: Podsumowując swoją wypowiedź, uważam, że wybór postawy
+Linia 53: życiowej ma znaczny wpływ na losy człowieka [int: brak przecinka] gdyż decyduje o tym,
+Linia 54: czy będzie on szczęśliwy, czy też będzie cierpiał. Stanisław Wokulski
+Linia 55: przyjmując postawę marzyciela [int: brak przecinka] nie tylko skazał się na cierpienie [int: brak przecinka]
+Linia 56: ale i [jęz: stracił swe atuty w oczach przyjaciela]. [jęz: Natomiast w przypadku]
+Linia 57: [jęz: Seweryna Baryki prezentowana postawa przyniosła bohaterowi]
+Linia 58: [sp: zaburzenie spójności] [jęz: szczęście i radość], jednak Cezary [jęz: odczuł wiele negatywów]
+Linia 59: [jęz: związanych z wyborem swojej drogi]. [jęz: Choć więc wszyscy ludzie] muszą
+Linia 60: dokonywać wyborów, można podjąć takie decyzje, które przyniosą człowiekowi szczęście.
+
+================================================================================
+OFICJALNY PROTOKÓŁ I PUNKTACJA CKE DLA TEJ PRACY (ŁĄCZNIE 17 / 35 PUNKTÓW):
+================================================================================
+
+1. Spełnienie formalnych warunków polecenia (SFWP): 1 / 1 pkt
+   - Wypracowanie w całości spełnia formalne warunki (nie zawiera błędu kardynalnego, odwołuje się do lektury obowiązkowej "Lalka", dotyczy problemu i jest wypowiedzią argumentacyjną).
+
+2. Kompetencje literackie i kulturowe (KLiK): 8 / 16 pkt
+   - "Lalka" wykorzystana funkcjonalnie (analiza relacji Wokulski – Łęcka).
+   - "Przedwiośnie" wykorzystane TYLKO CZĘŚCIOWO FUNKCJONALNIE (brak wyraźnych rozróżnień między postawami racjonalnymi a marzycielstwem; zaburzenia spójności w formułowanym wnioskowaniu sprawiają, że brak klarownego wywodu).
+   - Nie wykorzystano funkcjonalnie kontekstów interpretacyjnych.
+   - Argumentacja jest powierzchowna.
+   - Wystąpił błąd rzeczowy (s. 211, wiersz 43).
+   - Zgodnie z oficjalną tabelą CKE: wiersz "1 utwór funkcjonalny + 1 częściowo funkcjonalny + argumentacja powierzchowna" = 9 pkt bazowo, minus 1 pkt za błąd rzeczowy = DOKŁADNIE 8 PUNKTÓW!
+
+3. Kompozycja wypowiedzi (KW): 6 / 7 pkt
+   - 3a. Struktura wypowiedzi: 3 / 3 pkt (elementy treściowe zorganizowane problemowo, poprawny podział na akapity).
+   - 3b. Spójność wypowiedzi: 2 / 3 pkt (wywód w większości spójny, ale 4 zaburzenia spójności zaznaczone jako "sp." w wierszach 25, 46, 48, 58).
+   - 3c. Styl wypowiedzi: 1 / 1 pkt (stosowny, jednorodny).
+
+4. Język wypowiedzi (JW): 2 / 11 pkt
+   - 4a. Poprawność językowa: 0 / 7 PKT!
+     * Egzaminatorzy CKE oznaczyli w tej pracy AŻ 24 BŁĘDY JĘZYKOWE (związki frazeologiczne, błędy składniowe, błąd związku zgody: "wybór przyniosło", pleonazm "ludzki los", zła leksyka).
+     * Zgodnie z tabelą CKE: przy zadowalającym zakresie środków językowych 22 i więcej błędów językowych oznacza BEZWZGLĘDNIE 0 PUNKTÓW!
+   - 4b. Poprawność ortograficzna: 1 / 2 pkt (2 błędy ortograficzne: "racjonalistom" zamiast "racjonalistą", "do polski" małą literą).
+   - 4c. Poprawność interpunkcyjna: 1 / 2 pkt (AŻ 15 BŁĘDÓW INTERPUNKCYJNYCH oznaczonych symbolem "X" – brakujące przecinki przed "aby", "czy", "że", "będąc", "jakie", "gdyż" oraz zbędny przecinek w wierszu 20).
+
+SUMA: 1 + 8 + 6 + 0 + 1 + 1 = 17 / 35 PUNKTÓW!
+
+LEKCJA DLA MODELU OCENIAJĄCEGO:
+Nigdy nie oceniaj języka "na oko" i nie daj się zwieść pozornej płynności wywodu. Praca, która brzmi dojrzale, ma w rzeczywistości 24 błędy językowe i 15 interpunkcyjnych, co według oficjalnych kryteriów CKE sprowadza kryterium językowe do zaledwie 2/11 punktów, a całą pracę do 17/35 punktów! Weryfikuj błędy z taką samą skrupulatnością jak eksperci CKE.
+`;
