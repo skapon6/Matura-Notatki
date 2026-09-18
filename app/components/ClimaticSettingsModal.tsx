@@ -1,4 +1,4 @@
-// components/ClimaticSettingsModal.tsx (lub app/components/ClimaticSettingsModal.tsx)
+// components/ClimaticSettingsModal.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -28,7 +28,18 @@ export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
   triggerNotification,
   initialTab = "climate",
 }) => {
-  const [activeTab, setActiveTab] = useState<TabType>(initialTab);
+  // 🎯 Pobieramy żądaną zakładkę przed pierwszym renderem (omija opóźnienia Reacta)
+  const getInitialTab = (): TabType => {
+    if (typeof window !== "undefined") {
+      const target = (window as any).__TARGET_SETTINGS_TAB;
+      if (target === "account" || target === "climate" || target === "goal") {
+        return target;
+      }
+    }
+    return initialTab;
+  };
+
+  const [activeTab, setActiveTab] = useState<TabType>(getInitialTab);
   const [loading, setLoading] = useState(false);
 
   // Stany dla zmiany hasła
@@ -42,21 +53,15 @@ export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
   // Stany dla dziennego celu nauki
   const [studyGoal, setStudyGoal] = useState<number>(25);
 
-  // 🎯 1. Nasłuchiwanie zdarzenia z paska nawigacji (np. po kliknięciu w Twój login)
+  // 🎯 Ustawiamy zakładkę przy każdym otwarciu okna
   useEffect(() => {
-    const handleSetTab = (event: any) => {
-      if (event.detail) {
-        setActiveTab(event.detail);
+    if (isOpen) {
+      if (typeof window !== "undefined" && (window as any).__TARGET_SETTINGS_TAB) {
+        setActiveTab((window as any).__TARGET_SETTINGS_TAB);
+        (window as any).__TARGET_SETTINGS_TAB = null; // czyścimy flagę
+      } else if (initialTab) {
+        setActiveTab(initialTab);
       }
-    };
-    window.addEventListener("set-settings-tab", handleSetTab);
-    return () => window.removeEventListener("set-settings-tab", handleSetTab);
-  }, []);
-
-  // 🎯 2. Automatyczne przełączenie przy otwarciu z poziomu propsów
-  useEffect(() => {
-    if (isOpen && initialTab) {
-      setActiveTab(initialTab);
     }
   }, [isOpen, initialTab]);
 
@@ -253,7 +258,6 @@ export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
           {/* TAB 2: USTAWIENIA KONTA */}
           {activeTab === "account" && (
             <div className="flex flex-col gap-6 animate-slide-in">
-              {/* Formularz zmiany hasła */}
               <form onSubmit={handlePasswordChange} className="flex flex-col gap-3.5 pb-6 border-b border-stone-800/40">
                 <h3 className="text-xs uppercase tracking-widest text-amber-500 font-bold">
                   Zmień Hasło Dostępu
@@ -298,7 +302,6 @@ export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
                 </div>
               </form>
 
-              {/* Sekcja usuwania konta */}
               <form onSubmit={handleDeleteAccount} className="flex flex-col gap-3">
                 <h3 className="text-xs uppercase tracking-widest text-red-500 font-bold">
                   Strefa Zagrożenia: Usuń Konto
