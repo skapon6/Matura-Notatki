@@ -268,7 +268,7 @@ export async function POST(request: Request) {
     }
 
     // --- PODWÓJNY SYSTEM ZABEZPIECZEŃ (FALLBACK MODELI DLA MATURY USTNEJ) ---
-    const MODELS_TO_TRY = ["gemini-3.5-flash","gemini-2.5-flash"];
+    const MODELS_TO_TRY = ["gemini-3.7-flash","gemini-3.6-flash","gemini-3.5-flash","gemini-2.5-flash"];
     let response: any = null;
     let data: any = null;
     let finalModelUsed = "";

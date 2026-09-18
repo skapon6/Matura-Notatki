@@ -13,55 +13,73 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+// Pancerny ekstraktor JSON izolujący poprawny obiekt { ... } z dowolnej odpowiedzi AI
+const extractAndParseJSON = (text: string) => {
+  if (!text) {
+    throw new Error("Otrzymano pustą odpowiedź od AI.");
+  }
+
+  let firstBrace = text.indexOf('{');
+  if (firstBrace === -1) {
+    throw new Error("Materiały wyjściowe AI nie zawierają prawidłowego obiektu JSON.");
+  }
+
+  while (firstBrace !== -1) {
+    let lastBrace = text.lastIndexOf('}');
+    
+    while (lastBrace > firstBrace) {
+      const jsonString = text.substring(firstBrace, lastBrace + 1);
+      try {
+        return JSON.parse(jsonString);
+      } catch (err) {
+        lastBrace = text.lastIndexOf('}', lastBrace - 1);
+      }
+    }
+    firstBrace = text.indexOf('{', firstBrace + 1);
+  }
+
+  throw new Error("Nie udało się wyodrębnić i sparsować poprawnej struktury JSON z odpowiedzi AI.");
+};
+
 export async function POST(req: NextRequest) {
   let creditDeducted = false;
-  let originalCredits = 0;
+  let newCredits = 0;
   let userId = "";
 
   try {
+    // 1. Bezpieczna autoryzacja serwerowa getUser()
     const supabase = await getSupabaseServer();
-
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError || !session?.user) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
       return NextResponse.json({ error: "Brak autoryzacji." }, { status: 401 });
     }
+    userId = user.id;
 
-    userId = session.user.id;
-
+    // 2. Walidacja tematu
     const { topic } = await req.json();
-    if (!topic) {
+    if (!topic || typeof topic !== "string" || !topic.trim()) {
       return NextResponse.json({ error: "Brak tematu rozprawki." }, { status: 400 });
     }
 
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("essay_credits")
-      .eq("id", userId)
-      .single();
-
-    if (profileError || !profile) {
-      return NextResponse.json({ error: "Nie udało się pobrać profilu." }, { status: 500 });
+    if (topic.length > 2000) {
+      return NextResponse.json({ error: "Temat rozprawki jest zbyt długi (maksymalnie 2000 znaków)." }, { status: 400 });
     }
 
-    originalCredits = profile.essay_credits;
+    // 3. Atomowe pobranie kredytu za pomocą procedury RPC (Ochrona przed Race Condition)
+    const { data: deductedCredits, error: rpcError } = await supabaseAdmin
+      .rpc('deduct_credit', { user_id_param: userId });
 
-    if (originalCredits <= 0) {
-      return NextResponse.json({ error: "Brak wolnych kredytów." }, { status: 403 });
+    if (rpcError || deductedCredits === null || deductedCredits === -1) {
+      return NextResponse.json(
+        { error: "Brak wolnych kredytów na wygenerowanie wypracowania." },
+        { status: 403 }
+      );
     }
 
-    const newCredits = originalCredits - 1;
-    const { error: updateError } = await supabaseAdmin
-      .from("profiles")
-      .update({ essay_credits: newCredits })
-      .eq("id", userId);
-
-    if (updateError) {
-      console.error("Błąd blokowania kredytu:", updateError);
-      return NextResponse.json({ error: "Nie udało się zablokować kredytu." }, { status: 500 });
-    }
-
+    newCredits = deductedCredits;
     creditDeducted = true;
 
+    // 4. Prompt systemowy
     const systemPrompt = `Jesteś polskim licealistą przygotowującym się do matury 2026 z języka polskiego na poziomie podstawowym (Formuła 2023). Twoim zadaniem jest napisanie przykładowego, wzorcowego wypracowania na podany przez użytkownika temat.
 
 STYL I JĘZYK:
@@ -91,74 +109,114 @@ Zwróć odpowiedź WYŁĄCZNIE jako obiekt JSON o strukturze zgodnej z poniższy
   ]
 }`;
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
-      systemInstruction: systemPrompt,
-    });
+    // 5. 🎯 KASKADA MODELI ZE SPADKIEM W DÓŁ W RAZIE PRZECIĄŻENIA
+    const MODELS_TO_TRY = [
+      "gemini-3.7-flash",
+      "gemini-3.6-flash",
+      "gemini-3.5-flash",
+      "gemini-2.5-flash"
+    ];
 
-    // --- SYSTEM AUTOMATYCZNEGO PONAWIANIA PRÓB (RETRY ON 503) ---
-    let result: any;
-    const maxRetries = 3;
-    let delay = 5000; // Czekamy 5 sekund w razie przeciążenia
+    let result: any = null;
+    let finalModelUsed = "";
+    let modelSuccess = false;
+    let lastError: any = null;
 
-    for (let i = 0; i < maxRetries; i++) {
-      try {
-        console.log(`-> Wywołanie Gemini 2.5 Flash - Generowanie Przykładowej (Próba ${i + 1}/${maxRetries})...`);
-        result = await model.generateContent({
-          contents: [{ role: "user", parts: [{ text: `Temat rozprawki: "${topic}"` }] }],
-          generationConfig: {
-            responseMimeType: "application/json",
-            temperature: 0.35,
-          },
-        });
-        break;
-      } catch (error: any) {
-        const is503 = error?.message?.includes("503") || error?.message?.includes("UNAVAILABLE") || error?.status === 503;
-        if (is503 && i < maxRetries - 1) {
-          console.warn(`[PRZECIĄŻENIE GENERATORA 503] Serwer obciążony. Automatyczny retry za ${delay / 1000}s...`);
-          await new Promise((resolve) => setTimeout(resolve, delay));
-          delay *= 1.5;
-          continue;
+    for (const currentModelName of MODELS_TO_TRY) {
+      console.log(`-> Próba uruchomienia generatora na modelu: ${currentModelName}`);
+      
+      const model = genAI.getGenerativeModel({
+        model: currentModelName,
+        systemInstruction: systemPrompt,
+      });
+
+      let textRetries = 3;
+      let textDelay = 4000;
+      let modelSuccessInner = false;
+
+      for (let i = 0; i < textRetries; i++) {
+        try {
+          console.log(`-> Wywołanie ${currentModelName} - Generowanie rozprawki (Próba ${i + 1}/${textRetries})...`);
+          result = await model.generateContent({
+            contents: [{ role: "user", parts: [{ text: `Temat rozprawki: "${topic}"` }] }],
+            generationConfig: {
+              responseMimeType: "application/json",
+              temperature: 0.35,
+            },
+          });
+          
+          modelSuccessInner = true;
+          finalModelUsed = currentModelName;
+          break; // Sukces na tym modelu!
+        } catch (error: any) {
+          lastError = error;
+          
+          const isRetryable = 
+            error?.status === 429 || 
+            error?.status === 503 || 
+            error?.message?.includes("429") || 
+            error?.message?.includes("503") || 
+            error?.message?.includes("RESOURCE_EXHAUSTED") || 
+            error?.message?.includes("UNAVAILABLE");
+
+          if (isRetryable && i < textRetries - 1) {
+            const jitter = Math.floor(Math.random() * 1500) + 1000;
+            const finalDelay = textDelay + jitter;
+            console.warn(`  [PRZECIĄŻENIE ${currentModelName}] Automatyczny retry za ${(finalDelay / 1000).toFixed(2)}s...`);
+            await new Promise((resolve) => setTimeout(resolve, finalDelay));
+            textDelay *= 1.5;
+            continue;
+          }
+          
+          // Jeśli to nie jest błąd ponawialny lub skończyły się próby na tym modelu, przechodzimy do kolejnego modelu
+          break;
         }
-        throw error;
+      }
+
+      if (modelSuccessInner && result) {
+        console.log(`-> Sukces! Rozprawka wygenerowana pomyślnie za pomocą modelu: ${finalModelUsed}`);
+        modelSuccess = true;
+        break; // Przerywamy pętlę modeli – mamy gotową pracę!
       }
     }
 
-    const responseText = result.response.text();
-    let cleanJson = responseText.trim();
-    if (cleanJson.startsWith("```json")) {
-      cleanJson = cleanJson.substring(7);
-    }
-    if (cleanJson.endsWith("```")) {
-      cleanJson = cleanJson.substring(0, cleanJson.length - 3);
+    if (!modelSuccess || !result) {
+      console.error("!!! Wszystkie próby na wszystkich modelach zakończyły się niepowodzeniem:", lastError);
+      throw new Error("SERVERS_OVERLOADED");
     }
 
-    const parsedResult = JSON.parse(cleanJson.trim());
+    const responseText = result.response.text();
+
+    // 6. Bezpieczne parsowanie JSON
+    const parsedResult = extractAndParseJSON(responseText);
 
     return NextResponse.json({
       success: true,
       newCredits,
       essayText: parsedResult.essayText,
-      alternativeContexts: parsedResult.alternativeContexts,
+      alternativeContexts: parsedResult.alternativeContexts || [],
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Błąd podczas generowania wypracowania:", error);
 
+    // 7. Atomowy Rollback tokena w razie awarii API
     if (creditDeducted && userId) {
       try {
-        await supabaseAdmin
-          .from("profiles")
-          .update({ essay_credits: originalCredits })
-          .eq("id", userId);
-        console.log(`[ROLLBACK] Zwrócono kredyt użytkownikowi ${userId}`);
+        await supabaseAdmin.rpc('increment_credit', { user_id_param: userId });
+        console.log(`[ROLLBACK] Zwrócono kredyt użytkownikowi ${userId} za pomocą RPC.`);
       } catch (rollbackError) {
         console.error("Błąd podczas wycofywania kredytu:", rollbackError);
       }
     }
 
+    const isOverload = error?.message === "SERVERS_OVERLOADED" || error?.status === 503;
+    const errorMessage = isOverload
+      ? "Serwery Google AI są obecnie przeciążone. Twój kredyt został automatycznie zwrócony. Spróbuj wygenerować pracę ponownie za chwilę!"
+      : "Wystąpił nieoczekiwany błąd podczas generowania wypracowania. Twój kredyt został zwrócony.";
+
     return NextResponse.json(
-      { error: "Wystąpił błąd podczas generowania wypracowania przez AI. Twój kredyt został zwrócony." }, 
+      { error: errorMessage }, 
       { status: 500 }
     );
   }
