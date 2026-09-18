@@ -95,7 +95,7 @@ export default function OcenianieRozprawekPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGenerationMode, setIsGenerationMode] = useState(false);
-  const [isGeneratedByAi, setIsGeneratedByAi] = useState(false); // Śledzenie wzorca AI
+  const [isGeneratedByAi, setIsGeneratedByAi] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [generatedContexts, setGeneratedContexts] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
@@ -171,7 +171,6 @@ export default function OcenianieRozprawekPage() {
   };
 
   const handleAnalyze = async () => {
-    // Blokada analizy dla tekstu wygenerowanego przez AI
     if (isGeneratedByAi) {
       triggerAlert("Ta praca została wygenerowana jako wzorzec AI. Napisz własną rozprawkę, aby poddać ją ocenie!", "error");
       return;
@@ -320,7 +319,7 @@ export default function OcenianieRozprawekPage() {
 
       setProfile((prev: any) => ({ ...prev, essay_credits: data.newCredits }));
       setEssayText(data.essayText);
-      setIsGeneratedByAi(true); // Aktywujemy blokadę kopiowania oraz blokadę oceny
+      setIsGeneratedByAi(true);
       if (data.alternativeContexts) {
         setGeneratedContexts(data.alternativeContexts);
       }
@@ -355,6 +354,7 @@ export default function OcenianieRozprawekPage() {
     triggerAlert("Pomyślnie wczytano pracę z historii (0 kredytów)!", "success");
   };
 
+  // 🎯 ULEPSZONY RENDERER Z OBSŁUGĄ ZBIEGU KILKU BŁĘDÓW W JEDNYM MIEJSCU
   const renderHighlightedText = () => {
     if (!analysisResult || !analysisResult.annotations || analysisResult.annotations.length === 0) {
       return <p className="whitespace-pre-wrap leading-relaxed">{essayText}</p>;
@@ -367,6 +367,7 @@ export default function OcenianieRozprawekPage() {
 
     const matches: Match[] = [];
 
+    // 1. Wyszukujemy wszystkie wystąpienia adnotacji w tekście
     analysisResult.annotations.forEach((anno: any) => {
       if (!anno.original || !anno.original.trim()) return;
 
@@ -386,47 +387,131 @@ export default function OcenianieRozprawekPage() {
       }
     });
 
-    matches.sort((a, b) => {
-      if (a.start !== b.start) {
-        return a.start - b.start;
-      }
-      return (b.end - b.start) - (a.end - a.start);
-    });
+    if (matches.length === 0) {
+      return <p className="whitespace-pre-wrap leading-relaxed">{essayText}</p>;
+    }
 
-    const nonOverlappingMatches: Match[] = [];
-    let lastIndex = 0;
+    // 2. Sortujemy: najpierw po pozycji w tekście, a przy równym starcie dłuższe fragmenty pierwsze
+    matches.sort((a, b) => a.start - b.start || b.end - a.end);
+
+    // 3. Klastrowanie nakładających się błędów (Żaden błąd nie zostanie pominięty!)
+    interface ErrorCluster {
+      start: number;
+      end: number;
+      annotations: any[];
+    }
+
+    const clusters: ErrorCluster[] = [];
 
     for (const m of matches) {
-      if (m.start >= lastIndex) {
-        nonOverlappingMatches.push(m);
-        lastIndex = m.end;
+      if (clusters.length === 0) {
+        clusters.push({
+          start: m.start,
+          end: m.end,
+          annotations: [m.annotation]
+        });
+        continue;
+      }
+
+      const lastCluster = clusters[clusters.length - 1];
+
+      // Jeśli błąd nachodzi na poprzedni lub występuje dokładnie w tym samym miejscu
+      if (m.start < lastCluster.end) {
+        lastCluster.end = Math.max(lastCluster.end, m.end);
+        
+        const isDuplicate = lastCluster.annotations.some(
+          (a) => a.type === m.annotation.type && a.explanation === m.annotation.explanation
+        );
+        if (!isDuplicate) {
+          lastCluster.annotations.push(m.annotation);
+        }
+      } else {
+        clusters.push({
+          start: m.start,
+          end: m.end,
+          annotations: [m.annotation]
+        });
       }
     }
 
+    // 4. Generowanie kodu HTML z wielopoziomowym dymkiem
     let resultHtml = "";
     let currentIdx = 0;
 
-    nonOverlappingMatches.forEach((m) => {
-      resultHtml += escapedText.substring(currentIdx, m.start);
+    clusters.forEach((cluster) => {
+      resultHtml += escapedText.substring(currentIdx, cluster.start);
+
+      const clusterText = escapedText.substring(cluster.start, cluster.end);
+      const isMultiError = cluster.annotations.length > 1;
 
       let colorClass = "";
-      if (m.annotation.type === "rzeczowy") {
-        colorClass = "bg-amber-950/50 border-b-2 border-amber-500 text-amber-200 cursor-help";
-      } else if (m.annotation.type === "językowy") {
-        colorClass = "bg-blue-950/50 border-b-2 border-blue-500 text-blue-200 cursor-help";
-      } else if (m.annotation.type === "ortograficzny") {
-        colorClass = "bg-purple-950/50 border-b-2 border-purple-500 text-purple-200 cursor-help";
+      let borderClass = "";
+
+      if (isMultiError) {
+        colorClass = "bg-red-950/40 text-amber-200";
+        borderClass = "border-b-2 border-dashed border-amber-400";
       } else {
-        colorClass = "bg-red-950/50 border-b-2 border-red-500 text-red-200 cursor-help";
+        const type = cluster.annotations[0].type;
+        if (type === "rzeczowy") {
+          colorClass = "bg-amber-950/50 text-amber-200";
+          borderClass = "border-b-2 border-amber-500";
+        } else if (type === "językowy") {
+          colorClass = "bg-blue-950/50 text-blue-200";
+          borderClass = "border-b-2 border-blue-500";
+        } else if (type === "ortograficzny") {
+          colorClass = "bg-purple-950/50 text-purple-200";
+          borderClass = "border-b-2 border-purple-500";
+        } else {
+          colorClass = "bg-red-950/50 text-red-200";
+          borderClass = "border-b-2 border-red-500";
+        }
       }
 
-      const originalText = escapedText.substring(m.start, m.end);
-      const explanation = m.annotation.explanation.replace(/"/g, "&quot;");
-      const replacement = m.annotation.replacement.replace(/"/g, "&quot;");
+      let tooltipContent = "";
 
-      resultHtml += `<span class="${colorClass} relative group inline-block font-medium">${originalText}<span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-72 bg-stone-900 border border-stone-800 text-stone-300 text-[11px] p-3 rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 leading-relaxed font-sans font-normal"><strong class="text-[#c68a4c] uppercase tracking-wider block mb-1">Błąd ${m.annotation.type}:</strong>${explanation}<br/><span class="text-emerald-400 font-semibold block mt-1.5">Poprawnie: ${replacement}</span></span></span>`;
+      if (isMultiError) {
+        tooltipContent += `
+          <div class="font-bold text-[10px] uppercase tracking-wider text-amber-400 mb-2 pb-1.5 border-b border-stone-800 flex items-center justify-between">
+            <span>⚠️ Zbieg błędów (${cluster.annotations.length}):</span>
+            <span class="text-[9px] text-stone-500 lowercase font-normal">w tym fragmencie</span>
+          </div>
+        `;
+      }
 
-      currentIdx = m.end;
+      cluster.annotations.forEach((anno: any, aIdx: number) => {
+        const explanation = (anno.explanation || "").replace(/"/g, "&quot;");
+        const replacement = (anno.replacement || "").replace(/"/g, "&quot;");
+        
+        let badgeColor = "text-amber-400";
+        if (anno.type === "językowy") badgeColor = "text-blue-400";
+        if (anno.type === "ortograficzny") badgeColor = "text-purple-400";
+        if (anno.type === "interpunkcyjny") badgeColor = "text-red-400";
+
+        tooltipContent += `
+          <div class="${aIdx > 0 ? "pt-2 mt-2 border-t border-stone-800/80" : ""}">
+            <div class="flex items-center justify-between mb-0.5">
+              <strong class="${badgeColor} text-[10px] tracking-wider uppercase font-mono">Błąd ${anno.type}:</strong>
+            </div>
+            <p class="text-stone-300 text-[11px] leading-relaxed my-0.5">${explanation}</p>
+            ${replacement ? `<span class="text-emerald-400 font-semibold block text-[10.5px] mt-1">✓ Poprawnie: ${replacement}</span>` : ""}
+          </div>
+        `;
+      });
+
+      const countBadge = isMultiError 
+        ? `<span class="inline-flex items-center justify-center text-[9px] font-bold bg-amber-500 text-stone-950 rounded-full w-4 h-4 ml-1 select-none align-middle font-mono shadow-sm">${cluster.annotations.length}</span>` 
+        : "";
+
+      resultHtml += `
+        <span class="${colorClass} ${borderClass} relative group inline-block font-medium cursor-help rounded-sm px-0.5">
+          ${clusterText}${countBadge}
+          <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-80 max-w-[88vw] bg-[#161210] border border-stone-800 text-stone-300 text-[11px] p-3.5 rounded-2xl shadow-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 leading-relaxed font-sans font-normal backdrop-blur-md">
+            ${tooltipContent}
+          </span>
+        </span>
+      `;
+
+      currentIdx = cluster.end;
     });
 
     resultHtml += escapedText.substring(currentIdx);
@@ -474,12 +559,11 @@ export default function OcenianieRozprawekPage() {
         </div>
       )}
 
-      {/* NOWOCZESNY, CZYTELNY MODAL TEMATÓW CKE */}
+      {/* NOWOCZESNY MODAL TEMATÓW CKE */}
       {isTopicModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in">
           <div className="bg-[#181311] border border-stone-800 rounded-3xl p-5 sm:p-7 max-w-3xl w-full shadow-2xl flex flex-col gap-5 max-h-[90vh] overflow-hidden">
             
-            {/* Nagłówek i Wyszukiwarka */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-stone-800/80 pb-4 gap-4">
               <div className="flex items-center gap-3">
                 <span className="text-2xl sm:text-3xl p-2 rounded-2xl bg-amber-950/40 border border-amber-900/40">📜</span>
@@ -509,7 +593,6 @@ export default function OcenianieRozprawekPage() {
               </div>
             </div>
 
-            {/* Zakładki Roczników */}
             {!topicSearch && (
               <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 border-b border-stone-800/50">
                 <div className="flex gap-2">
@@ -533,7 +616,6 @@ export default function OcenianieRozprawekPage() {
               </div>
             )}
 
-            {/* Siatka Tematów */}
             <div className="flex flex-col gap-4 overflow-y-auto pr-1">
               {topicSearch ? (
                 <div className="space-y-4">
@@ -662,7 +744,6 @@ export default function OcenianieRozprawekPage() {
               )}
             </div>
 
-            {/* Stopka Modalu */}
             <div className="border-t border-stone-800/80 pt-3 flex justify-between items-center text-[11px] text-stone-500">
               <span>Wszystkie tematy pochodzą z oficjalnych arkuszy CKE</span>
               <button
@@ -816,7 +897,6 @@ export default function OcenianieRozprawekPage() {
                   <label className="text-xs uppercase tracking-widest text-stone-500 font-semibold block">
                     Treść Twojego wypracowania
                   </label>
-                  {/* DYSKRETNA INFORMACJA O BLOKADZIE DLA WZORCA AI */}
                   {isGeneratedByAi && (
                     <span className="text-[10px] text-amber-500/90 font-semibold flex items-center gap-1 bg-amber-950/40 border border-amber-900/50 px-2.5 py-0.5 rounded-md">
                       🔒 Wzorzec AI (Tylko do odczytu / Kopiowanie zablokowane)
@@ -898,7 +978,6 @@ export default function OcenianieRozprawekPage() {
                   </button>
                 ) : (
                   <>
-                    {/* PRZYCISK ANALIZY - INTELIGENTNIE ZABLOKOWANY DLA WZORCA AI */}
                     <button
                       onClick={handleAnalyze}
                       disabled={isAnalyzing || isGenerating || hasValidationError || isGeneratedByAi}
@@ -915,7 +994,6 @@ export default function OcenianieRozprawekPage() {
                         : "Przeanalizuj rozprawkę (1 kredyt)"}
                     </button>
 
-                    {/* PRZYCISK CZYSZCZENIA DLA WZORCA AI */}
                     {isGeneratedByAi && (
                       <button
                         type="button"
@@ -941,7 +1019,6 @@ export default function OcenianieRozprawekPage() {
               </div>
             )}
 
-            {/* Alternatywne konteksty */}
             {activeTab === "write" && generatedContexts.length > 0 && (
               <div className="mt-4 p-4 rounded-2xl bg-stone-950/50 border border-stone-800/80 animate-fade-in">
                 <h4 className="text-xs uppercase tracking-widest text-amber-500 font-bold mb-3 flex items-center gap-2">
@@ -1016,7 +1093,6 @@ export default function OcenianieRozprawekPage() {
               </ul>
             </div>
 
-            {/* DYSKRETNE ZASTRZEŻENIE DOTYCZĄCE PUNKTACJI AI */}
             <div className="p-3.5 rounded-2xl bg-stone-950/50 border border-stone-800/70 flex items-start gap-2.5 text-[11px] text-stone-400 leading-relaxed font-sans shadow-inner">
               <span className="text-amber-500 text-sm shrink-0 mt-0.5">ℹ️</span>
               <p>
