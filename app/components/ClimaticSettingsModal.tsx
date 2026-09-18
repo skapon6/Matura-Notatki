@@ -1,4 +1,4 @@
-// app/components/ClimaticSettingsModal.tsx (lub components/ClimaticSettingsModal.tsx)
+// components/ClimaticSettingsModal.tsx (lub app/components/ClimaticSettingsModal.tsx)
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -7,6 +7,8 @@ import { playSound } from "../lib/sounds";
 import { CozyTheme } from "../lib/theme";
 import { translateAuthError, validatePasswordStrength } from "../lib/auth-utils";
 
+export type TabType = "climate" | "account" | "goal";
+
 interface ClimaticSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -14,9 +16,8 @@ interface ClimaticSettingsModalProps {
   setCozyTheme: (theme: CozyTheme) => void;
   user: any;
   triggerNotification: (message: string, type?: "success" | "error" | "info") => void;
+  initialTab?: TabType;
 }
-
-type TabType = "climate" | "account" | "goal";
 
 export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
   isOpen,
@@ -25,8 +26,9 @@ export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
   setCozyTheme,
   user,
   triggerNotification,
+  initialTab = "climate",
 }) => {
-  const [activeTab, setActiveTab] = useState<TabType>("climate");
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab);
   const [loading, setLoading] = useState(false);
 
   // Stany dla zmiany hasła
@@ -39,6 +41,13 @@ export const ClimaticSettingsModal: React.FC<ClimaticSettingsModalProps> = ({
 
   // Stany dla dziennego celu nauki
   const [studyGoal, setStudyGoal] = useState<number>(25);
+
+  // Automatyczne przełączanie na żądaną zakładkę przy każdym otwarciu
+  useEffect(() => {
+    if (isOpen && initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [isOpen, initialTab]);
 
   // Wczytywanie zapisanego celu nauki z localStorage
   useEffect(() => {
