@@ -394,7 +394,7 @@ export default function OcenianieRozprawekPage() {
     // 2. Sortujemy: najpierw po pozycji w tekście, a przy równym starcie dłuższe fragmenty pierwsze
     matches.sort((a, b) => a.start - b.start || b.end - a.end);
 
-    // 3. Klastrowanie nakładających się błędów (Żaden błąd nie zostanie pominięty!)
+    // 3. Klastrowanie nakładających się błędów
     interface ErrorCluster {
       start: number;
       end: number;
@@ -415,7 +415,6 @@ export default function OcenianieRozprawekPage() {
 
       const lastCluster = clusters[clusters.length - 1];
 
-      // Jeśli błąd nachodzi na poprzedni lub występuje dokładnie w tym samym miejscu
       if (m.start < lastCluster.end) {
         lastCluster.end = Math.max(lastCluster.end, m.end);
         
@@ -434,7 +433,7 @@ export default function OcenianieRozprawekPage() {
       }
     }
 
-    // 4. Generowanie kodu HTML z wielopoziomowym dymkiem
+    // 4. Generowanie czystego kodu HTML BEZ sztucznych enterów (naprawia wielkie klocki)
     let resultHtml = "";
     let currentIdx = 0;
 
@@ -470,46 +469,27 @@ export default function OcenianieRozprawekPage() {
       let tooltipContent = "";
 
       if (isMultiError) {
-        tooltipContent += `
-          <div class="font-bold text-[10px] uppercase tracking-wider text-amber-400 mb-2 pb-1.5 border-b border-stone-800 flex items-center justify-between">
-            <span>⚠️ Zbieg błędów (${cluster.annotations.length}):</span>
-            <span class="text-[9px] text-stone-500 lowercase font-normal">w tym fragmencie</span>
-          </div>
-        `;
+        tooltipContent += `<div class="font-bold text-[10px] uppercase tracking-wider text-amber-400 mb-2 pb-1.5 border-b border-stone-800 flex items-center justify-between"><span>⚠️ Zbieg błędów (${cluster.annotations.length}):</span><span class="text-[9px] text-stone-500 lowercase font-normal">w tym fragmencie</span></div>`;
       }
 
       cluster.annotations.forEach((anno: any, aIdx: number) => {
         const explanation = (anno.explanation || "").replace(/"/g, "&quot;");
         const replacement = (anno.replacement || "").replace(/"/g, "&quot;");
-        
+
         let badgeColor = "text-amber-400";
         if (anno.type === "językowy") badgeColor = "text-blue-400";
         if (anno.type === "ortograficzny") badgeColor = "text-purple-400";
         if (anno.type === "interpunkcyjny") badgeColor = "text-red-400";
 
-        tooltipContent += `
-          <div class="${aIdx > 0 ? "pt-2 mt-2 border-t border-stone-800/80" : ""}">
-            <div class="flex items-center justify-between mb-0.5">
-              <strong class="${badgeColor} text-[10px] tracking-wider uppercase font-mono">Błąd ${anno.type}:</strong>
-            </div>
-            <p class="text-stone-300 text-[11px] leading-relaxed my-0.5">${explanation}</p>
-            ${replacement ? `<span class="text-emerald-400 font-semibold block text-[10.5px] mt-1">✓ Poprawnie: ${replacement}</span>` : ""}
-          </div>
-        `;
+        tooltipContent += `<div class="${aIdx > 0 ? "pt-2 mt-2 border-t border-stone-800/80" : ""}"><div class="flex items-center justify-between mb-0.5"><strong class="${badgeColor} text-[10px] tracking-wider uppercase font-mono">Błąd ${anno.type}:</strong></div><p class="text-stone-300 text-[11px] leading-relaxed my-0.5 whitespace-normal">${explanation}</p>${replacement ? `<span class="text-emerald-400 font-semibold block text-[10.5px] mt-1 whitespace-normal">✓ Poprawnie: ${replacement}</span>` : ""}</div>`;
       });
 
-      const countBadge = isMultiError 
-        ? `<span class="inline-flex items-center justify-center text-[9px] font-bold bg-amber-500 text-stone-950 rounded-full w-4 h-4 ml-1 select-none align-middle font-mono shadow-sm">${cluster.annotations.length}</span>` 
+      const countBadge = isMultiError
+        ? `<span class="inline-flex items-center justify-center text-[9px] font-bold bg-amber-500 text-stone-950 rounded-full w-4 h-4 ml-1 select-none align-middle font-mono shadow-sm">${cluster.annotations.length}</span>`
         : "";
 
-      resultHtml += `
-        <span class="${colorClass} ${borderClass} relative group inline-block font-medium cursor-help rounded-sm px-0.5">
-          ${clusterText}${countBadge}
-          <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-80 max-w-[88vw] bg-[#161210] border border-stone-800 text-stone-300 text-[11px] p-3.5 rounded-2xl shadow-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 leading-relaxed font-sans font-normal backdrop-blur-md">
-            ${tooltipContent}
-          </span>
-        </span>
-      `;
+      // Zapis w jednej linii (brak niechcianych enterów w tekście) + styl 'inline' zamiast 'inline-block'
+      resultHtml += `<span class="${colorClass} ${borderClass} relative group inline font-medium cursor-help rounded-sm px-1 py-0.5">${clusterText}${countBadge}<span class="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-80 max-w-[88vw] bg-[#161210] border border-stone-800 text-stone-300 text-[11px] p-3.5 rounded-2xl shadow-2xl z-50 leading-relaxed font-sans font-normal backdrop-blur-md whitespace-normal block text-left">${tooltipContent}</span></span>`;
 
       currentIdx = cluster.end;
     });
