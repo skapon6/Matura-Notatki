@@ -635,7 +635,6 @@ return (
                 <p className="text-xs text-stone-400 mt-1">Interaktywna weryfikacja prac z języka polskiego</p>
               </div>
             </div>
-          </div>
             <Link 
               href="/" 
               onClick={() => playSound("click")}
