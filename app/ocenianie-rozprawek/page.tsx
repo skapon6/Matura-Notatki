@@ -701,7 +701,7 @@ const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
           </div>
         )}
 
-        <div className={`max-w-6xl w-full ${currentTheme.cardBg} border ${currentTheme.cardBorder} rounded-3xl p-6 sm:p-8 shadow-xl mt-8 mb-12 flex flex-col gap-6 transition-colors duration-500`}>          
+        <div className={`max-w-7xl w-full ${currentTheme.cardBg} border ${currentTheme.cardBorder} rounded-3xl p-6 sm:p-10 shadow-xl mt-8 mb-12 flex flex-col gap-8 transition-colors duration-500`}>         
           <div className="p-4 rounded-2xl bg-stone-950/40 border border-stone-800/60 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="text-2xl">📊</span>
@@ -797,23 +797,13 @@ const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
 
               {activeTab === "write" ? (
                 <div>
-                <textarea
-                  ref={textareaRef}
-                  placeholder={
-                    isGenerationMode 
-                      ? "Opcja generowania jest włączona. Wpisz temat powyżej i kliknij przycisk generowania." 
-                      : "Wklej tutaj treść swojej rozprawki (minimum 50 słów)..."
-                  }
-                  value={essayText}
-                  onChange={(e) => {
-                    setEssayText(e.target.value);
-                    setIsGeneratedByAi(false);
-                    // Automatyczne powiększanie w trakcie pisania
-                    e.target.style.height = "auto";
-                    e.target.style.height = `${e.target.scrollHeight}px`;
-                  }}
-                  disabled={isAnalyzing || isGenerating || isGenerationMode || analysisResult !== null}
-                  className="w-full min-h-[350px] bg-stone-900/50 hover:bg-stone-900/70 focus:bg-stone-900/90 border border-stone-800 rounded-2xl p-6 sm:p-8 text-sm sm:text-base text-stone-200 font-serif leading-loose focus:outline-none focus:border-amber-600/50 disabled:opacity-60 disabled:cursor-not-allowed shadow-inner transition-colors resize-none overflow-hidden"
+               <textarea 
+                  rows={2}
+                  placeholder="Wpisz pełny temat rozprawki lub wybierz z bazy CKE..."
+                  value={selectedTopic}
+                  onChange={(e) => setSelectedTopic(e.target.value)}
+                  disabled={isAnalyzing || isGenerating || analysisResult !== null}
+                  className="w-full bg-stone-900/50 hover:bg-stone-900/70 focus:bg-stone-900/90 border border-stone-800 rounded-2xl p-4 sm:p-5 text-sm sm:text-base text-stone-100 font-medium leading-relaxed focus:outline-none focus:border-amber-500/70 focus:ring-1 focus:ring-amber-500/30 disabled:opacity-60 disabled:cursor-not-allowed shadow-inner transition-all resize-none min-h-[80px]"
                 />
                 </div>
               ) : (
