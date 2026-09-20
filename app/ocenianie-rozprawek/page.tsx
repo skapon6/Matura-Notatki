@@ -8,6 +8,7 @@ import { supabase } from "../lib/supabase";
 import { getThemeClasses, CozyTheme } from "../lib/theme";
 import { playSound } from "../lib/sounds";
 import { AtmosphericEssayLoader } from "../components/AtmosphericEssayLoader";
+import Header from "../components/Header";
 
 interface Match {
   start: number;
@@ -181,7 +182,7 @@ export default function OcenianieRozprawekPage() {
     triggerAlert("Wstawiono oficjalny temat z bazy CKE! 📜", "success");
   };
 
-const handleAnalyze = async () => {
+  const handleAnalyze = async () => {
     if (isGeneratedByAi) {
       triggerAlert("Ta praca została wygenerowana jako wzorzec AI. Napisz własną rozprawkę!", "error");
       return;
@@ -202,7 +203,6 @@ const handleAnalyze = async () => {
       triggerAlert("Brak wolnych kredytów na ocenę! Doładuj kredyty lub kup nowy pakiet.", "error");
       return;
     }
-
 
     setIsAnalyzing(true);
     setAnalysisResult(null);
@@ -246,7 +246,7 @@ const handleAnalyze = async () => {
       return;
     }
     if (!profile || profile.essay_credits <= 0) {
-      triggerAlert("Brak kredytów!", "error");
+      triggerAlert("Brak wolnych kredytów! Doładuj kredyty lub kup nowy pakiet.", "error");
       return;
     }
 
@@ -456,408 +456,412 @@ const handleAnalyze = async () => {
     : [];
 
   return (
-    <div className={`min-h-screen flex flex-col transition-colors duration-500 ${currentTheme.bg} text-stone-200 font-sans p-6 items-center`}>
+    <div className={`min-h-screen flex flex-col transition-colors duration-500 ${currentTheme.bg} text-stone-200 font-sans`}>
       
-      {notification && (
-        <div className={`fixed top-6 right-6 z-50 px-5 py-4 rounded-2xl border shadow-2xl backdrop-blur-md max-w-sm ${
-          notification.type === "success" ? "bg-emerald-950/90 border-emerald-500/30 text-emerald-200" : "bg-red-950/90 border-red-500/30 text-red-200"
-        }`}>
-          <p className="text-xs font-semibold leading-relaxed pr-2">{notification.message}</p>
-        </div>
-      )}
+      {/* 🌟 GLOBALNY NAGŁÓWEK PLATFORMY */}
+      <Header />
 
-      {/* MODAL TEMATÓW CKE */}
-      {isTopicModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className="bg-[#181311] border border-stone-800 rounded-3xl p-5 sm:p-7 max-w-3xl w-full shadow-2xl flex flex-col gap-5 max-h-[90vh] overflow-hidden">
-            
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-stone-800/80 pb-4 gap-4">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl sm:text-3xl p-2 rounded-2xl bg-amber-950/40 border border-amber-900/40">📜</span>
-                <div>
-                  <h3 className="text-base sm:text-lg font-bold font-serif text-stone-100">Baza Oficjalnych Tematów CKE</h3>
-                  <p className="text-[11px] text-stone-400">Wybierz gotowy temat maturalny, aby przeanalizować pracę</p>
-                </div>
-              </div>
+      <div className="flex-1 flex flex-col items-center p-6 w-full">
+        {notification && (
+          <div className={`fixed top-6 right-6 z-50 px-5 py-4 rounded-2xl border shadow-2xl backdrop-blur-md max-w-sm ${
+            notification.type === "success" ? "bg-emerald-950/90 border-emerald-500/30 text-emerald-200" : "bg-red-950/90 border-red-500/30 text-red-200"
+          }`}>
+            <p className="text-xs font-semibold leading-relaxed pr-2">{notification.message}</p>
+          </div>
+        )}
 
-              <div className="relative w-full sm:w-64">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500 text-xs">🔍</span>
-                <input
-                  type="text"
-                  placeholder="Szukaj (np. bunt, praca)..."
-                  value={topicSearch}
-                  onChange={(e) => setTopicSearch(e.target.value)}
-                  className="w-full bg-stone-950 border border-stone-800 rounded-xl py-2 pl-8 pr-8 text-xs text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-600/75 transition-all font-sans"
-                />
-                {topicSearch && (
-                  <button onClick={() => setTopicSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-300 text-xs">✕</button>
-                )}
-              </div>
-            </div>
-
-            {!topicSearch && (
-              <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 border-b border-stone-800/50">
-                <div className="flex gap-2">
-                  {OFFICIAL_CKE_YEARS.map((y) => (
-                    <button
-                      key={y.year}
-                      onClick={() => setActiveYearTab(y.year)}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-2 ${
-                        activeYearTab === y.year
-                          ? "bg-[#c68a4c] text-stone-950 shadow-lg scale-102 font-serif"
-                          : "bg-stone-900/60 border border-stone-800 text-stone-400 hover:text-stone-200 hover:bg-stone-800"
-                      }`}
-                    >
-                      <span>Matura {y.year}</span>
-                    </button>
-                  ))}
-                </div>
-                <span className="text-[10px] text-amber-500/80 font-mono tracking-widest hidden md:inline-block">
-                  {currentYearData?.formula}
-                </span>
-              </div>
-            )}
-
-            <div className="flex flex-col gap-4 overflow-y-auto pr-1 max-h-[60vh]">
-              {topicSearch ? (
-                <div className="space-y-4">
-                  <p className="text-[11px] text-stone-400">Wyniki wyszukiwania dla frazy: <strong className="text-amber-400">„{topicSearch}”</strong></p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {OFFICIAL_CKE_YEARS.flatMap(y => y.topics.map(t => ({ ...t, year: y.year }))).filter(t => t.text.toLowerCase().includes(topicSearch.toLowerCase())).map((t, idx) => (
-                      <div
-                        key={idx}
-                        onClick={() => handleSelectCkeTopic(t.text)}
-                        className="p-4 rounded-2xl bg-stone-900/40 border border-stone-800 hover:border-amber-600/60 transition-all cursor-pointer group flex flex-col justify-between gap-3"
-                      >
-                        <span className="text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-amber-950/60 text-amber-400 border border-amber-900/40 w-max">
-                          Matura {t.year} • {t.session.split(" ")[0]}
-                        </span>
-                        <p className="text-xs sm:text-[13px] text-stone-100 font-serif leading-relaxed">„{t.text}”</p>
-                      </div>
-                    ))}
+        {/* MODAL TEMATÓW CKE */}
+        {isTopicModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+            <div className="bg-[#181311] border border-stone-800 rounded-3xl p-5 sm:p-7 max-w-3xl w-full shadow-2xl flex flex-col gap-5 max-h-[90vh] overflow-hidden">
+              
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-stone-800/80 pb-4 gap-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl sm:text-3xl p-2 rounded-2xl bg-amber-950/40 border border-amber-900/40">📜</span>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold font-serif text-stone-100">Baza Oficjalnych Tematów CKE</h3>
+                    <p className="text-[11px] text-stone-400">Wybierz gotowy temat maturalny, aby przeanalizować pracę</p>
                   </div>
                 </div>
-              ) : (
-                <div className="space-y-6">
-                  {/* SESJA GŁÓWNA (MAJ) */}
-                  <div>
-                    <h4 className="text-[11px] uppercase tracking-widest text-amber-400 font-bold mb-2 px-1 flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-amber-400"></span> Sesja Główna (Maj)
-                    </h4>
+
+                <div className="relative w-full sm:w-64">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500 text-xs">🔍</span>
+                  <input
+                    type="text"
+                    placeholder="Szukaj (np. bunt, praca)..."
+                    value={topicSearch}
+                    onChange={(e) => setTopicSearch(e.target.value)}
+                    className="w-full bg-stone-950 border border-stone-800 rounded-xl py-2 pl-8 pr-8 text-xs text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-600/75 transition-all font-sans"
+                  />
+                  {topicSearch && (
+                    <button onClick={() => setTopicSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-300 text-xs">✕</button>
+                  )}
+                </div>
+              </div>
+
+              {!topicSearch && (
+                <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 border-b border-stone-800/50">
+                  <div className="flex gap-2">
+                    {OFFICIAL_CKE_YEARS.map((y) => (
+                      <button
+                        key={y.year}
+                        onClick={() => setActiveYearTab(y.year)}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-2 ${
+                          activeYearTab === y.year
+                            ? "bg-[#c68a4c] text-stone-950 shadow-lg scale-102 font-serif"
+                            : "bg-stone-900/60 border border-stone-800 text-stone-400 hover:text-stone-200 hover:bg-stone-800"
+                        }`}
+                      >
+                        <span>Matura {y.year}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <span className="text-[10px] text-amber-500/80 font-mono tracking-widest hidden md:inline-block">
+                    {currentYearData?.formula}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-4 overflow-y-auto pr-1 max-h-[60vh]">
+                {topicSearch ? (
+                  <div className="space-y-4">
+                    <p className="text-[11px] text-stone-400">Wyniki wyszukiwania dla frazy: <strong className="text-amber-400">„{topicSearch}”</strong></p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {currentYearData?.topics.filter(t => t.session.includes("Maj")).map((t, idx) => (
+                      {OFFICIAL_CKE_YEARS.flatMap(y => y.topics.map(t => ({ ...t, year: y.year }))).filter(t => t.text.toLowerCase().includes(topicSearch.toLowerCase())).map((t, idx) => (
                         <div
                           key={idx}
                           onClick={() => handleSelectCkeTopic(t.text)}
-                          className="p-4 rounded-2xl bg-stone-900/40 border border-stone-800/80 hover:border-amber-500/60 transition-all cursor-pointer group flex flex-col justify-between gap-3 shadow-sm"
+                          className="p-4 rounded-2xl bg-stone-900/40 border border-stone-800 hover:border-amber-600/60 transition-all cursor-pointer group flex flex-col justify-between gap-3"
                         >
-                          <span className="text-[9px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-amber-950/60 text-amber-300 border border-amber-800/40 w-max">{t.number}</span>
+                          <span className="text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-amber-950/60 text-amber-400 border border-amber-900/40 w-max">
+                            Matura {t.year} • {t.session.split(" ")[0]}
+                          </span>
                           <p className="text-xs sm:text-[13px] text-stone-100 font-serif leading-relaxed">„{t.text}”</p>
                         </div>
                       ))}
                     </div>
                   </div>
-
-                  {/* SESJA DODATKOWA (CZERWIEC) */}
-                  {currentYearData?.topics.some(t => t.session.includes("Czerwiec")) && (
+                ) : (
+                  <div className="space-y-6">
                     <div>
-                      <h4 className="text-[11px] uppercase tracking-widest text-sky-400 font-bold mb-2 px-1 flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-sky-400"></span> Sesja Dodatkowa (Czerwiec)
+                      <h4 className="text-[11px] uppercase tracking-widest text-amber-400 font-bold mb-2 px-1 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-amber-400"></span> Sesja Główna (Maj)
                       </h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {currentYearData?.topics.filter(t => t.session.includes("Czerwiec")).map((t, idx) => (
+                        {currentYearData?.topics.filter(t => t.session.includes("Maj")).map((t, idx) => (
                           <div
                             key={idx}
                             onClick={() => handleSelectCkeTopic(t.text)}
-                            className="p-4 rounded-2xl bg-stone-900/40 border border-stone-800/80 hover:border-sky-500/60 transition-all cursor-pointer group flex flex-col justify-between gap-3 shadow-sm"
+                            className="p-4 rounded-2xl bg-stone-900/40 border border-stone-800/80 hover:border-amber-500/60 transition-all cursor-pointer group flex flex-col justify-between gap-3 shadow-sm"
                           >
-                            <span className="text-[9px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-sky-950/60 text-sky-300 border border-sky-800/40 w-max">{t.number}</span>
+                            <span className="text-[9px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-amber-950/60 text-amber-300 border border-amber-800/40 w-max">{t.number}</span>
                             <p className="text-xs sm:text-[13px] text-stone-100 font-serif leading-relaxed">„{t.text}”</p>
                           </div>
                         ))}
                       </div>
                     </div>
-                  )}
 
-                  {/* SESJA POPRAWKOWA (SIERPIEŃ) */}
-                  {currentYearData?.topics.some(t => t.session.includes("Sierpień")) && (
-                    <div>
-                      <h4 className="text-[11px] uppercase tracking-widest text-orange-400 font-bold mb-2 px-1 flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-orange-400"></span> Sesja Poprawkowa (Sierpień)
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {currentYearData?.topics.filter(t => t.session.includes("Sierpień")).map((t, idx) => (
-                          <div
-                            key={idx}
-                            onClick={() => handleSelectCkeTopic(t.text)}
-                            className="p-4 rounded-2xl bg-stone-900/40 border border-stone-800/80 hover:border-orange-500/60 transition-all cursor-pointer group flex flex-col justify-between gap-3 shadow-sm"
-                          >
-                            <span className="text-[9px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-orange-950/60 text-orange-300 border border-orange-800/40 w-max">{t.number}</span>
-                            <p className="text-xs sm:text-[13px] text-stone-100 font-serif leading-relaxed">„{t.text}”</p>
-                          </div>
-                        ))}
+                    {currentYearData?.topics.some(t => t.session.includes("Czerwiec")) && (
+                      <div>
+                        <h4 className="text-[11px] uppercase tracking-widest text-sky-400 font-bold mb-2 px-1 flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-sky-400"></span> Sesja Dodatkowa (Czerwiec)
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {currentYearData?.topics.filter(t => t.session.includes("Czerwiec")).map((t, idx) => (
+                            <div
+                              key={idx}
+                              onClick={() => handleSelectCkeTopic(t.text)}
+                              className="p-4 rounded-2xl bg-stone-900/40 border border-stone-800/80 hover:border-sky-500/60 transition-all cursor-pointer group flex flex-col justify-between gap-3 shadow-sm"
+                            >
+                              <span className="text-[9px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-sky-950/60 text-sky-300 border border-sky-800/40 w-max">{t.number}</span>
+                              <p className="text-xs sm:text-[13px] text-stone-100 font-serif leading-relaxed">„{t.text}”</p>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+                    )}
 
-            <div className="border-t border-stone-800/80 pt-3 flex justify-between items-center text-[11px] text-stone-500">
-              <span>Wszystkie tematy pochodzą z oficjalnych arkuszy CKE</span>
-              <button onClick={() => setIsTopicModalOpen(false)} className="px-4 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 border border-stone-800 text-stone-300 text-xs font-semibold">Zamknij</button>
-            </div>
-
-          </div>
-        </div>
-      )}
-
-      <div className={`max-w-4xl w-full ${currentTheme.cardBg} border ${currentTheme.cardBorder} rounded-3xl p-6 sm:p-8 shadow-xl mt-8 flex flex-col gap-6 transition-colors duration-500`}>
-        
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-stone-800/60 pb-5 gap-4">
-          <div className="flex items-center gap-3">
-            <span className="text-3xl">✨</span>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold font-serif text-stone-100">Asystent Rozprawek AI</h1>
-              <p className="text-xs text-stone-400 mt-1">Interaktywna weryfikacja prac z języka polskiego</p>
-            </div>
-          </div>
-          <Link href="/" className={`self-start sm:self-center text-xs px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} bg-stone-900/60 text-stone-400 hover:text-stone-100 transition-all`}>
-            ← Wróć do kącika
-          </Link>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-stone-950/40 border border-stone-800/60 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">📊</span>
-            <div>
-              <p className="text-xs font-bold text-stone-300">Stan Twojego konta:</p>
-              <p className="text-[11px] text-stone-500">Używasz bezpiecznego systemu tokenów edukacyjnych.</p>
-            </div>
-          </div>
-          <span className="text-sm font-bold font-mono px-3.5 py-2 rounded-xl bg-amber-950/40 text-amber-400 border border-amber-900/50">
-            Pozostało ocen: {creditsRemaining}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-8 flex flex-col gap-4">
-            <div>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                <label className="text-xs uppercase tracking-widest text-amber-500 font-semibold">
-                  Temat Twojej rozprawki
-                </label>
-                
-                <button
-                  type="button"
-                  onClick={() => setIsTopicModalOpen(true)}
-                  disabled={isAnalyzing || isGenerating || analysisResult !== null}
-                  className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#231b16] border border-amber-800/40 hover:border-amber-500/70 text-[#c68a4c] text-[11px] font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
-                >
-                  <span>📚</span>
-                  <span>Wybierz z bazy CKE (2023–2026) ▾</span>
-                </button>
-              </div>
-
-              <input 
-                type="text"
-                placeholder="Wpisz temat rozprawki lub wybierz z bazy CKE..."
-                value={selectedTopic}
-                onChange={(e) => setSelectedTopic(e.target.value)}
-                disabled={isAnalyzing || isGenerating || analysisResult !== null}
-                className="w-full bg-stone-900/90 border border-stone-800 rounded-xl py-2.5 px-3.5 text-xs text-stone-200 disabled:opacity-60 disabled:cursor-not-allowed"
-              />
-            </div>
-
-            {/* TRYB WYBORU GENEROWANIA ROZPRAWKI */}
-            {/* TRYB WYBORU GENEROWANIA ROZPRAWKI – NOWOCZESNY KAFELEK */}
-            <div 
-              onClick={() => {
-                if (isAnalyzing || isGenerating || analysisResult !== null) return;
-                const newState = !isGenerationMode;
-                setIsGenerationMode(newState);
-                if (newState) {
-                  setEssayText(""); 
-                  setGeneratedContexts([]);
-                  setAnalysisResult(null);
-                  setIsGeneratedByAi(false);
-                }
-              }}
-              className={`group relative flex items-center gap-3.5 p-4 rounded-2xl border transition-all cursor-pointer select-none ${
-                isGenerationMode 
-                  ? "bg-amber-950/20 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.1)]" 
-                  : "bg-stone-900/40 border-stone-800/80 hover:border-stone-700 hover:bg-stone-900/70"
-              } ${(isAnalyzing || isGenerating || analysisResult !== null) ? "opacity-50 cursor-not-allowed" : ""}`}
-            >
-              {/* Niestandardowy, ładny element zaznaczenia */}
-              <div className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-all shrink-0 ${
-                isGenerationMode 
-                  ? "bg-[#c68a4c] border-amber-400 text-stone-950 shadow-sm scale-105" 
-                  : "bg-stone-950 border-stone-700 group-hover:border-stone-500"
-              }`}>
-                {isGenerationMode && (
-                  <svg className="w-3.5 h-3.5 stroke-[3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">💡</span>
-                  <span className={`text-xs font-bold transition-colors ${isGenerationMode ? "text-amber-300" : "text-stone-200"}`}>
-                    Tryb generowania wzorca przez AI
-                  </span>
-                </div>
-                <p className="text-[11px] text-stone-400 leading-relaxed">
-                  Zamiast oceniać Twoją pracę, sztuczna inteligencja napisze dla Ciebie idealną rozprawkę maturalną na ten temat.
-                </p>
-              </div>
-            </div>
-
-            {analysisResult && (
-              <div className="flex border-b border-stone-800 gap-2 mb-1">
-                <button onClick={() => setActiveTab("write")} className={`px-4 py-2 text-xs font-semibold uppercase ${activeTab === "write" ? "text-[#c68a4c] border-b-2 border-[#c68a4c]" : "text-stone-500"}`}>✍ Edytor tekstu (Zablokowany)</button>
-                <button onClick={() => setActiveTab("preview")} className={`px-4 py-2 text-xs font-semibold uppercase ${activeTab === "preview" ? "text-emerald-400 border-b-2 border-emerald-400" : "text-stone-500"}`}>🔍 Podgląd korekt i błędów</button>
-              </div>
-            )}
-
-            {activeTab === "write" ? (
-              <div>
-                <textarea
-                  rows={12}
-                  placeholder={
-                    isGenerationMode 
-                      ? "Opcja generowania jest włączona. Wpisz temat powyżej i kliknij przycisk generowania." 
-                      : "Wklej tutaj treść swojej rozprawki (minimum 50 słów)..."
-                  }
-                  value={essayText}
-                  onChange={(e) => {
-                    setEssayText(e.target.value);
-                    setIsGeneratedByAi(false);
-                  }}
-                  disabled={isAnalyzing || isGenerating || isGenerationMode || analysisResult !== null}
-                  className="w-full bg-stone-900/80 border border-stone-800 rounded-2xl p-4 text-xs sm:text-sm text-stone-200 disabled:opacity-60 disabled:cursor-not-allowed"
-                />
-              </div>
-            ) : (
-              <div className="bg-stone-950/40 border border-stone-800 rounded-2xl p-5 min-h-[300px] shadow-inner">
-                <div className="mb-4 border-b border-stone-900 pb-3 flex justify-between items-center">
-                  <span className="text-xs uppercase tracking-widest text-emerald-400 font-semibold">Zweryfikowana treść:</span>
-                  <span className="text-[10px] text-stone-500">Najedź myszką na błąd</span>
-                </div>
-                {renderHighlightedText()}
-              </div>
-            )}
-
-            {/* PRZYCISKI AKCJI */}
-            {analysisResult ? (
-              <div className="flex flex-col gap-2.5 w-full animate-slide-in">
-                <button
-                  type="button"
-                  onClick={() => {
-                    playSound("click");
-                    setAnalysisResult(null);
-                    setEssayText("");
-                    setSelectedTopic("");
-                    setIsGeneratedByAi(false);
-                    setActiveTab("write");
-                    playSound("success");
-                    triggerAlert("Zresetowano edytor. Możesz wpisać nową rozprawkę!", "success");
-                  }}
-                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-400 hover:from-amber-500 hover:to-amber-300 text-stone-950 font-extrabold text-xs sm:text-sm transition-all shadow-lg active:scale-95 cursor-pointer flex items-center justify-center gap-2"
-                >
-                  <span>🔄</span>
-                  <span>Zresetuj edytor i napisz nową rozprawkę</span>
-                </button>
-              </div>
-            ) : isGenerationMode ? (
-              <button
-                onClick={handleGenerateEssay}
-                disabled={isAnalyzing || isGenerating}
-                className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs cursor-pointer shadow-md disabled:opacity-50"
-              >
-                {isGenerating ? "✍ Trwa generowanie rozprawki..." : "Generuj przykładową rozprawkę (1 kredyt)"}
-              </button>
-            ) : (
-              <button
-                onClick={handleAnalyze}
-                disabled={isAnalyzing || isGenerating}
-                className="w-full py-3 rounded-xl bg-[#c68a4c] hover:bg-[#d99c5d] text-stone-950 font-bold text-xs cursor-pointer shadow-md disabled:opacity-50"
-              >
-                {isAnalyzing ? "🤖 Asystent Rozprawek AI analizuje..." : "Przeanalizuj rozprawkę (1 kredyt)"}
-              </button>
-            )}
-          </div>
-
-          {/* PRAWA KOLUMNA: RAPORT AI */}
-          <div className="lg:col-span-4 flex flex-col gap-4">
-            {isAnalyzing || isGenerating ? (
-              <div className="rounded-2xl border border-amber-950/40 bg-stone-950/20 p-5 flex flex-col justify-center items-center text-center min-h-[300px]">
-                <AtmosphericEssayLoader />
-              </div>
-            ) : analysisResult ? (
-              <div className="rounded-2xl border border-stone-800 bg-stone-900/60 p-5 flex flex-col gap-3.5 animate-fade-in max-h-[500px] overflow-y-auto">
-                <div className="flex items-center justify-between border-b border-stone-800 pb-3">
-                  <h3 className="text-xs uppercase tracking-widest text-emerald-400 font-bold">Wynik Analizy</h3>
-                  <span className="text-3xl sm:text-4xl font-black text-emerald-400 font-mono">
-                    {safeString(analysisResult.score || "0/35")}
-                  </span>
-                </div>
-
-                <div className="space-y-3.5">
-                  {detailsArray.map((detail: any, i: number) => (
-                    <div key={i} className="text-[11px] border-b border-stone-900/55 pb-2.5 last:border-none">
-                      <div className="flex justify-between font-bold text-stone-200 mb-1">
-                        <span>{safeString(detail.criterion)}</span>
-                        <span className="text-[#c68a4c] font-mono">{safeString(detail.points)}</span>
+                    {currentYearData?.topics.some(t => t.session.includes("Sierpień")) && (
+                      <div>
+                        <h4 className="text-[11px] uppercase tracking-widest text-orange-400 font-bold mb-2 px-1 flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-orange-400"></span> Sesja Poprawkowa (Sierpień)
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {currentYearData?.topics.filter(t => t.session.includes("Sierpień")).map((t, idx) => (
+                            <div
+                              key={idx}
+                              onClick={() => handleSelectCkeTopic(t.text)}
+                              className="p-4 rounded-2xl bg-stone-900/40 border border-stone-800/80 hover:border-orange-500/60 transition-all cursor-pointer group flex flex-col justify-between gap-3 shadow-sm"
+                            >
+                              <span className="text-[9px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-orange-950/60 text-orange-300 border border-orange-800/40 w-max">{t.number}</span>
+                              <p className="text-xs sm:text-[13px] text-stone-100 font-serif leading-relaxed">„{t.text}”</p>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <p className="text-stone-400 font-sans leading-relaxed">{safeString(detail.comment)}</p>
-                    </div>
-                  ))}
-                </div>
-
-                {analysisResult.summary && (
-                  <div className="border-t border-stone-800 pt-3 mt-1">
-                    <h4 className="text-[11px] font-bold text-[#c68a4c] font-serif uppercase tracking-wider mb-1">Podsumowanie krytyka:</h4>
-                    <p className="text-[11.5px] text-stone-400 italic leading-relaxed">{safeString(analysisResult.summary)}</p>
+                    )}
                   </div>
                 )}
               </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-stone-800 bg-stone-950/20 p-5 text-center text-xs text-stone-500">
-                Po kliknięciu przycisku oceny, tutaj pojawi się raport CKE.
-              </div>
-            )}
-          </div>
-        </div>
 
-        {/* HISTORIA PRAC */}
-        {history.length > 0 && (
-          <div className="border-t border-stone-800/60 pt-6 mt-2">
-            <h3 className="text-xs uppercase tracking-widest text-amber-500 font-bold mb-4">
-              📅 Historia Twoich prac i ocen ({history.length}) – Kliknij, aby wczytać za darmo:
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[280px] overflow-y-auto pr-1">
-              {history.map((item) => (
-                <div 
-                  key={item.id}
-                  onClick={() => loadFromHistory(item)}
-                  className="p-4 rounded-2xl bg-stone-950/40 border border-stone-800/60 hover:border-amber-700/50 transition-all cursor-pointer flex justify-between items-center"
-                >
-                  <div className="flex flex-col gap-1 pr-4 min-w-0">
-                    <h4 className="text-xs font-bold text-stone-200 truncate font-serif">{safeString(item.topic)}</h4>
-                    <span className="text-[10px] text-stone-500">{new Date(item.created_at).toLocaleDateString("pl-PL")}</span>
-                  </div>
-                  <span className="text-sm font-bold text-emerald-400 font-mono bg-stone-900 px-2.5 py-1.5 rounded-xl border border-stone-800">
-                    {safeString(item.score)}
-                  </span>
-                </div>
-              ))}
+              <div className="border-t border-stone-800/80 pt-3 flex justify-between items-center text-[11px] text-stone-500">
+                <span>Wszystkie tematy pochodzą z oficjalnych arkuszy CKE</span>
+                <button onClick={() => setIsTopicModalOpen(false)} className="px-4 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 border border-stone-800 text-stone-300 text-xs font-semibold">Zamknij</button>
+              </div>
+
             </div>
           </div>
         )}
 
+        <div className={`max-w-4xl w-full ${currentTheme.cardBg} border ${currentTheme.cardBorder} rounded-3xl p-6 sm:p-8 shadow-xl mt-8 flex flex-col gap-6 transition-colors duration-500`}>
+          
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-stone-800/60 pb-5 gap-4">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">✨</span>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold font-serif text-stone-100">Asystent Rozprawek AI</h1>
+                <p className="text-xs text-stone-400 mt-1">Interaktywna weryfikacja prac z języka polskiego</p>
+              </div>
+            </div>
+            <Link 
+              href="/" 
+              onClick={() => playSound("click")}
+              className={`self-start sm:self-center text-xs px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} bg-stone-900/60 text-stone-400 hover:text-stone-100 transition-all`}
+            >
+              ← Wróć do kącika
+            </Link>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-stone-950/40 border border-stone-800/60 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">📊</span>
+              <div>
+                <p className="text-xs font-bold text-stone-300">Stan Twojego konta:</p>
+                <p className="text-[11px] text-stone-500">Używasz bezpiecznego systemu tokenów edukacyjnych.</p>
+              </div>
+            </div>
+            <span className="text-sm font-bold font-mono px-3.5 py-2 rounded-xl bg-amber-950/40 text-amber-400 border border-amber-900/50">
+              Pozostało ocen: {creditsRemaining}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-8 flex flex-col gap-4">
+              <div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                  <label className="text-xs uppercase tracking-widest text-amber-500 font-semibold">
+                    Temat Twojej rozprawki
+                  </label>
+                  
+                  <button
+                    type="button"
+                    onClick={() => setIsTopicModalOpen(true)}
+                    disabled={isAnalyzing || isGenerating || analysisResult !== null}
+                    className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#231b16] border border-amber-800/40 hover:border-amber-500/70 text-[#c68a4c] text-[11px] font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                  >
+                    <span>📚</span>
+                    <span>Wybierz z bazy CKE (2023–2026) ▾</span>
+                  </button>
+                </div>
+
+                <input 
+                  type="text"
+                  placeholder="Wpisz temat rozprawki lub wybierz z bazy CKE..."
+                  value={selectedTopic}
+                  onChange={(e) => setSelectedTopic(e.target.value)}
+                  disabled={isAnalyzing || isGenerating || analysisResult !== null}
+                  className="w-full bg-stone-900/90 border border-stone-800 rounded-xl py-2.5 px-3.5 text-xs text-stone-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                />
+              </div>
+
+              {/* TRYB WYBORU GENEROWANIA ROZPRAWKI */}
+              <div 
+                onClick={() => {
+                  if (isAnalyzing || isGenerating || analysisResult !== null) return;
+                  const newState = !isGenerationMode;
+                  setIsGenerationMode(newState);
+                  if (newState) {
+                    setEssayText(""); 
+                    setGeneratedContexts([]);
+                    setAnalysisResult(null);
+                    setIsGeneratedByAi(false);
+                  }
+                }}
+                className={`group relative flex items-center gap-3.5 p-4 rounded-2xl border transition-all cursor-pointer select-none ${
+                  isGenerationMode 
+                    ? "bg-amber-950/20 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.1)]" 
+                    : "bg-stone-900/40 border-stone-800/80 hover:border-stone-700 hover:bg-stone-900/70"
+                } ${(isAnalyzing || isGenerating || analysisResult !== null) ? "opacity-50 cursor-not-allowed" : ""}`}
+              >
+                <div className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-all shrink-0 ${
+                  isGenerationMode 
+                    ? "bg-[#c68a4c] border-amber-400 text-stone-950 shadow-sm scale-105" 
+                    : "bg-stone-950 border-stone-700 group-hover:border-stone-500"
+                }`}>
+                  {isGenerationMode && (
+                    <svg className="w-3.5 h-3.5 stroke-[3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">💡</span>
+                    <span className={`text-xs font-bold transition-colors ${isGenerationMode ? "text-amber-300" : "text-stone-200"}`}>
+                      Tryb generowania wzorca przez AI
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-stone-400 leading-relaxed">
+                    Zamiast oceniać Twoją pracę, sztuczna inteligencja napisze dla Ciebie idealną rozprawkę maturalną na ten temat.
+                  </p>
+                </div>
+              </div>
+
+              {analysisResult && (
+                <div className="flex border-b border-stone-800 gap-2 mb-1">
+                  <button onClick={() => setActiveTab("write")} className={`px-4 py-2 text-xs font-semibold uppercase ${activeTab === "write" ? "text-[#c68a4c] border-b-2 border-[#c68a4c]" : "text-stone-500"}`}>✍ Edytor tekstu (Zablokowany)</button>
+                  <button onClick={() => setActiveTab("preview")} className={`px-4 py-2 text-xs font-semibold uppercase ${activeTab === "preview" ? "text-emerald-400 border-b-2 border-emerald-400" : "text-stone-500"}`}>🔍 Podgląd korekt i błędów</button>
+                </div>
+              )}
+
+              {activeTab === "write" ? (
+                <div>
+                  <textarea
+                    rows={12}
+                    placeholder={
+                      isGenerationMode 
+                        ? "Opcja generowania jest włączona. Wpisz temat powyżej i kliknij przycisk generowania." 
+                        : "Wklej tutaj treść swojej rozprawki (minimum 50 słów)..."
+                    }
+                    value={essayText}
+                    onChange={(e) => {
+                      setEssayText(e.target.value);
+                      setIsGeneratedByAi(false);
+                    }}
+                    disabled={isAnalyzing || isGenerating || isGenerationMode || analysisResult !== null}
+                    className="w-full bg-stone-900/80 border border-stone-800 rounded-2xl p-4 text-xs sm:text-sm text-stone-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                  />
+                </div>
+              ) : (
+                <div className="bg-stone-950/40 border border-stone-800 rounded-2xl p-5 min-h-[300px] shadow-inner">
+                  <div className="mb-4 border-b border-stone-900 pb-3 flex justify-between items-center">
+                    <span className="text-xs uppercase tracking-widest text-emerald-400 font-semibold">Zweryfikowana treść:</span>
+                    <span className="text-[10px] text-stone-500">Najedź myszką na błąd</span>
+                  </div>
+                  {renderHighlightedText()}
+                </div>
+              )}
+
+              {/* PRZYCISKI AKCJI */}
+              {analysisResult ? (
+                <div className="flex flex-col gap-2.5 w-full animate-slide-in">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playSound("click");
+                      setAnalysisResult(null);
+                      setEssayText("");
+                      setSelectedTopic("");
+                      setIsGeneratedByAi(false);
+                      setActiveTab("write");
+                      playSound("success");
+                      triggerAlert("Zresetowano edytor. Możesz wpisać nową rozprawkę!", "success");
+                    }}
+                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-400 hover:from-amber-500 hover:to-amber-300 text-stone-950 font-extrabold text-xs sm:text-sm transition-all shadow-lg active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <span>🔄</span>
+                    <span>Zresetuj edytor i napisz nową rozprawkę</span>
+                  </button>
+                </div>
+              ) : isGenerationMode ? (
+                <button
+                  onClick={handleGenerateEssay}
+                  disabled={isAnalyzing || isGenerating}
+                  className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs cursor-pointer shadow-md disabled:opacity-50"
+                >
+                  {isGenerating ? "✍ Trwa generowanie rozprawki..." : "Generuj przykładową rozprawkę (1 kredyt)"}
+                </button>
+              ) : (
+                <button
+                  onClick={handleAnalyze}
+                  disabled={isAnalyzing || isGenerating}
+                  className="w-full py-3 rounded-xl bg-[#c68a4c] hover:bg-[#d99c5d] text-stone-950 font-bold text-xs cursor-pointer shadow-md disabled:opacity-50"
+                >
+                  {isAnalyzing ? "🤖 Asystent Rozprawek AI analizuje..." : "Przeanalizuj rozprawkę (1 kredyt)"}
+                </button>
+              )}
+            </div>
+
+            {/* PRAWA KOLUMNA: RAPORT AI */}
+            <div className="lg:col-span-4 flex flex-col gap-4">
+              {isAnalyzing || isGenerating ? (
+                <div className="rounded-2xl border border-amber-950/40 bg-stone-950/20 p-5 flex flex-col justify-center items-center text-center min-h-[300px]">
+                  <AtmosphericEssayLoader />
+                </div>
+              ) : analysisResult ? (
+                <div className="rounded-2xl border border-stone-800 bg-stone-900/60 p-5 flex flex-col gap-3.5 animate-fade-in max-h-[500px] overflow-y-auto">
+                  <div className="flex items-center justify-between border-b border-stone-800 pb-3">
+                    <h3 className="text-xs uppercase tracking-widest text-emerald-400 font-bold">Wynik Analizy</h3>
+                    <span className="text-3xl sm:text-4xl font-black text-emerald-400 font-mono">
+                      {safeString(analysisResult.score || "0/35")}
+                    </span>
+                  </div>
+
+                  <div className="space-y-3.5">
+                    {detailsArray.map((detail: any, i: number) => (
+                      <div key={i} className="text-[11px] border-b border-stone-900/55 pb-2.5 last:border-none">
+                        <div className="flex justify-between font-bold text-stone-200 mb-1">
+                          <span>{safeString(detail.criterion)}</span>
+                          <span className="text-[#c68a4c] font-mono">{safeString(detail.points)}</span>
+                        </div>
+                        <p className="text-stone-400 font-sans leading-relaxed">{safeString(detail.comment)}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {analysisResult.summary && (
+                    <div className="border-t border-stone-800 pt-3 mt-1">
+                      <h4 className="text-[11px] font-bold text-[#c68a4c] font-serif uppercase tracking-wider mb-1">Podsumowanie krytyka:</h4>
+                      <p className="text-[11.5px] text-stone-400 italic leading-relaxed">{safeString(analysisResult.summary)}</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-stone-800 bg-stone-950/20 p-5 text-center text-xs text-stone-500">
+                  Po kliknięciu przycisku oceny, tutaj pojawi się raport CKE.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* HISTORIA PRAC */}
+          {history.length > 0 && (
+            <div className="border-t border-stone-800/60 pt-6 mt-2">
+              <h3 className="text-xs uppercase tracking-widest text-amber-500 font-bold mb-4">
+                📅 Historia Twoich prac i ocen ({history.length}) – Kliknij, aby wczytać za darmo:
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[280px] overflow-y-auto pr-1">
+                {history.map((item) => (
+                  <div 
+                    key={item.id}
+                    onClick={() => loadFromHistory(item)}
+                    className="p-4 rounded-2xl bg-stone-950/40 border border-stone-800/60 hover:border-amber-700/50 transition-all cursor-pointer flex justify-between items-center"
+                  >
+                    <div className="flex flex-col gap-1 pr-4 min-w-0">
+                      <h4 className="text-xs font-bold text-stone-200 truncate font-serif">{safeString(item.topic)}</h4>
+                      <span className="text-[10px] text-stone-500">{new Date(item.created_at).toLocaleDateString("pl-PL")}</span>
+                    </div>
+                    <span className="text-sm font-bold text-emerald-400 font-mono bg-stone-900 px-2.5 py-1.5 rounded-xl border border-stone-800">
+                      {safeString(item.score)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+        </div>
       </div>
     </div>
   );
