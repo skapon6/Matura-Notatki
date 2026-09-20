@@ -8,7 +8,7 @@ import { supabase } from "../lib/supabase";
 import { getThemeClasses, CozyTheme } from "../lib/theme";
 import { playSound } from "../lib/sounds";
 import { AtmosphericEssayLoader } from "../components/AtmosphericEssayLoader";
-import { Header } from "../components/Header";
+import { useLofi } from "../context/LofiContext";
 
 interface Match {
   start: number;
@@ -101,6 +101,18 @@ const escapeHtml = (val: any): string => {
 export default function OcenianieRozprawekPage() {
   const router = useRouter();
   const [currentTheme, setCurrentTheme] = useState<any>(getThemeClasses("library"));
+
+  // Globalny odtwarzacz Lo-Fi
+  const {
+    lofiActive,
+    currentTrackIndex,
+    lofiVolume,
+    lofiTracks,
+    toggleLofi,
+    handleNextTrack,
+    handlePrevTrack,
+    handleVolumeChange
+  } = useLofi();
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("app_theme") as CozyTheme;
@@ -442,7 +454,6 @@ export default function OcenianieRozprawekPage() {
   }
 
   const creditsRemaining = profile?.essay_credits ?? 0;
-  const currentWordCount = essayText.split(/\s+/).filter(Boolean).length;
   const currentYearData = OFFICIAL_CKE_YEARS.find(y => y.year === activeYearTab);
 
   const detailsArray = Array.isArray(analysisResult?.details)
@@ -455,25 +466,77 @@ export default function OcenianieRozprawekPage() {
       }))
     : [];
 
-return (
+  return (
     <div className={`min-h-screen flex flex-col transition-colors duration-500 ${currentTheme.bg} text-stone-200 font-sans`}>
       
-      {/* 🌟 GLOBALNY NAGŁÓWEK PLATFORMY */}
-      <Header currentTheme={currentTheme} user={user} profile={profile} {...({} as any)} />
+      {/* 🌟 DEDYKOWANY NAGŁÓWEK MODUŁU (JAK W MATURZE USTNEJ) */}
+      <header className={`border-b ${currentTheme.cardBorder} px-4 sm:px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 backdrop-blur-md sticky top-0 z-40 ${currentTheme.cardBg} transition-colors duration-500 w-full`}>
+        <div className="flex w-full md:w-auto items-center justify-between md:justify-start gap-4">
+          <Link
+            href="/"
+            onClick={() => playSound("click")}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 transition-all text-xs font-medium ${currentTheme.subText} hover:text-stone-100`}
+          >
+            ← Wróć do kącika
+          </Link>
+        </div>
 
-      {/* Pasek nawigacyjny z przyciskiem powrotu (identyczny jak na screenie) */}
-      <div className="w-full max-w-6xl px-6 pt-4 flex items-center justify-between">
-        <Link
-          href="/"
-          onClick={() => playSound("click")}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-stone-900/50 hover:bg-stone-800/80 text-stone-400 hover:text-stone-200 text-xs font-medium border border-stone-800/80 transition-all shadow-sm backdrop-blur-sm"
-        >
-          <span>←</span>
-          <span>Wróć do kącika</span>
-        </Link>
-      </div>
+        <div className="hidden md:flex flex-col items-center select-none">
+          <div className="flex items-center gap-2">
+            <span className="text-xl sm:text-2xl">✨</span>
+            <h1 className="text-sm sm:text-base font-semibold tracking-wide text-stone-100 font-serif">
+              Asystent Rozprawek AI
+            </h1>
+          </div>
+        </div>
 
-      <div className="flex-1 flex flex-col items-center p-6 pt-2 w-full">
+        <div className="flex w-full md:w-auto items-center justify-between md:justify-end gap-3 sm:gap-4 border-t md:border-t-0 border-stone-800/40 pt-3 md:pt-0">
+          <div className={`flex items-center gap-3 sm:gap-4 px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} transition-all select-none shadow-md`}>
+            <button type="button" onClick={handlePrevTrack} className="text-stone-400 hover:text-amber-400 p-1 rounded-xl hover:bg-stone-800/40 transition-colors">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.334 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z" />
+              </svg>
+            </button>
+            <button type="button" onClick={toggleLofi} className="flex items-center gap-1.5 sm:gap-2 px-3 py-1 sm:px-4 sm:py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 hover:text-amber-400 border border-amber-500/20 transition-all font-semibold text-xs active:scale-95">
+              {lofiActive ? (
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 001.555-.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
+              <span className="hidden md:inline text-[10px] sm:text-xs tracking-wide">
+                {lofiTracks[currentTrackIndex]?.name || "Lofi"}
+              </span>
+            </button>
+            <button type="button" onClick={handleNextTrack} className="text-stone-400 hover:text-amber-400 p-1 rounded-xl hover:bg-stone-800/40 transition-colors">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 005 8v8a1 1 0 001.6.8l5.334-4zM19.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.334-4z" />
+              </svg>
+            </button>
+            <div className="hidden sm:flex items-center gap-2 sm:gap-2.5 ml-1 border-l border-stone-800/80 pl-2 sm:pl-3">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-stone-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 12H3a1 1 0 01-1-1V9a1 1 0 011-1h1.586l3.707-3.707a1 1 0 011.09-.217z" clipRule="evenodd" />
+              </svg>
+              <input 
+                type="range" 
+                min="0" 
+                max="1" 
+                step="0.05" 
+                value={lofiVolume} 
+                onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                className="w-14 sm:w-16 md:w-20 h-1 bg-stone-850 rounded-lg appearance-none cursor-pointer accent-amber-500 focus:outline-none"
+                style={{ WebkitAppearance: "none" }}
+              />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="flex-1 flex flex-col items-center p-6 w-full">
         {notification && (
           <div className={`fixed top-6 right-6 z-50 px-5 py-4 rounded-2xl border shadow-2xl backdrop-blur-md max-w-sm ${
             notification.type === "success" ? "bg-emerald-950/90 border-emerald-500/30 text-emerald-200" : "bg-red-950/90 border-red-500/30 text-red-200"
@@ -635,13 +698,7 @@ return (
                 <p className="text-xs text-stone-400 mt-1">Interaktywna weryfikacja prac z języka polskiego</p>
               </div>
             </div>
-            <Link 
-              href="/" 
-              onClick={() => playSound("click")}
-              className={`self-start sm:self-center text-xs px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} bg-stone-900/60 text-stone-400 hover:text-stone-100 transition-all`}
-            >
-              ← Wróć do kącika
-            </Link>
+            {/* PRZYCISK WRÓĆ ZOSTAŁ USUNIĘTY STĄD (JEST W GŁÓWNYM NAGŁÓWKU) */}
           </div>
 
           <div className="p-4 rounded-2xl bg-stone-950/40 border border-stone-800/60 flex items-center justify-between">
