@@ -8,6 +8,7 @@ import { supabase } from "../lib/supabase";
 import { getThemeClasses, CozyTheme } from "../lib/theme";
 import { playSound } from "../lib/sounds";
 
+
 interface Match {
   start: number;
   end: number;
@@ -224,6 +225,8 @@ export default function OcenianieRozprawekPage() {
       setProfile((prev: any) => ({ ...prev, essay_credits: data.newCredits }));
       setAnalysisResult(data.analysisResult);
       setActiveTab("preview");
+
+      playSound("success");
       
       if (user) await fetchUserHistory(user.id);
       triggerAlert("Analiza ukończona pomyślnie! Pobrano 1 kredyt.", "success");
@@ -266,6 +269,7 @@ export default function OcenianieRozprawekPage() {
       if (data.alternativeContexts) setGeneratedContexts(data.alternativeContexts);
       setIsGenerationMode(false);
       setActiveTab("write");
+      playSound("success");
       triggerAlert("Wygenerowano rozprawkę! Pobrano 1 kredyt.", "success");
 
     } catch (err: any) {
@@ -572,7 +576,7 @@ export default function OcenianieRozprawekPage() {
                     playSound("click");
                     setAnalysisResult(null);
                     setEssayText("");
-                    setSelectedTopic("");
+                    setSelectedTopic("");playSound("success");
                     setIsGeneratedByAi(false);
                     setActiveTab("write");
                     triggerAlert("Zresetowano edytor. Możesz wpisać nową rozprawkę!", "success");
