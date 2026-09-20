@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import { getThemeClasses, CozyTheme } from "../lib/theme";
 import { playSound } from "../lib/sounds";
-
+import { AtmosphericEssayLoader } from "../components/AtmosphericEssayLoader";
 
 interface Match {
   start: number;
@@ -576,9 +576,10 @@ export default function OcenianieRozprawekPage() {
                     playSound("click");
                     setAnalysisResult(null);
                     setEssayText("");
-                    setSelectedTopic("");playSound("success");
+                    setSelectedTopic("");
                     setIsGeneratedByAi(false);
                     setActiveTab("write");
+                    playSound("success");
                     triggerAlert("Zresetowano edytor. Możesz wpisać nową rozprawkę!", "success");
                   }}
                   className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-400 hover:from-amber-500 hover:to-amber-300 text-stone-950 font-extrabold text-xs sm:text-sm transition-all shadow-lg active:scale-95 cursor-pointer flex items-center justify-center gap-2"
@@ -602,8 +603,7 @@ export default function OcenianieRozprawekPage() {
           <div className="lg:col-span-4 flex flex-col gap-4">
             {isAnalyzing ? (
               <div className="rounded-2xl border border-amber-950/40 bg-stone-950/20 p-5 flex flex-col justify-center items-center text-center min-h-[300px]">
-                <span className="text-3xl animate-spin mb-3">⏳</span>
-                <p className="text-xs text-amber-500 font-bold">Claude analizuje wypracowanie...</p>
+                <AtmosphericEssayLoader />
               </div>
             ) : analysisResult ? (
               <div className="rounded-2xl border border-stone-800 bg-stone-900/60 p-5 flex flex-col gap-3.5 animate-fade-in max-h-[500px] overflow-y-auto">
