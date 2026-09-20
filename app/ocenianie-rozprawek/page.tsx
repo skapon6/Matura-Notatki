@@ -1,7 +1,7 @@
 // app/ocenianie-rozprawek/page.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
@@ -102,6 +102,7 @@ export default function OcenianieRozprawekPage() {
   const router = useRouter();
   const [currentTheme, setCurrentTheme] = useState<any>(getThemeClasses("library"));
 
+  // Globalny odtwarzacz Lo-Fi z contextu
   const {
     lofiActive,
     currentTrackIndex,
@@ -132,10 +133,10 @@ export default function OcenianieRozprawekPage() {
   const [isGeneratedByAi, setIsGeneratedByAi] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [generatedContexts, setGeneratedContexts] = useState<any[]>([]);
-const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
-  
-  // 🌟 Referencja i logika automatycznego rozszerzania edytora tekstu
-  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
+
+  // 🌟 Referencja do auto-powiększania pola tekstowego rozprawki
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -143,8 +144,6 @@ const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
     }
   }, [essayText, activeTab]);
-  
-  
 
   const [isTopicModalOpen, setIsTopicModalOpen] = useState(false);
   const [activeYearTab, setActiveYearTab] = useState("2026");
@@ -257,6 +256,7 @@ const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
 
     } catch (err: any) {
       console.error("Błąd analizy:", err);
+      playSound("error");
       triggerAlert(err.message || "Błąd serwera. Spróbuj ponownie.", "error");
     } finally {
       setIsAnalyzing(false);
@@ -297,6 +297,7 @@ const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
       triggerAlert("Wygenerowano rozprawkę! Pobrano 1 kredyt.", "success");
 
     } catch (err: any) {
+      playSound("error");
       triggerAlert(err.message || "Błąd generowania.", "error");
     } finally {
       setIsGenerating(false);
@@ -311,6 +312,7 @@ const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
     setIsGenerationMode(false);
     setIsGeneratedByAi(false);
     setActiveTab("preview");
+    playSound("success");
     triggerAlert("Wczytano pracę z historii (0 kredytów)! 🎉", "success");
   };
 
@@ -446,7 +448,7 @@ const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
       return (
         <div 
           dangerouslySetInnerHTML={{ __html: resultHtml }} 
-          className="whitespace-pre-wrap leading-loose text-stone-300 font-sans text-xs sm:text-sm"
+          className="whitespace-pre-wrap leading-loose text-stone-300 font-sans text-sm sm:text-base font-serif"
         />
       );
     } catch (err) {
@@ -549,7 +551,7 @@ const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
         </div>
       </header>
 
-      <div className="flex-1 flex flex-col items-center p-6 w-full">
+      <div className="flex-1 flex flex-col items-center p-4 sm:p-6 w-full">
         {notification && (
           <div className={`fixed top-6 right-6 z-50 px-5 py-4 rounded-2xl border shadow-2xl backdrop-blur-md max-w-sm ${
             notification.type === "success" ? "bg-emerald-950/90 border-emerald-500/30 text-emerald-200" : "bg-red-950/90 border-red-500/30 text-red-200"
@@ -701,12 +703,15 @@ const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
           </div>
         )}
 
-          <div className={`max-w-5xl w-full ${currentTheme.cardBg} border ${currentTheme.cardBorder} rounded-3xl p-6 sm:p-8 shadow-xl mt-8 mb-12 flex flex-col gap-6 transition-colors duration-500`}>          <div className="p-4 rounded-2xl bg-stone-950/40 border border-stone-800/60 flex items-center justify-between">
+        {/* 🌟 KARTA GŁÓWNA - MAX-W-6XL (ZWIĘKSZONA SZEROKOŚĆ) */}
+        <div className={`max-w-6xl w-full ${currentTheme.cardBg} border ${currentTheme.cardBorder} rounded-3xl p-6 sm:p-10 shadow-xl mt-8 mb-12 flex flex-col gap-6 transition-colors duration-500`}>
+          
+          <div className="p-4 rounded-2xl bg-stone-950/40 border border-stone-800/60 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="text-2xl">📊</span>
               <div>
                 <p className="text-xs font-bold text-stone-300">Stan Twojego konta:</p>
-                <p className="text-[11px] text-stone-500">Używasz bezpiecznego systemu tokenów edukacyjnych.</p>
+                <p className="text-[11px] text-stone-500 hidden sm:block">Używasz bezpiecznego systemu tokenów edukacyjnych.</p>
               </div>
             </div>
             <span className="text-sm font-bold font-mono px-3.5 py-2 rounded-xl bg-amber-950/40 text-amber-400 border border-amber-900/50">
@@ -714,10 +719,12 @@ const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
             </span>
           </div>
 
+          {/* 🌟 ZMIANA PROPORCJI GRID: 8 Kolumn na Edytor, 4 Kolumny na Wynik */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <div className="lg:col-span-9 flex flex-col gap-5">
+            <div className="lg:col-span-8 flex flex-col gap-5">
+              
               <div>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
                   <label className="text-xs uppercase tracking-widest text-amber-500 font-semibold">
                     Temat Twojej rozprawki
                   </label>
@@ -733,13 +740,14 @@ const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
                   </button>
                 </div>
 
-                <input 
-                  type="text"
+                {/* 🌟 POWIĘKSZONE, CZYTELNE POLE TEMATU */}
+                <textarea 
+                  rows={2}
                   placeholder="Wpisz temat rozprawki lub wybierz z bazy CKE..."
                   value={selectedTopic}
                   onChange={(e) => setSelectedTopic(e.target.value)}
                   disabled={isAnalyzing || isGenerating || analysisResult !== null}
-                  className="w-full bg-stone-900/90 border border-stone-800 rounded-xl py-2.5 px-3.5 text-xs text-stone-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full bg-stone-900/50 hover:bg-stone-900/70 focus:bg-stone-900/90 border border-stone-800 rounded-2xl p-4 sm:p-5 text-base sm:text-lg text-stone-100 font-serif font-bold leading-relaxed focus:outline-none focus:border-amber-500/70 focus:ring-1 focus:ring-amber-500/30 disabled:opacity-60 disabled:cursor-not-allowed shadow-inner transition-all resize-none min-h-[90px]"
                 />
               </div>
 
@@ -796,18 +804,27 @@ const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
 
               {activeTab === "write" ? (
                 <div>
-                <textarea 
-                  rows={2}
-                  placeholder="Wpisz temat rozprawki lub wybierz z bazy CKE..."
-                  value={selectedTopic}
-                  onChange={(e) => setSelectedTopic(e.target.value)}
-                  disabled={isAnalyzing || isGenerating || analysisResult !== null}
-                  className="w-full bg-stone-900/50 hover:bg-stone-900/70 focus:bg-stone-900/90 border border-stone-800 rounded-2xl p-5 sm:p-6 text-base sm:text-lg text-stone-100 font-serif font-bold leading-relaxed focus:outline-none focus:border-amber-500/70 focus:ring-1 focus:ring-amber-500/30 disabled:opacity-60 disabled:cursor-not-allowed shadow-inner transition-all resize-none min-h-[96px]"
-                />
+                  <textarea
+                    ref={textareaRef}
+                    placeholder={
+                      isGenerationMode 
+                        ? "Opcja generowania jest włączona. Wpisz temat powyżej i kliknij przycisk generowania." 
+                        : "Wklej tutaj treść swojej rozprawki (minimum 50 słów)..."
+                    }
+                    value={essayText}
+                    onChange={(e) => {
+                      setEssayText(e.target.value);
+                      setIsGeneratedByAi(false);
+                      e.target.style.height = "auto";
+                      e.target.style.height = `${e.target.scrollHeight}px`;
+                    }}
+                    disabled={isAnalyzing || isGenerating || isGenerationMode || analysisResult !== null}
+                    className="w-full min-h-[350px] bg-stone-900/50 hover:bg-stone-900/70 focus:bg-stone-900/90 border border-stone-800 rounded-2xl p-6 sm:p-8 text-sm sm:text-base text-stone-200 font-serif leading-loose focus:outline-none focus:border-amber-600/50 disabled:opacity-60 disabled:cursor-not-allowed shadow-inner transition-colors resize-none overflow-hidden"
+                  />
                 </div>
               ) : (
-                <div className="bg-stone-950/40 border border-stone-800 rounded-2xl p-5 min-h-[300px] shadow-inner">
-                  <div className="mb-4 border-b border-stone-900 pb-3 flex justify-between items-center">
+                <div className="bg-stone-950/40 border border-stone-800 rounded-2xl p-6 min-h-[350px] shadow-inner">
+                  <div className="mb-5 border-b border-stone-900 pb-3 flex justify-between items-center">
                     <span className="text-xs uppercase tracking-widest text-emerald-400 font-semibold">Zweryfikowana treść:</span>
                     <span className="text-[10px] text-stone-500">Najedź myszką na błąd</span>
                   </div>
@@ -817,7 +834,7 @@ const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
 
               {/* PRZYCISKI AKCJI */}
               {analysisResult ? (
-                <div className="flex flex-col gap-2.5 w-full animate-slide-in">
+                <div className="flex flex-col gap-2.5 w-full animate-slide-in mt-2">
                   <button
                     type="button"
                     onClick={() => {
@@ -830,7 +847,7 @@ const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
                       playSound("success");
                       triggerAlert("Zresetowano edytor. Możesz wpisać nową rozprawkę!", "success");
                     }}
-                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-400 hover:from-amber-500 hover:to-amber-300 text-stone-950 font-extrabold text-xs sm:text-sm transition-all shadow-lg active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+                    className="w-full py-4 rounded-xl bg-gradient-to-r from-amber-600 to-amber-400 hover:from-amber-500 hover:to-amber-300 text-stone-950 font-extrabold text-sm transition-all shadow-lg active:scale-95 cursor-pointer flex items-center justify-center gap-2"
                   >
                     <span>🔄</span>
                     <span>Zresetuj edytor i napisz nową rozprawkę</span>
@@ -840,7 +857,7 @@ const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
                 <button
                   onClick={handleGenerateEssay}
                   disabled={isAnalyzing || isGenerating}
-                  className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs cursor-pointer shadow-md disabled:opacity-50"
+                  className="w-full py-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-sm cursor-pointer shadow-md disabled:opacity-50 mt-2"
                 >
                   {isGenerating ? "✍ Trwa generowanie rozprawki..." : "Generuj przykładową rozprawkę (1 kredyt)"}
                 </button>
@@ -848,34 +865,34 @@ const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
                 <button
                   onClick={handleAnalyze}
                   disabled={isAnalyzing || isGenerating}
-                  className="w-full py-3 rounded-xl bg-[#c68a4c] hover:bg-[#d99c5d] text-stone-950 font-bold text-xs cursor-pointer shadow-md disabled:opacity-50"
+                  className="w-full py-4 rounded-xl bg-[#c68a4c] hover:bg-[#d99c5d] text-stone-950 font-bold text-sm cursor-pointer shadow-md disabled:opacity-50 mt-2"
                 >
                   {isAnalyzing ? "🤖 Asystent Rozprawek AI analizuje..." : "Przeanalizuj rozprawkę (1 kredyt)"}
                 </button>
               )}
             </div>
 
-            {/* PRAWA KOLUMNA: RAPORT AI */}
-            <div className="lg:col-span-4 flex flex-col gap-4">
+            {/* PRAWA KOLUMNA: RAPORT AI (4 KOLUMNY Z 12) */}
+            <div className="lg:col-span-4 flex flex-col gap-5">
               {isAnalyzing || isGenerating ? (
-                <div className="rounded-2xl border border-amber-950/40 bg-stone-950/20 p-5 flex flex-col justify-center items-center text-center min-h-[300px]">
+                <div className="rounded-2xl border border-amber-950/40 bg-stone-950/20 p-5 flex flex-col justify-center items-center text-center min-h-[400px]">
                   <AtmosphericEssayLoader />
                 </div>
               ) : analysisResult ? (
-                <div className="rounded-2xl border border-stone-800 bg-stone-900/60 p-5 flex flex-col gap-3.5 animate-fade-in max-h-[500px] overflow-y-auto">
-                  <div className="flex items-center justify-between border-b border-stone-800 pb-3">
+                <div className="rounded-2xl border border-stone-800 bg-stone-900/60 p-6 flex flex-col gap-4 animate-fade-in sticky top-24 max-h-[85vh] overflow-y-auto scrollbar-thin scrollbar-thumb-stone-800">
+                  <div className="flex items-center justify-between border-b border-stone-800 pb-4">
                     <h3 className="text-xs uppercase tracking-widest text-emerald-400 font-bold">Wynik Analizy</h3>
-                    <span className="text-3xl sm:text-4xl font-black text-emerald-400 font-mono">
+                    <span className="text-4xl font-black text-emerald-400 font-mono">
                       {safeString(analysisResult.score || "0/35")}
                     </span>
                   </div>
 
-                  <div className="space-y-3.5">
+                  <div className="space-y-4">
                     {detailsArray.map((detail: any, i: number) => (
-                      <div key={i} className="text-[11px] border-b border-stone-900/55 pb-2.5 last:border-none">
-                        <div className="flex justify-between font-bold text-stone-200 mb-1">
+                      <div key={i} className="text-[11.5px] border-b border-stone-900/55 pb-3 last:border-none">
+                        <div className="flex justify-between font-bold text-stone-200 mb-1.5">
                           <span>{safeString(detail.criterion)}</span>
-                          <span className="text-[#c68a4c] font-mono">{safeString(detail.points)}</span>
+                          <span className="text-[#c68a4c] font-mono text-sm">{safeString(detail.points)}</span>
                         </div>
                         <p className="text-stone-400 font-sans leading-relaxed">{safeString(detail.comment)}</p>
                       </div>
@@ -883,15 +900,16 @@ const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
                   </div>
 
                   {analysisResult.summary && (
-                    <div className="border-t border-stone-800 pt-3 mt-1">
-                      <h4 className="text-[11px] font-bold text-[#c68a4c] font-serif uppercase tracking-wider mb-1">Podsumowanie krytyka:</h4>
-                      <p className="text-[11.5px] text-stone-400 italic leading-relaxed">{safeString(analysisResult.summary)}</p>
+                    <div className="border-t border-stone-800 pt-4 mt-2">
+                      <h4 className="text-xs font-bold text-[#c68a4c] font-serif uppercase tracking-wider mb-2">Podsumowanie krytyka:</h4>
+                      <p className="text-xs text-stone-300 italic leading-relaxed">{safeString(analysisResult.summary)}</p>
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="rounded-2xl border border-dashed border-stone-800 bg-stone-950/20 p-5 text-center text-xs text-stone-500">
-                  Po kliknięciu przycisku oceny, tutaj pojawi się raport CKE.
+                <div className="rounded-2xl border border-dashed border-stone-800 bg-stone-950/20 p-6 text-center text-xs text-stone-500 h-full flex flex-col items-center justify-center min-h-[400px]">
+                  <span className="text-4xl mb-3">🤖</span>
+                  <p className="max-w-[200px] leading-relaxed">Po kliknięciu przycisku oceny, tutaj pojawi się szczegółowy raport CKE.</p>
                 </div>
               )}
             </div>
@@ -899,22 +917,22 @@ const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
 
           {/* HISTORIA PRAC */}
           {history.length > 0 && (
-            <div className="border-t border-stone-800/60 pt-6 mt-2">
-              <h3 className="text-xs uppercase tracking-widest text-amber-500 font-bold mb-4">
+            <div className="border-t border-stone-800/60 pt-8 mt-4">
+              <h3 className="text-xs uppercase tracking-widest text-amber-500 font-bold mb-5">
                 📅 Historia Twoich prac i ocen ({history.length}) – Kliknij, aby wczytać za darmo:
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[280px] overflow-y-auto pr-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[320px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-stone-800">
                 {history.map((item) => (
                   <div 
                     key={item.id}
                     onClick={() => loadFromHistory(item)}
-                    className="p-4 rounded-2xl bg-stone-950/40 border border-stone-800/60 hover:border-amber-700/50 transition-all cursor-pointer flex justify-between items-center"
+                    className="p-5 rounded-2xl bg-stone-950/40 border border-stone-800/60 hover:border-amber-700/50 transition-all cursor-pointer flex justify-between items-center group"
                   >
-                    <div className="flex flex-col gap-1 pr-4 min-w-0">
-                      <h4 className="text-xs font-bold text-stone-200 truncate font-serif">{safeString(item.topic)}</h4>
+                    <div className="flex flex-col gap-1.5 pr-4 min-w-0">
+                      <h4 className="text-sm font-bold text-stone-200 truncate font-serif group-hover:text-amber-300 transition-colors">{safeString(item.topic)}</h4>
                       <span className="text-[10px] text-stone-500">{new Date(item.created_at).toLocaleDateString("pl-PL")}</span>
                     </div>
-                    <span className="text-sm font-bold text-emerald-400 font-mono bg-stone-900 px-2.5 py-1.5 rounded-xl border border-stone-800">
+                    <span className="text-base font-bold text-emerald-400 font-mono bg-stone-900 px-3 py-1.5 rounded-xl border border-stone-800 shadow-inner">
                       {safeString(item.score)}
                     </span>
                   </div>
