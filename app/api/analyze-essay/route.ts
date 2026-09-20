@@ -243,11 +243,11 @@ ${safeEssayText}
 Oceń powyższą rozprawkę zgodnie z oficjalnymi kryteriami CKE Formuła 2023. Zwróć tylko JSON.
 `;
 
-    // 7. WYWOŁANIE MODELU CLAUDE SONNET (Z OBSŁUGĄ KASKADY)
+// 7. WYWOŁANIE MODELU CLAUDE SONNET (Z AKTUALNYMI IDENTYFIKATORAMI I CACHEM)
     const CLAUDE_MODELS_TO_TRY = [
       "claude-sonnet-5",
-      "claude-3-7-sonnet-20250219",
-      "claude-3-5-sonnet-latest",
+      "claude-sonnet-4-6",
+      "claude-haiku-4-5",
     ];
 
     let claudeResponse: any = null;
@@ -257,16 +257,15 @@ Oceń powyższą rozprawkę zgodnie z oficjalnymi kryteriami CKE Formuła 2023. 
     for (const modelName of CLAUDE_MODELS_TO_TRY) {
       try {
         console.log(`-> Wywołanie Claude (${modelName})...`);
-        // ✅ PO ZMIANIE (Z włączonym 90% rabatem Prompt Caching):
         claudeResponse = await anthropic.messages.create({
           model: modelName,
           max_tokens: 3000,
-          temperature: 0.1,
+          // ⚠️ Usunięto parametr temperature (wymóg Claude Sonnet 5 zapobiegający błędowi 400!)
           system: [
             {
               type: "text",
               text: systemPrompt,
-              cache_control: { type: "ephemeral" }, // 👈 Ta linijka włącza 90% tańszy odczyt bazy CKE!
+              cache_control: { type: "ephemeral" },
             },
           ],
           messages: [
@@ -283,7 +282,6 @@ Oceń powyższą rozprawkę zgodnie z oficjalnymi kryteriami CKE Formuła 2023. 
         break;
       } catch (claudeErr: any) {
         console.warn(`Błąd modelu ${modelName}:`, claudeErr?.message || claudeErr);
-        // Jeśli model nie jest dostępny, próbuje kolejnego z listy
         continue;
       }
     }
