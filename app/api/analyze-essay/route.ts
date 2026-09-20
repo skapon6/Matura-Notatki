@@ -173,10 +173,12 @@ ${similarEssaysContext}
    - Jeśli słów < 300: przyznaj KW = 0/7 oraz JW = 0/11 (oficjalna zasada CKE!).
    - Jeśli słów >= 300: oceń pełne 4 kryteria.
 
-2. KLiK (0–16 pkt):
-   - 13–16 pkt: Pogłębiona argumentacja, oba utwory w pełni funkcjonalne pod tezę.
+2. KLiK (0–16 pkt) & BŁĘDY RZECZOWE:
+   - Przeprowadź bezwzględnie wnikliwą i surową analizę treści pod kątem wszelkiego rodzaju błędów rzeczowych, przeinaczeń fabularnych, fałszu merytorycznego, anachronizmów oraz błędów kardynalnych.
+   - Za każdy unikalny błąd rzeczowy odetnij 1 punkt z kryterium KLiK (pamiętaj o zasadzie: błąd kardynalny lub zbyt wiele błędów rzeczowych może zniszczyć całą punktację).
+   - 13–16 pkt: Pogłębiona argumentacja, oba utwory w pełni funkcjonalne pod tezę, brak błędów rzeczowych.
    - 9–12 pkt: Zadowalająca argumentacja, poprawna analiza lektur.
-   - 8 pkt: Jedna lektura funkcjonalna, druga częściowo funkcjonalna, powierzchowna argumentacja (dokładnie jak w Złotym Wzorcu CKE!).
+   - 8 pkt: Jedna lektura funkcjonalna, druga częściowo funkcjonalna, powierzchowna argumentacja.
    - 1–4 pkt: Wyłącznie powierzchowne streszczenie fabuły.
 
 3. KW: Kompozycja (0–7 pkt):
