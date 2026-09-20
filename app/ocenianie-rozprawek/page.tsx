@@ -468,16 +468,18 @@ export default function OcenianieRozprawekPage() {
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-500 ${currentTheme.bg} text-stone-200 font-sans`}>
       
-      {/* 🌟 DEDYKOWANY NAGŁÓWEK MODUŁU Z KOLOREM TŁA APLIKACJI */}
-      <header className={`border-b ${currentTheme.cardBorder} px-4 sm:px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 backdrop-blur-md sticky top-0 z-40 ${currentTheme.bg} transition-colors duration-500 w-full`}>
+      {/* 🌟 DEDYKOWANY NAGŁÓWEK MODUŁU (PRZEZROCZYSTY JAK W MATURZE USTNEJ) */}
+      <header className={`border-b ${currentTheme.cardBorder} px-4 sm:px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 backdrop-blur-md sticky top-0 z-40 transition-colors duration-500 w-full`}>
         <div className="flex w-full md:w-auto items-center justify-between md:justify-start gap-4">
-          <Link
-            href="/"
-            onClick={() => playSound("click")}
+          <button
+            onClick={() => {
+              playSound("click");
+              router.push("/");
+            }}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 transition-all text-xs font-medium ${currentTheme.subText} hover:text-stone-100`}
           >
             ← Wróć do kącika
-          </Link>
+          </button>
         </div>
 
         <div className="hidden md:flex flex-col items-center select-none">
