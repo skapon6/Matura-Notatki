@@ -701,8 +701,7 @@ const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
           </div>
         )}
 
-        <div className={`max-w-4xl w-full ${currentTheme.cardBg} border ${currentTheme.cardBorder} rounded-3xl p-6 sm:p-8 shadow-xl mt-8 flex flex-col gap-6 transition-colors duration-500`}>
-          
+        <div className={`max-w-6xl w-full ${currentTheme.cardBg} border ${currentTheme.cardBorder} rounded-3xl p-6 sm:p-8 shadow-xl mt-8 mb-12 flex flex-col gap-6 transition-colors duration-500`}>          
           <div className="p-4 rounded-2xl bg-stone-950/40 border border-stone-800/60 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="text-2xl">📊</span>
