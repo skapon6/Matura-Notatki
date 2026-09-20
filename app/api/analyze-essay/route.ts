@@ -257,11 +257,18 @@ Oceń powyższą rozprawkę zgodnie z oficjalnymi kryteriami CKE Formuła 2023. 
     for (const modelName of CLAUDE_MODELS_TO_TRY) {
       try {
         console.log(`-> Wywołanie Claude (${modelName})...`);
+        // ✅ PO ZMIANIE (Z włączonym 90% rabatem Prompt Caching):
         claudeResponse = await anthropic.messages.create({
           model: modelName,
           max_tokens: 3000,
           temperature: 0.1,
-          system: systemPrompt,
+          system: [
+            {
+              type: "text",
+              text: systemPrompt,
+              cache_control: { type: "ephemeral" }, // 👈 Ta linijka włącza 90% tańszy odczyt bazy CKE!
+            },
+          ],
           messages: [
             {
               role: "user",
