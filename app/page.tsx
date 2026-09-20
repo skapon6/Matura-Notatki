@@ -377,7 +377,7 @@ export default function Home() {
               Zdasz Maturę z Palcem w Nosie.
             </h2>
             <p className={`mt-4 text-sm sm:text-base ${currentTheme.subText} leading-relaxed`}>
-              Witaj w swojej cichej przystani naukowej. Zaloguj się lub utwórz bezpłatne konto, aby uzyskać dostęp do notatek.
+              Witaj w swojej cichej przystani naukowej. Zaloguj się lub przetestuj demo, aby zyskać <strong className="text-stone-200">pełny dostęp do bazy wszystkich lektur, epok i fiszek</strong> oraz ocenić swoją pierwszą rozprawkę w <strong className="text-stone-200">Asystencie Rozprawek AI napędzanym przez Anthropic Claude</strong>.
             </p>
 
             {/* WIELKI PRZYCISK TRYBU DEMO */}
