@@ -101,7 +101,7 @@ BRAK ORGANIZACJI (zbiór niezależnych elementów):
 --- 3b. Spójność (0–3 pkt) ---
 3 – 0–2 zaburzenia
 2 – 3–5 zaburzeń
-1 – 6–8 zaburzeń LUB wstęp niespójny z częścią zasadniczą albo zakończeniem
+1 – 6–8 zaburzeń LUB wstęp/zakończenie niespójne z częścią zasadniczą
 0 – 9+ zaburzeń LUB wstęp niespójny z częścią zasadniczą ORAZ zakończeniem
 
 Zaburzenia: błędy logiczne, zbyt dalekie uogólnienia, nieuzasadnione wnioski, sprzeczności, niefunkcjonalne dygresje, skróty myślowe, wątki niezwiązane z tematem.
@@ -148,7 +148,7 @@ Uwaga!: nie zwracaj uwagi na spacje przed interpunkcją.
 
 
 ================================================================================
-CZĘŚĆ 3: 🏆 OFICJALNY ZŁOTY WZORZEC KALIBRACYJNY CKE
+CZĘŚĆ 3: 🏆 OFICJALNY ZŁOTY WZORZEC KALIBRACYJNY CKE NR 1
 (Źródło: Oficjalny Informator CKE o egzaminie maturalnym od 2024/2025, s. 210–212)
 ================================================================================
 
@@ -219,34 +219,130 @@ Linia 59: [jęz: związanych z wyborem swojej drogi]. [jęz: Choć więc wszyscy
 Linia 60: dokonywać wyborów, można podjąć takie decyzje, które przyniosą człowiekowi szczęście.
 
 ================================================================================
-OFICJALNY PROTOKÓŁ I PUNKTACJA CKE DLA TEJ PRACY (ŁĄCZNIE 17 / 35 PUNKTÓW):
+OFICJALNY PROTOKÓŁ I PUNKTACJA CKE DLA WZORCA NR 1 (ŁĄCZNIE 17 / 35 PUNKTÓW):
 ================================================================================
 
 1. Spełnienie formalnych warunków polecenia (SFWP): 1 / 1 pkt
-   - Wypracowanie w całości spełnia formalne warunki (nie zawiera błędu kardynalnego, odwołuje się do lektury obowiązkowej "Lalka", dotyczy problemu i jest wypowiedzią argumentacyjną).
+   - Wypracowanie w całości spełnia formalne warunki (brak błędu kardynalnego, odwołanie analityczne do lektury obowiązkowej "Lalka", realizacja tematu, wypowiedź argumentacyjna).
 
 2. Kompetencje literackie i kulturowe (KLiK): 8 / 16 pkt
    - "Lalka" wykorzystana funkcjonalnie (analiza relacji Wokulski – Łęcka).
-   - "Przedwiośnie" wykorzystane TYLKO CZĘŚCIOWO FUNKCJONALNIE (brak wyraźnych rozróżnień między postawami racjonalnymi a marzycielstwem; zaburzenia spójności w formułowanym wnioskowaniu sprawiają, że brak klarownego wywodu).
-   - Nie wykorzystano funkcjonalnie kontekstów interpretacyjnych.
-   - Argumentacja jest powierzchowna.
-   - Wystąpił błąd rzeczowy (s. 211, wiersz 43).
-   - Zgodnie z oficjalną tabelą CKE: wiersz "1 utwór funkcjonalny + 1 częściowo funkcjonalny + argumentacja powierzchowna" = 9 pkt bazowo, minus 1 pkt za błąd rzeczowy = DOKŁADNIE 8 PUNKTÓW!
+   - "Przedwiośnie" wykorzystane TYLKO CZĘŚCIOWO FUNKCJONALNIE (brak wyraźnych rozróżnień między postawami racjonalnymi a marzycielstwem; zaburzenia spójności w wywodzie).
+   - Brak funkcjonalnych kontekstów.
+   - Powierzchowna argumentacja.
+   - Błąd rzeczowy (wiersz 43).
+   - Tabela: [1 w pełni + 1 częściowo + powierzchowna] = 9 pkt bazowo, minus 1 pkt za błąd rzeczowy = DOKŁADNIE 8 PUNKTÓW!
 
 3. Kompozycja wypowiedzi (KW): 6 / 7 pkt
-   - 3a. Struktura wypowiedzi: 3 / 3 pkt (elementy treściowe zorganizowane problemowo, poprawny podział na akapity).
-   - 3b. Spójność wypowiedzi: 2 / 3 pkt (wywód w większości spójny, ale 4 zaburzenia spójności zaznaczone jako "sp." w wierszach 25, 46, 48, 58).
-   - 3c. Styl wypowiedzi: 1 / 1 pkt (stosowny, jednorodny).
+   - 3a. Struktura: 3 / 3 pkt (tok problemowy, poprawny podział na akapity).
+   - 3b. Spójność: 2 / 3 pkt (4 zaburzenia spójności zaznaczone jako "sp." w wierszach 25, 46, 48, 58).
+   - 3c. Styl: 1 / 1 pkt (stosowny, jednorodny).
 
 4. Język wypowiedzi (JW): 2 / 11 pkt
    - 4a. Poprawność językowa: 0 / 7 PKT!
-     * Egzaminatorzy CKE oznaczyli w tej pracy AŻ 24 BŁĘDY JĘZYKOWE (związki frazeologiczne, błędy składniowe, błąd związku zgody: "wybór przyniosło", pleonazm "ludzki los", zła leksyka).
-     * Zgodnie z tabelą CKE: przy zadowalającym zakresie środków językowych 22 i więcej błędów językowych oznacza BEZWZGLĘDNIE 0 PUNKTÓW!
-   - 4b. Poprawność ortograficzna: 1 / 2 pkt (2 błędy ortograficzne: "racjonalistom" zamiast "racjonalistą", "do polski" małą literą).
-   - 4c. Poprawność interpunkcyjna: 1 / 2 pkt (AŻ 15 BŁĘDÓW INTERPUNKCYJNYCH oznaczonych symbolem "X" – brakujące przecinki przed "aby", "czy", "że", "będąc", "jakie", "gdyż" oraz zbędny przecinek w wierszu 20).
+     * Aż 24 BŁĘDY JĘZYKOWE (frazeologia, składnia, błąd związku zgody: "wybór przyniosło", pleonazm "ludzki los", leksyka).
+     * Tabela CKE dla zadowalającego zakresu: ≥22 błędy = BEZWZGLĘDNIE 0 PUNKTÓW!
+   - 4b. Poprawność ortograficzna: 1 / 2 pkt (2 błędy: "racjonalistom", "do polski").
+   - 4c. Poprawność interpunkcyjna: 1 / 2 pkt (15 BŁĘDÓW INTERPUNKCYJNYCH – brakujące przecinki i 1 zbędny przecinek).
 
 SUMA: 1 + 8 + 6 + 0 + 1 + 1 = 17 / 35 PUNKTÓW!
 
-LEKCJA DLA MODELU OCENIAJĄCEGO:
-Nigdy nie oceniaj języka "na oko" i nie daj się zwieść pozornej płynności wywodu. Praca, która brzmi dojrzale, ma w rzeczywistości 24 błędy językowe i 15 interpunkcyjnych, co według oficjalnych kryteriów CKE sprowadza kryterium językowe do zaledwie 2/11 punktów, a całą pracę do 17/35 punktów! Weryfikuj błędy z taką samą skrupulatnością jak eksperci CKE.
+
+================================================================================
+CZĘŚĆ 4: 🏆 OFICJALNY ZŁOTY WZORZEC KALIBRACYJNY CKE NR 2
+(Źródło: Oficjalny Informator CKE o egzaminie maturalnym od 2024/2025, s. 228–230)
+================================================================================
+
+Poniżej znajduje się druga autentyczna praca maturalna (dokładnie 352 słowa) oceniona w Informatorze CKE.
+Zwróć uwagę na kluczowy mechanizm oceny: praca jest poprawna językowo (mało błędów językowych i interpunkcyjnych, brak ortograficznych), ale traci punkty na logice, sprzeczności wewnętrznej oraz skrajnie skróconym zakończeniu!
+
+[TEMAT]: Różne postawy ludzi wobec własnych błędów.
+
+[AUTENTYCZNA PRACA Z OZNACZONYMI BŁĘDAMI CKE]:
+Linia 01: Błędy są nieodłącznym elementem życia ludzi. Każdy człowiek je
+Linia 02: popełnia, jednak to od niego zależy [int: brak przecinka] jaką naukę z nich wyciągnie.
+Linia 03: Część społeczeństwa jest przekonana o swej nieomylności i w ogóle
+Linia 04: nie uważa, że może zrobić coś złego lub nieprawidłowego. Takim
+Linia 05: ludziom bardzo trudno udowodnić ich winę. Z kolei inne osoby nie
+Linia 06: mają problemów, aby przyznać się do własnych błędów. Nie jest to
+Linia 07: przyjemne uczucie, gdy człowiek żył w błędnym przekonaniu,
+Linia 08: a następnie musi się jeszcze z nim zmierzyć. Jednak mimo wszystko
+Linia 09: uważam, że każdy człowiek na końcu zrozumie, jakie popełnił błędy.
+Linia 10: [jęz: niezręczność leksykalno-składniowa] Osoba, która jest zaślepiona ważnym dla niej celem, nie jest
+Linia 11: [sp: zaburzenie spójności] w stanie dostrzec przez siebie wagi popełnionych czynów. [jęz: usterka językowa] Nie zawsze
+Linia 12: są one słuszne, dlatego zdanie sobie sprawy z nich bywa
+Linia 13: wstrząsające. W takiej sytuacji znalazł się Kreon w utworze
+Linia 14: „Antygona” Sofoklesa. [sp: brak płynnego przejścia logicznego] Nowy władca chciał być sprawiedliwy i dobry
+Linia 15: dla swojego społeczeństwa. Jedynym błędem [int: brak przecinka] jaki popełnił, to była [jęz: błąd składniowy – konstrukcja mianownikowa] zmiana
+Linia 16: prawa władzy, która kolidowała z prawem boskim, bardzo [jęz: zła łączliwość / niezręczność leksykalna]
+Linia 17: przestrzeganym w starożytności. Kreon nie wiedział, że to był błąd.
+Linia 18: Uświadomił to sobie dopiero w tragicznym rozpoznaniu, kiedy lud
+Linia 19: zaczął się burzyć i buntować. Zrozumiał swój błąd za późno, jednak
+Linia 20: [sp: nielogiczność/nieuzasadniony wniosek] w ostateczności podszedł do niego z pokorą. [sp: zaburzenie spójności] Każdy władca lub król [jęz: pleonazm]
+Linia 21: chce jak najlepiej dla swojego królestwa. [sp: przeskok myślowy] [jęz: błąd związku zgody: Każdy władca... Robią] Robią wszystko, co w ich
+Linia 22: mocy, aby tak było, dlatego zdarza im się popełniać błędy. Dobry
+Linia 23: władca zawsze się do nich przyzna, jak Kreon.
+Linia 24: [sp: nielogiczne zestawienie – podwójna zbrodnia z premedytacją nazwana „podobną sytuacją” do pomyłki politycznej]
+Linia 25: W podobnej sytuacji znalazł się główny bohater [rzecz: błąd rzeczowy – „Zemsty i kary” zamiast „Zbrodni i kary”] „Zemsty i kary”
+Linia 26: Fiodora Dostojewskiego. Raskolnikow, który był tak bardzo
+Linia 27: [jęz: błąd składniowy / forma gramatyczna: „zaślepieonym” zamiast „zaślepiony”] zaślepionym własnym celem, zabił lichwiarkę i jej siostrę. Długo
+Linia 28: zmagał się z poczuciem winy, aż w końcu zrozumiał swój błąd.
+Linia 29: Niełatwo było mu się do niego przyznać, jednak zrobił to i odbył
+Linia 30: [rzecz: błąd rzeczowy / fałsz merytoryczny – Raskolnikow nie odbył natychmiast kary, nastąpiło śledztwo Porfirego i proces] należną karę. Nie wszyscy zbrodniarze są w stanie powiedzieć, że
+Linia 31: popełnili błąd, mimo że zdają sobie z niego sprawę. Pokazują tym
+Linia 32: samym swoje tchórzostwo. Raskolnikow [int: brak przecinka] przyznając się i rozumiejąc
+Linia 33: własny błąd, wykazuje się odważną i pokorną postawą.
+Linia 34: Podsumowując, ludzie popełniają błędy, ale są w stanie je
+Linia 35: zauważyć i naprawić. W zasadzie to dobrze, że człowiek je robi,
+Linia 36: ponieważ są one dla niego nauką na całe życie. Jest to ludzka rzecz,
+Linia 37: bo nikt nie jest idealny.
+
+================================================================================
+OFICJALNY PROTOKÓŁ I PUNKTACJA CKE DLA WZORCA NR 2 (ŁĄCZNIE 20 / 35 PUNKTÓW):
+================================================================================
+
+1. Spełnienie formalnych warunków polecenia (SFWP): 1 / 1 pkt
+   - Wypracowanie w całości spełnia formalne warunki:
+     • odwołanie do lektury obowiązkowej („Antygona” Sofoklesa),
+     • realizacja problemu wskazanego w poleceniu,
+     • praca jest wypowiedzią argumentacyjną,
+     • brak błędu kardynalnego.
+
+2. Kompetencje literackie i kulturowe (KLiK): 7 / 16 pkt
+   - W wypracowaniu wykorzystano w pełni funkcjonalnie „Antygonę” Sofoklesa (funkcjonalna analiza postawy Kreona wobec popełnionych błędów).
+   - Częściowo funkcjonalnie wykorzystano „Zbrodnię i karę” (analiza postawy Raskolnikowa zawiera znaczne uproszczenia, trywializuje morderstwo z premedytacją jako zwykły „błąd” oraz zawiera błędy rzeczowe).
+   - W pracy NIE wykorzystano funkcjonalnego kontekstu.
+   - Argumentacja jest powierzchowna.
+   - Tabela KLiK: [1 w pełni + 1 częściowo + powierzchowna] = 9 pkt bazowo.
+   - Potrącenia: 2 błędy rzeczowe (błędny tytuł „Zemsta i kara” oraz fałsz faktograficzny dotyczący losów bohatera i odbycia kary) $\rightarrow$ 9 pkt - 2 pkt = DOKŁADNIE 7 PUNKTÓW!
+
+3. Kompozycja wypowiedzi (KW): 3 / 7 pkt
+   - 3a. Struktura wypowiedzi: 1 / 3 pkt!
+     * W pracy podjęto próbę organizacji problemowej, ale występują poważne usterki w podziale wypowiedzi w skali ogólnej: zakończenie (zaledwie 4 linijki / 2 zdania ogólnikowe) jest rażąco za krótkie w stosunku do rozbudowanego rozwinięcia i wstępu, co niszczy proporcje tekstu.
+   - 3b. Spójność wypowiedzi: 1 / 3 pkt!
+     * Egzaminatorzy odnotowali aż 5 zaburzeń spójności (w tym przeskok myślowy w linii 14, nieuzasadniony wniosek w linii 20, zrównanie motywacji Kreona i zabójstwa Raskolnikowa w linii 24).
+     * Przede wszystkim: ZAKOŃCZENIE PRACY JEST TREŚCIOWO NIESPÓJNE Z CZĘŚCIĄ ZASADNICZĄ! Zdający we wstępie i zakończeniu stawia tezę, że „błędy można zauważyć i naprawić”, podczas gdy omawiane w rozwinięciu przykłady tego NIE potwierdzają – ani Kreon nie mógł cofnąć śmierci Antygony, Hajmona i Eurydyki, ani Raskolnikow nie mógł wskrzesić zamordowanych kobiet. Wprowadzenie takiej sprzeczności logicznej obniża spójność do 1 punktu.
+   - 3c. Styl wypowiedzi: 1 / 1 pkt (stosowny, jednorodny).
+
+4. Język wypowiedzi (JW): 9 / 11 pkt
+   - 4a. Zakres i poprawność językowa: 5 / 7 pkt
+     * Zakres zadowalający (odpowiednia leksyka i składnia do realizacji tematu).
+     * W pracy zidentyfikowano zaledwie 7 błędów językowych (m.in. błąd związku zgody: „Każdy władca... Robią”, pleonazm „władca lub król”, błąd składniowy „jedynym błędem... to była zmiana”, błąd formy „zaślepieonym”).
+     * Tabela CKE dla zadowalającego zakresu: 6–8 błędów językowych = DOKŁADNIE 5 PUNKTÓW.
+   - 4b. Poprawność ortograficzna: 2 / 2 pkt (0 błędów ortograficznych!).
+   - 4c. Poprawność interpunkcyjna: 2 / 2 pkt
+     * Zaledwie 3 błędy interpunkcyjne (brak przecinków przed zdaniami podrzędnymi „jaki”, „jaką” oraz przed imiesłowem „przyznając się”).
+     * Tabela CKE: przedział 0–8 błędów = PEŁNE 2 PUNKTY.
+
+SUMA: 1 + 7 + 3 + 5 + 2 + 2 = 20 / 35 PUNKTÓW!
+
+================================================================================
+KLUCZOWA SYNTEZA DLA MODELU OCENIAJĄCEGO (PORÓWNANIE WZORCÓW 1 I 2):
+================================================================================
+1. WZORZEC 1 (17/35 pkt): Pozornie dojrzały esej z ambicjami erudycyjnymi, poprawny kompozycyjnie (KW: 6/7), ale całkowicie zniszczony przez mikrobłędy językowe (24 błędy językowe = 0/7 pkt w JW! Łącznie JW: zaledwie 2/11).
+2. WZORZEC 2 (20/35 pkt): Odwrotność Wzorca 1! Praca czysta, poprawna gramatycznie, bez błędów ortograficznych i z minimalną liczbą błędów interpunkcyjnych (JW: aż 9/11 pkt), ale słaba merytorycznie i logicznie:
+   - płytka argumentacja i błędy rzeczowe sprowadzają KLiK do 7/16 pkt,
+   - lakoniczne zakończenie (zaledwie 2 zdania) ścina Strukturę do 1/3 pkt,
+   - sprzeczność tezy z podanymi argumentami (teza o naprawianiu błędów vs czyny nieodwracalne/morderstwa) ścina Spójność do 1/3 pkt.
+NIGDY nie przyznawaj wysokiej kompozycji (KW) tylko dlatego, że praca nie ma błędów językowych. Oceniaj strukturę logiczną i proporcje akapitów niezależnie od poprawności gramatycznej!
 `;
