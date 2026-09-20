@@ -1,7 +1,7 @@
 // app/ocenianie-rozprawek/page.tsx
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
@@ -13,7 +13,6 @@ interface Match {
   annotation: any;
 }
 
-// Baza oficjalnych tematów maturalnych CKE (2023–2026)
 const OFFICIAL_CKE_YEARS = [
   {
     year: "2026",
@@ -65,16 +64,39 @@ const OFFICIAL_CKE_YEARS = [
   }
 ];
 
-// Zabezpieczenie przed Spamem (maksymalnie 25 znaków na słowo)
 const isSpamText = (text: string) => {
   const words = text.split(/\s+/).filter(Boolean);
   return words.some(word => word.length > 25);
 };
 
+// 🛡️ Bezpieczny konwerter na string zapobiegający crashom Reacta
+const safeString = (val: any): string => {
+  if (val === null || val === undefined) return "";
+  if (typeof val === "string") return val;
+  if (typeof val === "number" || typeof val === "boolean") return String(val);
+  if (Array.isArray(val)) return val.map(safeString).join(", ");
+  if (typeof val === "object") {
+    try {
+      return JSON.stringify(val);
+    } catch {
+      return "";
+    }
+  }
+  return String(val);
+};
+
+const escapeHtml = (val: any): string => {
+  const str = safeString(val);
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+
 export default function OcenianieRozprawekPage() {
   const router = useRouter();
-
-  // Dynamiczny stan motywu
   const [currentTheme, setCurrentTheme] = useState<any>(getThemeClasses("library"));
 
   useEffect(() => {
@@ -84,12 +106,10 @@ export default function OcenianieRozprawekPage() {
     }
   }, []);
 
-  // Stany autoryzacji i profilu
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
-  // Stany edytora i wyników AI
   const [essayText, setEssayText] = useState("");
   const [selectedTopic, setSelectedTopic] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -100,14 +120,10 @@ export default function OcenianieRozprawekPage() {
   const [generatedContexts, setGeneratedContexts] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
 
-  // Stany selektora tematów CKE (Modal)
   const [isTopicModalOpen, setIsTopicModalOpen] = useState(false);
   const [activeYearTab, setActiveYearTab] = useState("2026");
 
-  // Stan historii ocen
   const [history, setHistory] = useState<any[]>([]);
-
-  // Powiadomienia wewnętrzne
   const [notification, setNotification] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [topicSearch, setTopicSearch] = useState("");
 
@@ -120,7 +136,6 @@ export default function OcenianieRozprawekPage() {
     async function checkUserAndCredits() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        
         if (!session?.user) {
           router.push("/");
           return;
@@ -145,9 +160,7 @@ export default function OcenianieRozprawekPage() {
       .eq("id", userId)
       .single();
     
-    if (data) {
-      setProfile(data);
-    }
+    if (data) setProfile(data);
   }
 
   async function fetchUserHistory(userId: string) {
@@ -157,11 +170,7 @@ export default function OcenianieRozprawekPage() {
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
     
-    if (error) {
-      console.error("Błąd podczas pobierania historii:", error);
-    } else if (data) {
-      setHistory(data);
-    }
+    if (!error && data) setHistory(data);
   }
 
   const handleSelectCkeTopic = (topicText: string) => {
@@ -172,58 +181,23 @@ export default function OcenianieRozprawekPage() {
 
   const handleAnalyze = async () => {
     if (isGeneratedByAi) {
-      triggerAlert("Ta praca została wygenerowana jako wzorzec AI. Napisz własną rozprawkę, aby poddać ją ocenie!", "error");
+      triggerAlert("Ta praca została wygenerowana jako wzorzec AI. Napisz własną rozprawkę!", "error");
       return;
     }
-
     if (!selectedTopic.trim()) {
       triggerAlert("Wprowadź temat rozprawki przed rozpoczęciem analizy!", "error");
       return;
     }
 
-    const topicWords = selectedTopic.split(/\s+/).filter(Boolean);
-    const hasInvalidTopicWord = topicWords.some((word) => word.length > 25);
-
-    if (hasInvalidTopicWord) {
-      triggerAlert("Temat zawiera nieprawidłowe, zbyt długie słowa (maksymalnie 25 znaków na słowo)!", "error");
-      return;
-    }
-
-    if (topicWords.length > 200) {
-      triggerAlert("Temat rozprawki przekracza maksymalny limit 200 słów!", "error");
-      return;
-    }
-
-    if (selectedTopic.length > 2000) {
-      triggerAlert("Temat rozprawki przekracza maksymalny limit 2000 znaków!", "error");
-      return;
-    }
-
-    if (essayText.length > 10000) {
-      triggerAlert("Wypracowanie jest zbyt długie (maksymalnie 10 000 znaków)!", "error");
-      return;
-    }
-
     const essayWords = essayText.split(/\s+/).filter(Boolean);
-    const hasInvalidEssayWord = essayWords.some((word) => word.length > 25);
-
-    if (hasInvalidEssayWord) {
-      triggerAlert("Wypracowanie zawiera nieprawidłowe, zbyt długie słowa (maksymalnie 25 znaków na słowo)!", "error");
-      return;
-    }
-
     const wordCount = essayWords.length;
     if (wordCount < 50) {
-      triggerAlert("Wprowadzona rozprawka jest za krótka! Wklej co najmniej 50 słów, aby przeprowadzić analizę.", "error");
-      return;
-    }
-    if (wordCount > 1500) {
-      triggerAlert("Wprowadzona rozprawka przekracza maksymalny limit 1500 słów. Skróć tekst przed analizą.", "error");
+      triggerAlert("Rozprawka jest za krótka! Wklej co najmniej 50 słów.", "error");
       return;
     }
 
     if (!profile || profile.essay_credits <= 0) {
-      triggerAlert("Brak wolnych kredytów na ocenę! Kup pakiet Premium, aby otrzymać dodatkowe próby.", "error");
+      triggerAlert("Brak wolnych kredytów na ocenę! Kup pakiet Premium.", "error");
       return;
     }
 
@@ -234,9 +208,7 @@ export default function OcenianieRozprawekPage() {
     try {
       const response = await fetch("/api/analyze-essay", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           topic: selectedTopic,
           essayText: essayText,
@@ -244,7 +216,6 @@ export default function OcenianieRozprawekPage() {
       });
 
       const data = await response.json();
-
       if (!response.ok) {
         throw new Error(data.error || "Wystąpił błąd podczas analizy.");
       }
@@ -253,15 +224,12 @@ export default function OcenianieRozprawekPage() {
       setAnalysisResult(data.analysisResult);
       setActiveTab("preview");
       
-      if (user) {
-        await fetchUserHistory(user.id);
-      }
-      
+      if (user) await fetchUserHistory(user.id);
       triggerAlert("Analiza ukończona pomyślnie! Pobrano 1 kredyt.", "success");
 
     } catch (err: any) {
-      console.error("Błąd podczas analizy wypracowania:", err);
-      triggerAlert(err.message || "Wystąpił błąd serwera. Spróbuj ponownie.", "error");
+      console.error("Błąd analizy:", err);
+      triggerAlert(err.message || "Błąd serwera. Spróbuj ponownie.", "error");
     } finally {
       setIsAnalyzing(false);
     }
@@ -269,30 +237,11 @@ export default function OcenianieRozprawekPage() {
 
   const handleGenerateEssay = async () => {
     if (!selectedTopic.trim()) {
-      triggerAlert("Wprowadź temat rozprawki, na który mam napisać przykładową pracę!", "error");
+      triggerAlert("Wprowadź temat rozprawki!", "error");
       return;
     }
-
-    const topicWords = selectedTopic.split(/\s+/).filter(Boolean);
-    const hasInvalidTopicWord = topicWords.some((word) => word.length > 25);
-
-    if (hasInvalidTopicWord) {
-      triggerAlert("Temat zawiera nieprawidłowe, zbyt długie słowa (maksymalnie 25 znaków na słowo)!", "error");
-      return;
-    }
-
-    if (topicWords.length > 200) {
-      triggerAlert("Temat rozprawki przekracza maksymalny limit 200 słów!", "error");
-      return;
-    }
-
-    if (selectedTopic.length > 2000) {
-      triggerAlert("Temat rozprawki przekracza maksymalny limit 2000 znaków!", "error");
-      return;
-    }
-
     if (!profile || profile.essay_credits <= 0) {
-      triggerAlert("Brak wolnych kredytów na wygenerowanie rozprawki! Kup pakiet Premium.", "error");
+      triggerAlert("Brak kredytów!", "error");
       return;
     }
 
@@ -303,44 +252,26 @@ export default function OcenianieRozprawekPage() {
     try {
       const response = await fetch("/api/generate-essay", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          topic: selectedTopic,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic: selectedTopic }),
       });
 
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Wystąpił błąd podczas generowania wypracowania.");
-      }
+      if (!response.ok) throw new Error(data.error || "Błąd generowania.");
 
       setProfile((prev: any) => ({ ...prev, essay_credits: data.newCredits }));
       setEssayText(data.essayText);
       setIsGeneratedByAi(true);
-      if (data.alternativeContexts) {
-        setGeneratedContexts(data.alternativeContexts);
-      }
+      if (data.alternativeContexts) setGeneratedContexts(data.alternativeContexts);
       setIsGenerationMode(false);
       setActiveTab("write");
-      triggerAlert("Przykładowa rozprawka została wygenerowana! Pobrano 1 kredyt.", "success");
+      triggerAlert("Wygenerowano rozprawkę! Pobrano 1 kredyt.", "success");
 
     } catch (err: any) {
-      console.error("Błąd podczas generowania wypracowania:", err);
-      triggerAlert(err.message || "Wystąpił błąd serwera. Spróbuj ponownie.", "error");
+      triggerAlert(err.message || "Błąd generowania.", "error");
     } finally {
       setIsGenerating(false);
     }
-  };
-
-  const handleClearGenerated = () => {
-    setEssayText("");
-    setIsGeneratedByAi(false);
-    setGeneratedContexts([]);
-    setAnalysisResult(null);
-    triggerAlert("Wyczyszczono pole. Możesz teraz wpisać własną rozprawkę!", "success");
   };
 
   const loadFromHistory = (item: any) => {
@@ -351,196 +282,175 @@ export default function OcenianieRozprawekPage() {
     setIsGenerationMode(false);
     setIsGeneratedByAi(false);
     setActiveTab("preview");
-    triggerAlert("Pomyślnie wczytano pracę z historii (0 kredytów)!", "success");
+    triggerAlert("Wczytano pracę z historii (0 kredytów)! 🎉", "success");
   };
 
-  // 🎯 ULEPSZONY RENDERER Z OBSŁUGĄ ZBIEGU KILKU BŁĘDÓW W JEDNYM MIEJSCU
-  // 🎯 PANCERNY RENDERER PODŚWIETLEŃ (Ignoruje cudzysłowy Claude'a i wielkość liter)
+  // 🎯 PANCERNA FUNKCJA RENDERUJĄCA PODŚWIETLENIA (ODPORNA NA CRASHE)
   const renderHighlightedText = () => {
-    if (!analysisResult || !analysisResult.annotations || analysisResult.annotations.length === 0) {
-      return <p className="whitespace-pre-wrap leading-relaxed">{essayText}</p>;
-    }
+    try {
+      if (!analysisResult) {
+        return <p className="whitespace-pre-wrap leading-relaxed">{essayText}</p>;
+      }
 
-    // Pomocnik do bezpiecznego kodowania znaków HTML
-    const escapeHtml = (str: string) => {
-      return str
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-    };
+      // Bezpieczne pobranie adnotacji jako tablicy
+      const rawAnnotations = Array.isArray(analysisResult.annotations)
+        ? analysisResult.annotations
+        : typeof analysisResult.annotations === "object" && analysisResult.annotations !== null
+        ? Object.values(analysisResult.annotations)
+        : [];
 
-    const matches: Match[] = [];
+      if (rawAnnotations.length === 0) {
+        return <p className="whitespace-pre-wrap leading-relaxed">{essayText}</p>;
+      }
 
-    // 1. Wyszukujemy adnotacje w surowym tekście ucznia (Smart Case-Insensitive Matching)
-    analysisResult.annotations.forEach((anno: any) => {
-      if (!anno.original || typeof anno.original !== "string" || !anno.original.trim()) return;
+      const matches: Match[] = [];
 
-      // Usuwamy cudzysłowy „ ”, " ", ' ', które model czasami samowolnie dodaje do słowa
-      let cleanOrig = anno.original.trim().replace(/^[„"'\s«]+|[”"'\s»]+$/g, "").trim();
-      if (!cleanOrig) return;
+      rawAnnotations.forEach((anno: any) => {
+        if (!anno) return;
+        const origText = safeString(anno.original).trim();
+        if (!origText) return;
 
-      try {
-        // Bezpieczny regex ignorujący wielkość liter (flaga 'i')
-        const escapedRegexStr = cleanOrig.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const regex = new RegExp(escapedRegexStr, "gi");
+        let cleanOrig = origText.replace(/^[„"'\s«]+|[”"'\s»]+$/g, "").trim();
+        if (!cleanOrig) return;
 
-        let match: RegExpExecArray | null;
-        while ((match = regex.exec(essayText)) !== null) {
-          matches.push({
-            start: match.index,
-            end: match.index + match[0].length,
-            annotation: anno
-          });
-          if (match[0].length === 0) regex.lastIndex++;
+        try {
+          const escapedRegexStr = cleanOrig
+            .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+            .replace(/\s+/g, "\\s+");
+          const regex = new RegExp(escapedRegexStr, "gi");
+
+          let match: RegExpExecArray | null;
+          let count = 0;
+          while ((match = regex.exec(essayText)) !== null && count < 50) {
+            matches.push({
+              start: match.index,
+              end: match.index + match[0].length,
+              annotation: anno
+            });
+            if (match[0].length === 0) regex.lastIndex++;
+            count++;
+          }
+        } catch (err) {
+          console.warn("Błąd parsowania adnotacji:", err);
         }
-      } catch (err) {
-        console.warn("Błąd parsowania błędu:", err);
-      }
-    });
-
-    if (matches.length === 0) {
-      return <p className="whitespace-pre-wrap leading-relaxed">{essayText}</p>;
-    }
-
-    // 2. Sortujemy: najpierw po pozycji startowej, a przy równej pozycji dłuższe pierwsze
-    matches.sort((a, b) => a.start - b.start || b.end - a.end);
-
-    // 3. Klastrowanie nakładających się błędów w jeden zakres
-    interface ErrorCluster {
-      start: number;
-      end: number;
-      annotations: any[];
-    }
-
-    const clusters: ErrorCluster[] = [];
-
-    for (const m of matches) {
-      if (clusters.length === 0) {
-        clusters.push({
-          start: m.start,
-          end: m.end,
-          annotations: [m.annotation]
-        });
-        continue;
-      }
-
-      const lastCluster = clusters[clusters.length - 1];
-
-      if (m.start < lastCluster.end) {
-        lastCluster.end = Math.max(lastCluster.end, m.end);
-        
-        const isDuplicate = lastCluster.annotations.some(
-          (a) => a.type === m.annotation.type && a.explanation === m.annotation.explanation
-        );
-        if (!isDuplicate) {
-          lastCluster.annotations.push(m.annotation);
-        }
-      } else {
-        clusters.push({
-          start: m.start,
-          end: m.end,
-          annotations: [m.annotation]
-        });
-      }
-    }
-
-    // 4. Generowanie czystego HTML z zachowaniem oryginalnego tekstu ucznia
-    let resultHtml = "";
-    let currentIdx = 0;
-
-    clusters.forEach((cluster) => {
-      // Tekst przed błędem
-      resultHtml += escapeHtml(essayText.substring(currentIdx, cluster.start));
-
-      // Tekst z błędem wprost z wypracowania ucznia
-      const clusterRawText = essayText.substring(cluster.start, cluster.end);
-      const clusterEscapedText = escapeHtml(clusterRawText);
-
-      const isMultiError = cluster.annotations.length > 1;
-
-      let colorClass = "";
-      let borderClass = "";
-
-      if (isMultiError) {
-        colorClass = "bg-red-950/40 text-amber-200";
-        borderClass = "border-b-2 border-dashed border-amber-400";
-      } else {
-        const type = cluster.annotations[0].type;
-        if (type === "rzeczowy") {
-          colorClass = "bg-amber-950/50 text-amber-200";
-          borderClass = "border-b-2 border-amber-500";
-        } else if (type === "językowy") {
-          colorClass = "bg-blue-950/50 text-blue-200";
-          borderClass = "border-b-2 border-blue-500";
-        } else if (type === "ortograficzny") {
-          colorClass = "bg-purple-950/50 text-purple-200";
-          borderClass = "border-b-2 border-purple-500";
-        } else {
-          colorClass = "bg-red-950/50 text-red-200";
-          borderClass = "border-b-2 border-red-500";
-        }
-      }
-
-      let tooltipContent = "";
-
-      if (isMultiError) {
-        tooltipContent += `<div class="font-bold text-[10px] uppercase tracking-wider text-amber-400 mb-2 pb-1.5 border-b border-stone-800 flex items-center justify-between"><span>⚠️ Zbieg błędów (${cluster.annotations.length}):</span><span class="text-[9px] text-stone-500 lowercase font-normal">w tym fragmencie</span></div>`;
-      }
-
-      cluster.annotations.forEach((anno: any, aIdx: number) => {
-        const explanation = escapeHtml(anno.explanation || "");
-        const replacement = escapeHtml(anno.replacement || "");
-        
-        let badgeColor = "text-amber-400";
-        if (anno.type === "językowy") badgeColor = "text-blue-400";
-        if (anno.type === "ortograficzny") badgeColor = "text-purple-400";
-        if (anno.type === "interpunkcyjny") badgeColor = "text-red-400";
-
-        tooltipContent += `<div class="${aIdx > 0 ? "pt-2 mt-2 border-t border-stone-800/80" : ""}"><div class="flex items-center justify-between mb-0.5"><strong class="${badgeColor} text-[10px] tracking-wider uppercase font-mono">Błąd ${anno.type}:</strong></div><p class="text-stone-300 text-[11px] leading-relaxed my-0.5 whitespace-normal">${explanation}</p>${replacement ? `<span class="text-emerald-400 font-semibold block text-[10.5px] mt-1 whitespace-normal">✓ Poprawnie: ${replacement}</span>` : ""}</div>`;
       });
 
-      const countBadge = isMultiError 
-        ? `<span class="inline-flex items-center justify-center text-[9px] font-bold bg-amber-500 text-stone-950 rounded-full w-4 h-4 ml-1 select-none align-middle font-mono shadow-sm">${cluster.annotations.length}</span>` 
-        : "";
+      if (matches.length === 0) {
+        return <p className="whitespace-pre-wrap leading-relaxed">{essayText}</p>;
+      }
 
-      resultHtml += `<span class="${colorClass} ${borderClass} relative group inline font-medium cursor-help rounded-sm px-1 py-0.5">${clusterEscapedText}${countBadge}<span class="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-80 max-w-[88vw] bg-[#161210] border border-stone-800 text-stone-300 text-[11px] p-3.5 rounded-2xl shadow-2xl z-50 leading-relaxed font-sans font-normal backdrop-blur-md whitespace-normal block text-left">${tooltipContent}</span></span>`;
+      matches.sort((a, b) => a.start - b.start || b.end - a.end);
 
-      currentIdx = cluster.end;
-    });
+      interface ErrorCluster {
+        start: number;
+        end: number;
+        annotations: any[];
+      }
 
-    resultHtml += escapeHtml(essayText.substring(currentIdx));
+      const clusters: ErrorCluster[] = [];
 
-    return (
-      <div 
-        dangerouslySetInnerHTML={{ __html: resultHtml }} 
-        className="whitespace-pre-wrap leading-loose text-stone-300 font-sans text-xs sm:text-sm"
-      />
-    );
+      for (const m of matches) {
+        if (clusters.length === 0) {
+          clusters.push({ start: m.start, end: m.end, annotations: [m.annotation] });
+          continue;
+        }
+
+        const lastCluster = clusters[clusters.length - 1];
+        if (m.start < lastCluster.end) {
+          lastCluster.end = Math.max(lastCluster.end, m.end);
+          const isDuplicate = lastCluster.annotations.some(
+            (a) => safeString(a.type) === safeString(m.annotation.type) && safeString(a.explanation) === safeString(m.annotation.explanation)
+          );
+          if (!isDuplicate) lastCluster.annotations.push(m.annotation);
+        } else {
+          clusters.push({ start: m.start, end: m.end, annotations: [m.annotation] });
+        }
+      }
+
+      let resultHtml = "";
+      let currentIdx = 0;
+
+      clusters.forEach((cluster) => {
+        resultHtml += escapeHtml(essayText.substring(currentIdx, cluster.start));
+
+        const clusterRawText = essayText.substring(cluster.start, cluster.end);
+        const clusterEscapedText = escapeHtml(clusterRawText);
+        const isMultiError = cluster.annotations.length > 1;
+
+        let colorClass = "bg-red-950/50 text-red-200 border-b-2 border-red-500";
+        if (isMultiError) {
+          colorClass = "bg-red-950/40 text-amber-200 border-b-2 border-dashed border-amber-400";
+        } else {
+          const type = safeString(cluster.annotations[0]?.type).toLowerCase();
+          if (type.includes("rzecz")) colorClass = "bg-amber-950/50 text-amber-200 border-b-2 border-amber-500";
+          else if (type.includes("język")) colorClass = "bg-blue-950/50 text-blue-200 border-b-2 border-blue-500";
+          else if (type.includes("orto")) colorClass = "bg-purple-950/50 text-purple-200 border-b-2 border-purple-500";
+        }
+
+        let tooltipContent = "";
+        if (isMultiError) {
+          tooltipContent += `<div class="font-bold text-[10px] uppercase tracking-wider text-amber-400 mb-2 pb-1 border-b border-stone-800 flex items-center justify-between"><span>⚠️ Zbieg błędów (${cluster.annotations.length}):</span><span class="text-[9px] text-stone-500 lowercase">w tym fragmencie</span></div>`;
+        }
+
+        cluster.annotations.forEach((anno: any, aIdx: number) => {
+          const explanation = escapeHtml(anno?.explanation || "");
+          const replacement = escapeHtml(anno?.replacement || "");
+          const typeStr = safeString(anno?.type || "Błąd").toLowerCase();
+
+          let badgeColor = "text-amber-400";
+          if (typeStr.includes("język")) badgeColor = "text-blue-400";
+          else if (typeStr.includes("orto")) badgeColor = "text-purple-400";
+          else if (typeStr.includes("interp")) badgeColor = "text-red-400";
+
+          tooltipContent += `<div class="${aIdx > 0 ? "pt-2 mt-2 border-t border-stone-800/80" : ""}"><div class="flex items-center justify-between mb-0.5"><strong class="${badgeColor} text-[10px] tracking-wider uppercase font-mono">Błąd ${escapeHtml(anno?.type)}:</strong></div><p class="text-stone-300 text-[11px] leading-relaxed my-0.5 whitespace-normal">${explanation}</p>${replacement ? `<span class="text-emerald-400 font-semibold block text-[10.5px] mt-1 whitespace-normal">✓ Poprawnie: ${replacement}</span>` : ""}</div>`;
+        });
+
+        const countBadge = isMultiError 
+          ? `<span class="inline-flex items-center justify-center text-[9px] font-bold bg-amber-500 text-stone-950 rounded-full w-4 h-4 ml-1 select-none align-middle font-mono shadow-sm">${cluster.annotations.length}</span>` 
+          : "";
+
+        resultHtml += `<span class="${colorClass} relative group inline font-medium cursor-help rounded-sm px-1 py-0.5">${clusterEscapedText}${countBadge}<span class="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-80 max-w-[88vw] bg-[#161210] border border-stone-800 text-stone-300 text-[11px] p-3.5 rounded-2xl shadow-2xl z-50 leading-relaxed font-sans font-normal backdrop-blur-md whitespace-normal block text-left">${tooltipContent}</span></span>`;
+
+        currentIdx = cluster.end;
+      });
+
+      resultHtml += escapeHtml(essayText.substring(currentIdx));
+
+      return (
+        <div 
+          dangerouslySetInnerHTML={{ __html: resultHtml }} 
+          className="whitespace-pre-wrap leading-loose text-stone-300 font-sans text-xs sm:text-sm"
+        />
+      );
+    } catch (err) {
+      console.error("Awaryjny fallback podświetlania:", err);
+      return <p className="whitespace-pre-wrap leading-relaxed text-stone-300 font-sans text-xs sm:text-sm">{essayText}</p>;
+    }
   };
 
   if (checkingAuth) {
     return (
       <div className="min-h-screen bg-[#14100e] text-stone-200 flex flex-col items-center justify-center p-8">
         <div className="text-4xl animate-bounce mb-4">🤖</div>
-        <p className="text-sm tracking-widest font-semibold text-stone-400">
-          Łączenie z modułem sztucznej inteligencji...
-        </p>
+        <p className="text-sm tracking-widest font-semibold text-stone-400">Łączenie z modułem sztucznej inteligencji...</p>
       </div>
     );
   }
 
   const creditsRemaining = profile?.essay_credits ?? 0;
   const currentWordCount = essayText.split(/\s+/).filter(Boolean).length;
-
-  const isTopicSpam = isSpamText(selectedTopic);
-  const isEssaySpam = isSpamText(essayText);
-  const isTopicLengthExceeded = selectedTopic.length > 2000;
-  const isEssayLengthExceeded = essayText.length > 10000;
-  const topicWordsCount = selectedTopic.split(/\s+/).filter(Boolean).length;
-  const isTopicWordsExceeded = topicWordsCount > 200;
-  const hasValidationError = isTopicSpam || isEssaySpam || isTopicLengthExceeded || isEssayLengthExceeded || isTopicWordsExceeded;
-
   const currentYearData = OFFICIAL_CKE_YEARS.find(y => y.year === activeYearTab);
+
+  // 🛡️ Bezpieczne pobranie listy kryteriów niezależnie od tego czy AI zwróciło obiekt czy tablicę
+  const detailsArray = Array.isArray(analysisResult?.details)
+    ? analysisResult.details
+    : typeof analysisResult?.details === "object" && analysisResult?.details !== null
+    ? Object.entries(analysisResult.details).map(([k, v]: [string, any]) => ({
+        criterion: k,
+        points: safeString(v?.points || v?.score || ""),
+        comment: typeof v === "string" ? v : safeString(v?.comment || JSON.stringify(v))
+      }))
+    : [];
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-500 ${currentTheme.bg} text-stone-200 font-sans p-6 items-center`}>
@@ -553,11 +463,10 @@ export default function OcenianieRozprawekPage() {
         </div>
       )}
 
-      {/* NOWOCZESNY MODAL TEMATÓW CKE */}
+      {/* MODAL TEMATÓW CKE */}
       {isTopicModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in">
           <div className="bg-[#181311] border border-stone-800 rounded-3xl p-5 sm:p-7 max-w-3xl w-full shadow-2xl flex flex-col gap-5 max-h-[90vh] overflow-hidden">
-            
             <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-stone-800/80 pb-4 gap-4">
               <div className="flex items-center gap-3">
                 <span className="text-2xl sm:text-3xl p-2 rounded-2xl bg-amber-950/40 border border-amber-900/40">📜</span>
@@ -566,195 +475,25 @@ export default function OcenianieRozprawekPage() {
                   <p className="text-[11px] text-stone-400">Wybierz gotowy temat maturalny, aby przeanalizować pracę</p>
                 </div>
               </div>
-
-              <div className="relative w-full sm:w-64">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500 text-xs">🔍</span>
-                <input
-                  type="text"
-                  placeholder="Szukaj (np. bunt, praca, nadzieja)..."
-                  value={topicSearch}
-                  onChange={(e) => setTopicSearch(e.target.value)}
-                  className="w-full bg-stone-950 border border-stone-800 rounded-xl py-2 pl-8 pr-8 text-xs text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-600/70 transition-all font-sans"
-                />
-                {topicSearch && (
-                  <button 
-                    onClick={() => setTopicSearch("")} 
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-300 text-xs"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
             </div>
-
-            {!topicSearch && (
-              <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 border-b border-stone-800/50">
-                <div className="flex gap-2">
-                  {OFFICIAL_CKE_YEARS.map((y) => (
-                    <button
-                      key={y.year}
-                      onClick={() => setActiveYearTab(y.year)}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-2 ${
-                        activeYearTab === y.year
-                          ? "bg-[#c68a4c] text-stone-950 shadow-lg scale-102 font-serif"
-                          : "bg-stone-900/60 border border-stone-800 text-stone-400 hover:text-stone-200 hover:bg-stone-800"
-                      }`}
-                    >
-                      <span>Matura {y.year}</span>
-                    </button>
-                  ))}
-                </div>
-                <span className="text-[10px] text-amber-500/80 font-mono tracking-widest hidden md:inline-block">
-                  {currentYearData?.formula}
-                </span>
-              </div>
-            )}
-
             <div className="flex flex-col gap-4 overflow-y-auto pr-1">
-              {topicSearch ? (
-                <div className="space-y-4">
-                  <p className="text-[11px] text-stone-400">
-                    Wyniki wyszukiwania dla frazy: <strong className="text-amber-400">„{topicSearch}”</strong>
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {OFFICIAL_CKE_YEARS.flatMap(y => 
-                      y.topics.map(t => ({ ...t, year: y.year }))
-                    ).filter(t => t.text.toLowerCase().includes(topicSearch.toLowerCase())).map((t, idx) => (
-                      <div
-                        key={idx}
-                        onClick={() => handleSelectCkeTopic(t.text)}
-                        className="p-4 rounded-2xl bg-stone-900/40 border border-stone-800 hover:border-amber-600/60 hover:bg-[#231b17] transition-all cursor-pointer group flex flex-col justify-between gap-3 shadow-md"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-amber-950/60 text-amber-400 border border-amber-900/40">
-                            Matura {t.year} • {t.session.split(" ")[0]}
-                          </span>
-                          <span className="text-[10px] text-stone-500 font-mono">{t.number}</span>
-                        </div>
-                        <p className="text-xs sm:text-[13px] text-stone-100 font-serif leading-relaxed group-hover:text-amber-200 transition-colors">
-                          „{t.text}”
-                        </p>
-                        <div className="text-[10px] text-[#c68a4c] font-semibold flex items-center gap-1 opacity-80 group-hover:opacity-100">
-                          Wybierz ten temat <span>→</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+              {currentYearData?.topics.map((t, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => handleSelectCkeTopic(t.text)}
+                  className="p-4 rounded-2xl bg-stone-900/40 border border-stone-800/80 hover:border-amber-500/60 transition-all cursor-pointer"
+                >
+                  <p className="text-xs sm:text-[13px] text-stone-100 font-serif leading-relaxed">„{t.text}”</p>
                 </div>
-              ) : (
-                <div className="space-y-5">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2 px-1">
-                      <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-                      <h4 className="text-[11px] uppercase tracking-widest text-amber-400 font-bold">
-                        Sesja Główna (Maj)
-                      </h4>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {currentYearData?.topics.filter(t => t.session.includes("Maj")).map((t, idx) => (
-                        <div
-                          key={idx}
-                          onClick={() => handleSelectCkeTopic(t.text)}
-                          className="p-4 rounded-2xl bg-stone-900/40 border border-stone-800/80 hover:border-amber-500/60 hover:bg-[#241c18] transition-all cursor-pointer group flex flex-col justify-between gap-3 shadow-sm hover:shadow-xl"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="text-[9px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-amber-950/60 text-amber-300 border border-amber-800/40">
-                              {t.number}
-                            </span>
-                            <span className="text-[10px] text-[#c68a4c] font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
-                              Wstaw do edytora ↵
-                            </span>
-                          </div>
-                          <p className="text-xs sm:text-[13px] text-stone-100 font-serif leading-relaxed">
-                            „{t.text}”
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {currentYearData?.topics.some(t => t.session.includes("Czerwiec")) && (
-                    <div>
-                      <div className="flex items-center gap-2 mb-2 px-1">
-                        <span className="w-2 h-2 rounded-full bg-sky-400"></span>
-                        <h4 className="text-[11px] uppercase tracking-widest text-sky-400 font-bold">
-                          Sesja Dodatkowa (Czerwiec)
-                        </h4>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {currentYearData?.topics.filter(t => t.session.includes("Czerwiec")).map((t, idx) => (
-                          <div
-                            key={idx}
-                            onClick={() => handleSelectCkeTopic(t.text)}
-                            className="p-4 rounded-2xl bg-stone-900/40 border border-stone-800/80 hover:border-sky-500/60 hover:bg-[#152026] transition-all cursor-pointer group flex flex-col justify-between gap-3 shadow-sm hover:shadow-xl"
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="text-[9px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-sky-950/60 text-sky-300 border border-sky-800/40">
-                                {t.number}
-                              </span>
-                              <span className="text-[10px] text-sky-400 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
-                                Wstaw do edytora ↵
-                              </span>
-                            </div>
-                            <p className="text-xs sm:text-[13px] text-stone-100 font-serif leading-relaxed">
-                              „{t.text}”
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div>
-                    <div className="flex items-center gap-2 mb-2 px-1">
-                      <span className="w-2 h-2 rounded-full bg-orange-400"></span>
-                      <h4 className="text-[11px] uppercase tracking-widest text-orange-400 font-bold">
-                        Sesja Poprawkowa (Sierpień)
-                      </h4>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {currentYearData?.topics.filter(t => t.session.includes("Sierpień")).map((t, idx) => (
-                        <div
-                          key={idx}
-                          onClick={() => handleSelectCkeTopic(t.text)}
-                          className="p-4 rounded-2xl bg-stone-900/40 border border-stone-800/80 hover:border-orange-500/60 hover:bg-[#261914] transition-all cursor-pointer group flex flex-col justify-between gap-3 shadow-sm hover:shadow-xl"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="text-[9px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-orange-950/60 text-orange-300 border border-orange-800/40">
-                              {t.number}
-                            </span>
-                            <span className="text-[10px] text-orange-400 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
-                              Wstaw do edytora ↵
-                            </span>
-                          </div>
-                          <p className="text-xs sm:text-[13px] text-stone-100 font-serif leading-relaxed">
-                            „{t.text}”
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
+              ))}
             </div>
-
-            <div className="border-t border-stone-800/80 pt-3 flex justify-between items-center text-[11px] text-stone-500">
-              <span>Wszystkie tematy pochodzą z oficjalnych arkuszy CKE</span>
-              <button
-                onClick={() => setIsTopicModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 border border-stone-800 text-stone-300 text-xs font-semibold transition-all"
-              >
-                Zamknij okno
-              </button>
-            </div>
-
+            <button onClick={() => setIsTopicModalOpen(false)} className="py-2 bg-stone-900 text-xs rounded-xl">Zamknij</button>
           </div>
         </div>
       )}
 
       <div className={`max-w-4xl w-full ${currentTheme.cardBg} border ${currentTheme.cardBorder} rounded-3xl p-6 sm:p-8 shadow-xl mt-8 flex flex-col gap-6 transition-colors duration-500`}>
         
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-stone-800/60 pb-5 gap-4">
           <div className="flex items-center gap-3">
             <span className="text-3xl">✨</span>
@@ -763,16 +502,12 @@ export default function OcenianieRozprawekPage() {
               <p className="text-xs text-stone-400 mt-1">Interaktywna weryfikacja prac z języka polskiego</p>
             </div>
           </div>
-          <Link 
-            href="/" 
-            className={`self-start sm:self-center text-xs px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} bg-stone-900/60 text-stone-400 hover:text-stone-100 hover:scale-105 active:scale-95 transition-all`}
-          >
+          <Link href="/" className={`text-xs px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} bg-stone-900/60 text-stone-400 hover:text-stone-100 transition-all`}>
             ← Wróć do kącika
           </Link>
         </div>
 
-        {/* Informacja o Kredytach */}
-        <div className="p-4 rounded-2xl bg-stone-950/40 border border-stone-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="p-4 rounded-2xl bg-stone-950/40 border border-stone-800/60 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-2xl">📊</span>
             <div>
@@ -780,459 +515,133 @@ export default function OcenianieRozprawekPage() {
               <p className="text-[11px] text-stone-500">Używasz bezpiecznego systemu tokenów edukacyjnych.</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <span className={`text-sm font-bold font-mono px-3.5 py-2 rounded-xl ${
-              creditsRemaining > 0 ? "bg-amber-950/40 text-amber-400 border border-amber-900/50" : "bg-red-950/30 text-red-400 border border-red-900/30"
-            }`}>
-              Pozostało ocen: {creditsRemaining}
-            </span>
-          </div>
+          <span className="text-sm font-bold font-mono px-3.5 py-2 rounded-xl bg-amber-950/40 text-amber-400 border border-amber-900/50">
+            Pozostało ocen: {creditsRemaining}
+          </span>
         </div>
 
-        {/* Content Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
-          {/* Lewa kolumna: Edytor i podgląd */}
           <div className="lg:col-span-8 flex flex-col gap-4">
             <div>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                <label className="text-xs uppercase tracking-widest text-amber-500 font-semibold">
-                  Temat Twojej rozprawki (Maksymalnie 200 słów)
-                </label>
-                
-                <button
-                  type="button"
-                  onClick={() => setIsTopicModalOpen(true)}
-                  disabled={isAnalyzing || isGenerating}
-                  className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#231b16] border border-amber-800/40 hover:border-amber-500/70 hover:bg-[#2c221c] text-[#c68a4c] hover:text-[#d99c5d] text-[11px] font-bold transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-50"
-                >
-                  <span>📚</span>
-                  <span>Wybierz z bazy CKE (2022–2026) ▾</span>
-                </button>
-              </div>
-
+              <label className="text-xs uppercase tracking-widest text-amber-500 font-semibold mb-2 block">
+                Temat Twojej rozprawki
+              </label>
               <input 
                 type="text"
-                placeholder="Wpisz tutaj pełny temat swojej rozprawki lub wybierz z bazy CKE powyżej..."
+                placeholder="Wpisz temat..."
                 value={selectedTopic}
                 onChange={(e) => setSelectedTopic(e.target.value)}
                 disabled={isAnalyzing || isGenerating}
-                className="w-full bg-stone-900/90 border border-stone-800 rounded-xl py-2.5 px-3.5 text-xs sm:text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-700/60 font-sans transition-all"
+                className="w-full bg-stone-900/90 border border-stone-800 rounded-xl py-2.5 px-3.5 text-xs text-stone-200"
               />
-
-              {isTopicSpam && (
-                <p className="text-[11px] text-red-400 font-semibold mt-1 animate-pulse">
-                  ⚠️ Wykryto nieprawidłowe, zbyt długie słowo bez spacji (maksymalnie 25 znaków). Popraw temat, aby odblokować analizę!
-                </p>
-              )}
-              {isTopicLengthExceeded && (
-                <p className="text-[11px] text-red-400 font-semibold mt-1 animate-pulse">
-                  ⚠️ Temat rozprawki przekracza maksymalny limit 2000 znaków!
-                </p>
-              )}
-              {isTopicWordsExceeded && (
-                <p className="text-[11px] text-red-400 font-semibold mt-1 animate-pulse">
-                  ⚠️ Temat rozprawki przekracza maksymalny limit 200 słów!
-                </p>
-              )}
-            </div>
-
-            {/* Tryb wyboru generowania rozprawki */}
-            <div className="flex items-center gap-2.5 bg-stone-900/40 border border-stone-800/60 p-3 rounded-xl">
-              <input 
-                type="checkbox"
-                id="generationMode"
-                checked={isGenerationMode}
-                onChange={(e) => {
-                  setIsGenerationMode(e.target.checked);
-                  if (e.target.checked) {
-                    setEssayText(""); 
-                    setGeneratedContexts([]);
-                    setAnalysisResult(null);
-                    setIsGeneratedByAi(false);
-                  }
-                }}
-                disabled={isAnalyzing || isGenerating}
-                className="w-4 h-4 rounded border-stone-800 text-amber-500 focus:ring-amber-500 bg-stone-950 cursor-pointer accent-[#c68a4c]"
-              />
-              <label htmlFor="generationMode" className="text-xs font-semibold text-stone-300 cursor-pointer select-none">
-                Chcę wygenerować przykładową rozprawkę przez AI (zamiast oceniać własną)
-              </label>
             </div>
 
             {analysisResult && (
               <div className="flex border-b border-stone-800 gap-2 mb-1">
-                <button
-                  onClick={() => setActiveTab("write")}
-                  className={`px-4 py-2 text-xs font-semibold tracking-wider uppercase transition-all ${
-                    activeTab === "write" 
-                      ? "text-[#c68a4c] border-b-2 border-[#c68a4c]" 
-                      : "text-stone-500 hover:text-stone-300"
-                  }`}
-                >
-                  ✍ Edytor tekstu
-                </button>
-                <button
-                  onClick={() => setActiveTab("preview")}
-                  className={`px-4 py-2 text-xs font-semibold tracking-wider uppercase transition-all ${
-                    activeTab === "preview" 
-                      ? "text-emerald-400 border-b-2 border-emerald-400" 
-                      : "text-stone-500 hover:text-stone-300"
-                  }`}
-                >
-                  🔍 Podgląd korekt i błędów
-                </button>
+                <button onClick={() => setActiveTab("write")} className={`px-4 py-2 text-xs font-semibold uppercase ${activeTab === "write" ? "text-[#c68a4c] border-b-2 border-[#c68a4c]" : "text-stone-500"}`}>✍ Edytor tekstu</button>
+                <button onClick={() => setActiveTab("preview")} className={`px-4 py-2 text-xs font-semibold uppercase ${activeTab === "preview" ? "text-emerald-400 border-b-2 border-emerald-400" : "text-stone-500"}`}>🔍 Podgląd korekt i błędów</button>
               </div>
             )}
 
             {activeTab === "write" ? (
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs uppercase tracking-widest text-stone-500 font-semibold block">
-                    Treść Twojego wypracowania
-                  </label>
-                  {isGeneratedByAi && (
-                    <span className="text-[10px] text-amber-500/90 font-semibold flex items-center gap-1 bg-amber-950/40 border border-amber-900/50 px-2.5 py-0.5 rounded-md">
-                      🔒 Wzorzec AI (Tylko do odczytu / Kopiowanie zablokowane)
-                    </span>
-                  )}
-                </div>
-
                 <textarea
                   rows={12}
-                  placeholder={
-                    isGenerationMode 
-                      ? "Opcja automatycznego generowania rozprawki przez AI jest włączona. Treść Twojego wypracowania jest zablokowana. Wpisz lub wybierz temat powyżej i kliknij przycisk generowania." 
-                      : "Wklej tutaj treść swojej rozprawki (minimum 50 słów)..."
-                  }
+                  placeholder="Wklej treść wypracowania..."
                   value={essayText}
-                  onChange={(e) => {
-                    setEssayText(e.target.value);
-                    setIsGeneratedByAi(false);
-                  }}
-                  onCopy={(e) => {
-                    if (isGeneratedByAi) {
-                      e.preventDefault();
-                      triggerAlert("🔒 Kopiowanie prac wzorcowych AI jest zablokowane. Wykorzystaj ten tekst do inspiracji i samodzielnej nauki!", "error");
-                    }
-                  }}
-                  onCut={(e) => {
-                    if (isGeneratedByAi) {
-                      e.preventDefault();
-                      triggerAlert("🔒 Kopiowanie prac wzorcowych AI jest zablokowane.", "error");
-                    }
-                  }}
-                  onContextMenu={(e) => {
-                    if (isGeneratedByAi) {
-                      e.preventDefault();
-                    }
-                  }}
+                  onChange={(e) => setEssayText(e.target.value)}
                   disabled={isAnalyzing || isGenerating || isGenerationMode}
-                  className={`w-full bg-stone-900/80 border border-stone-800 rounded-2xl p-4 text-xs sm:text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-700/60 leading-relaxed font-sans disabled:opacity-50 disabled:cursor-not-allowed ${
-                    isGeneratedByAi ? "select-none cursor-default" : ""
-                  }`}
+                  className="w-full bg-stone-900/80 border border-stone-800 rounded-2xl p-4 text-xs sm:text-sm text-stone-200"
                 />
-
-                {isEssaySpam && (
-                  <p className="text-[11px] text-red-400 font-semibold mt-1 animate-pulse">
-                    ⚠️ Wykryto nieprawidłowe, zbyt długie słowo bez spacji (maksymalnie 25 znaków). Popraw wypracowanie, aby odblokować analizę!
-                  </p>
-                )}
-                {isEssayLengthExceeded && (
-                  <p className="text-[11px] text-red-400 font-semibold mt-1 animate-pulse">
-                    ⚠️ Wypracowanie przekracza maksymalny limit 10 000 znaków!
-                  </p>
-                )}
-                <div className="flex justify-between text-[11px] text-stone-500 mt-1">
-                  <span>Liczba znaków: {essayText.length}</span>
-                  <span className={currentWordCount > 1500 ? "text-red-400 font-semibold" : ""}>
-                    Orientacyjna liczba słów: {currentWordCount} / 1500
-                  </span>
-                </div>
               </div>
             ) : (
               <div className="bg-stone-950/40 border border-stone-800 rounded-2xl p-5 min-h-[300px] shadow-inner">
                 <div className="mb-4 border-b border-stone-900 pb-3 flex justify-between items-center">
-                  <span className="text-xs uppercase tracking-widest text-emerald-400 font-semibold">Zweryfikowana treść wypracowania:</span>
-                  <span className="text-[10px] text-stone-500">Najedź myszką na błąd, aby zobaczyć wyjaśnienie</span>
+                  <span className="text-xs uppercase tracking-widest text-emerald-400 font-semibold">Zweryfikowana treść:</span>
+                  <span className="text-[10px] text-stone-500">Najedź myszką na błąd</span>
                 </div>
                 {renderHighlightedText()}
               </div>
             )}
 
-            {creditsRemaining > 0 ? (
-              <div className="flex flex-col gap-2 w-full">
-                {isGenerationMode ? (
-                  <button
-                    onClick={handleGenerateEssay}
-                    disabled={isAnalyzing || isGenerating || isTopicSpam || isTopicLengthExceeded || isTopicWordsExceeded}
-                    className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold transition-all text-xs sm:text-sm shadow-md disabled:bg-stone-800 disabled:text-stone-500 cursor-pointer"
-                  >
-                    {isGenerating ? "✍ Trwa generowanie rozprawki..." : "Generuj przykładową rozprawkę (1 kredyt)"}
-                  </button>
-                ) : (
-                  <>
-                    <button
-                      onClick={handleAnalyze}
-                      disabled={isAnalyzing || isGenerating || hasValidationError || isGeneratedByAi}
-                      className={`w-full py-3 rounded-xl font-bold transition-all text-xs sm:text-sm shadow-md ${
-                        isGeneratedByAi
-                          ? "bg-stone-900 border border-stone-800 text-stone-500 cursor-not-allowed opacity-80"
-                          : "bg-[#c68a4c] hover:bg-[#d99c5d] text-stone-950 disabled:bg-stone-800 disabled:text-stone-500 cursor-pointer"
-                      }`}
-                    >
-                      {isAnalyzing
-                        ? "🤖 Trwa analiza tekstu..."
-                        : isGeneratedByAi
-                        ? "🔒 Praca wzorcowa AI (Nie wymaga oceny – służy do nauki)"
-                        : "Przeanalizuj rozprawkę (1 kredyt)"}
-                    </button>
-
-                    {isGeneratedByAi && (
-                      <button
-                        type="button"
-                        onClick={handleClearGenerated}
-                        className="w-full py-2.5 rounded-xl bg-stone-900/60 hover:bg-stone-800 border border-amber-900/40 text-amber-400 hover:text-amber-300 text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
-                      >
-                        <span>✍️</span>
-                        <span>Wyczyść wzorzec i napisz własną rozprawkę</span>
-                      </button>
-                    )}
-                  </>
-                )}
-
-                {(isAnalyzing || isGenerating) && (
-                  <div className="p-4 rounded-2xl bg-amber-950/20 border border-amber-900/30 text-left text-[11px] text-amber-400/95 leading-relaxed font-sans mt-1 animate-pulse">
-                    ⚠️ <strong className="text-amber-300 font-bold">Trwa analiza przez sztuczną inteligencję. Prosimy o cierpliwość i nieodświeżanie tej strony.</strong> Zamknięcie lub przeładowanie karty w tym momencie uniemożliwi wyświetlenie wyników. Twój kredyt jest bezpieczny – w przypadku wystąpienia jakiegokolwiek błędu połączenia sieciowego, pobrany token zostanie automatycznie zwrócony na Twoje konto.
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-center p-3.5 bg-red-950/20 border border-red-950/40 rounded-xl text-xs text-red-400">
-                Wykorzystałeś wszystkie darmowe oceny wypracowań. Kup pakiet Premium, aby natychmiast otrzymać kolejne próby! 🚀
-              </div>
-            )}
-
-            {activeTab === "write" && generatedContexts.length > 0 && (
-              <div className="mt-4 p-4 rounded-2xl bg-stone-950/50 border border-stone-800/80 animate-fade-in">
-                <h4 className="text-xs uppercase tracking-widest text-amber-500 font-bold mb-3 flex items-center gap-2">
-                  <span>💡</span> Propozycje alternatywnych kontekstów do tego tematu:
-                </h4>
-                <div className="grid grid-cols-1 gap-3">
-                  {generatedContexts.map((ctx, index) => (
-                    <div key={index} className="p-3 rounded-xl bg-stone-900/60 border border-stone-800/50 text-[11px] leading-relaxed">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-bold text-stone-200">{ctx.title}</span>
-                        <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-amber-950/40 text-amber-400 border border-amber-900/30">
-                          {ctx.type}
-                        </span>
-                      </div>
-                      <p className="text-stone-400">{ctx.description}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <button
+              onClick={handleAnalyze}
+              disabled={isAnalyzing || isGenerating}
+              className="w-full py-3 rounded-xl bg-[#c68a4c] text-stone-950 font-bold text-xs cursor-pointer shadow-md disabled:opacity-50"
+            >
+              {isAnalyzing ? "🤖 Trwa analiza tekstu..." : "Przeanalizuj rozprawkę (1 kredyt)"}
+            </button>
           </div>
 
-          {/* Prawa kolumna: Raport AI */}
+          {/* 🛡️ PRAWA KOLUMNA: W 100% ODPORNA NA CRASHE */}
           <div className="lg:col-span-4 flex flex-col gap-4">
-            
-            {isAnalyzing || isGenerating ? (
+            {isAnalyzing ? (
               <div className="rounded-2xl border border-amber-950/40 bg-stone-950/20 p-5 flex flex-col justify-center items-center text-center min-h-[300px]">
-                <AtmosphericEssayLoader mode={isGenerating ? "generate" : "analyze"} />
+                <span className="text-3xl animate-spin mb-3">⏳</span>
+                <p className="text-xs text-amber-500 font-bold">Claude analizuje wypracowanie...</p>
               </div>
             ) : analysisResult ? (
               <div className="rounded-2xl border border-stone-800 bg-stone-900/60 p-5 flex flex-col gap-3.5 animate-fade-in max-h-[500px] overflow-y-auto">
                 <div className="flex items-center justify-between border-b border-stone-800 pb-3">
                   <h3 className="text-xs uppercase tracking-widest text-emerald-400 font-bold">Wynik Analizy</h3>
-                  <span className="text-3xl sm:text-4xl font-black text-emerald-400 font-mono tracking-tight">
-                    {analysisResult.score}
+                  <span className="text-3xl sm:text-4xl font-black text-emerald-400 font-mono">
+                    {safeString(analysisResult.score || "0/35")}
                   </span>
                 </div>
 
                 <div className="space-y-3.5">
-                  {analysisResult.details.map((detail: any, i: number) => (
+                  {detailsArray.map((detail: any, i: number) => (
                     <div key={i} className="text-[11px] border-b border-stone-900/55 pb-2.5 last:border-none">
                       <div className="flex justify-between font-bold text-stone-200 mb-1">
-                        <span>{detail.criterion}</span>
-                        <span className="text-[#c68a4c] font-mono">{detail.points}</span>
+                        <span>{safeString(detail.criterion)}</span>
+                        <span className="text-[#c68a4c] font-mono">{safeString(detail.points)}</span>
                       </div>
-                      <p className="text-stone-400 font-sans leading-relaxed">{detail.comment}</p>
+                      <p className="text-stone-400 font-sans leading-relaxed">{safeString(detail.comment)}</p>
                     </div>
                   ))}
                 </div>
 
-                <div className="border-t border-stone-800 pt-3 mt-1">
-                  <h4 className="text-[11px] font-bold text-stone-200 font-serif uppercase tracking-wider text-[#c68a4c] mb-1">Podsumowanie krytyka:</h4>
-                  <p className="text-[11.5px] text-stone-400 italic leading-relaxed">{analysisResult.summary}</p>
-                </div>
+                {analysisResult.summary && (
+                  <div className="border-t border-stone-800 pt-3 mt-1">
+                    <h4 className="text-[11px] font-bold text-[#c68a4c] font-serif uppercase tracking-wider mb-1">Podsumowanie krytyka:</h4>
+                    <p className="text-[11.5px] text-stone-400 italic leading-relaxed">{safeString(analysisResult.summary)}</p>
+                  </div>
+                )}
               </div>
             ) : (
-              <div className="rounded-2xl border border-dashed border-stone-800 bg-stone-950/20 p-5 flex flex-col justify-center items-center text-center min-h-[300px]">
-                <span className="text-4xl mb-3">🤖</span>
-                <h3 className="text-sm font-bold text-stone-200 font-serif">Gotowy do analizy</h3>
-                <p className="text-xs text-stone-500 mt-2 max-w-[200px] mx-auto leading-relaxed">
-                  Po kliknięciu przycisku oceny, tutaj pojawi się kompletny, szczegółowy raport CKE z punktacją i uwagami stylisty.
-                </p>
+              <div className="rounded-2xl border border-dashed border-stone-800 bg-stone-950/20 p-5 text-center text-xs text-stone-500">
+                Po kliknięciu przycisku oceny, tutaj pojawi się raport CKE.
               </div>
             )}
-            
-            <div className="rounded-2xl bg-stone-900/40 border border-stone-800/60 p-4">
-              <h4 className="text-xs font-bold text-amber-500 uppercase tracking-widest mb-2">🔍 Zasady oceniania</h4>
-              <ul className="text-[11px] text-stone-400 space-y-2">
-                <li className="flex gap-2"><span>✔</span> Sprawdzenie poprawności kompozycji (wstęp, rozwinięcie, zakończenie)</li>
-                <li className="flex gap-2"><span>✔</span> Weryfikacja poprawności rzeczowej i językowej</li>
-                <li className="flex gap-2"><span>✔</span> Wykrywanie ewentualnego błędu kardynalnego</li>
-              </ul>
-            </div>
-
-            <div className="p-3.5 rounded-2xl bg-stone-950/50 border border-stone-800/70 flex items-start gap-2.5 text-[11px] text-stone-400 leading-relaxed font-sans shadow-inner">
-              <span className="text-amber-500 text-sm shrink-0 mt-0.5">ℹ️</span>
-              <p>
-                <strong className="text-stone-300 font-semibold">Uwaga:</strong> Model AI dokonuje bardzo rygorystycznej i dosłownej oceny według wytycznych CKE (a zwłaszcza zasad dotyczących interpunkcji, stylu i gramatyki). Rzeczywista punktacja na egzaminie państwowym może różnić się na korzyść zdającego z uwagi na bardziej elastyczną i holistyczną ocenę ludzkiego egzaminatora.
-              </p>
-            </div>
           </div>
-
         </div>
 
-        {/* Sekcja historii */}
+        {/* 📅 HISTORIA PRAC (ODZYSKIWANIE ZA 0 TOKENÓW) */}
         {history.length > 0 && (
           <div className="border-t border-stone-800/60 pt-6 mt-2">
-            <h3 className="text-xs uppercase tracking-widest text-amber-500 font-bold mb-4 flex items-center gap-2">
-              <span>📅</span> Historia Twoich prac i ocen ({history.length})
+            <h3 className="text-xs uppercase tracking-widest text-amber-500 font-bold mb-4">
+              📅 Historia Twoich prac i ocen ({history.length}) – Kliknij, aby wczytać za darmo:
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[280px] overflow-y-auto pr-1">
               {history.map((item) => (
                 <div 
                   key={item.id}
                   onClick={() => loadFromHistory(item)}
-                  className="p-4 rounded-2xl bg-stone-950/40 border border-stone-800/60 hover:border-amber-700/50 hover:bg-[#1f1915]/60 transition-all cursor-pointer flex justify-between items-center group"
+                  className="p-4 rounded-2xl bg-stone-950/40 border border-stone-800/60 hover:border-amber-700/50 transition-all cursor-pointer flex justify-between items-center"
                 >
                   <div className="flex flex-col gap-1 pr-4 min-w-0">
-                    <h4 className="text-xs font-bold text-stone-200 truncate font-serif leading-tight">
-                      {item.topic}
-                    </h4>
-                    <span className="text-[10px] text-stone-500">
-                      {new Date(item.created_at).toLocaleDateString("pl-PL", {
-                        day: "numeric",
-                        month: "long",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit"
-                      })}
-                    </span>
+                    <h4 className="text-xs font-bold text-stone-200 truncate font-serif">{safeString(item.topic)}</h4>
+                    <span className="text-[10px] text-stone-500">{new Date(item.created_at).toLocaleDateString("pl-PL")}</span>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-sm font-extrabold text-emerald-400 font-mono bg-stone-900/80 px-2.5 py-1.5 rounded-xl border border-stone-800 group-hover:border-emerald-500/30 transition-all">
-                      {item.score}
-                    </span>
-                    <span className="text-stone-600 group-hover:text-amber-500 transition-all text-xs">→</span>
-                  </div>
+                  <span className="text-sm font-bold text-emerald-400 font-mono bg-stone-900 px-2.5 py-1.5 rounded-xl border border-stone-800">
+                    {safeString(item.score)}
+                  </span>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-      </div>
-    </div>
-  );
-}
-
-// ==========================================================================
-// KOMPONENT ŁADOWANIA (SUB-COMPONENT)
-// ==========================================================================
-function AtmosphericEssayLoader({ mode }: { mode: "analyze" | "generate" }) {
-  const [step, setStep] = useState(0);
-
-  const analyzeSteps = [
-    "Zaparzanie świeżej herbaty i rozgrzewanie maszyn AI...",
-    "Egzaminator CKE zakłada okulary i otwiera Twoje wypracowanie...",
-    "Analizowanie bogactwa leksykalnego i struktur składniowych...",
-    "Weryfikacja tekstu pod kątem błędów rzeczowych i kardynalnych...",
-    "Przeszukiwanie bazy RAG w poszukiwaniu wzorców oceniania...",
-    "Konstruowanie sprawiedliwej i pomocnej informacji zwrotnej..."
-  ];
-
-  const generateSteps = [
-    "Zaparzanie świeżej herbaty i rozgrzewanie maszyn AI...",
-    "Dobieranie optymalnych lektur i motywów literackich...",
-    "Formułowanie dojrzałej, uniwersalnej tezy do tematu...",
-    "Konstruowanie wieloaspektowych argumentów merytorycznych...",
-    "Dobieranie i płynne wstrzykiwanie funkcjonalnych kontekstów CKE...",
-    "Kończenie generowania przykładowego wypracowania..."
-  ];
-
-  const loadingSteps = mode === "generate" ? generateSteps : analyzeSteps;
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setStep((prev) => (prev + 1) % loadingSteps.length);
-    }, 4500);
-    return () => clearInterval(interval);
-  }, [loadingSteps.length]);
-
-  return (
-    <div className="flex flex-col items-center justify-center p-6 text-center select-none w-full">
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes float {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-8px) rotate(1deg); }
-        }
-        @keyframes pulse-glow {
-          0%, 100% { opacity: 0.15; transform: scale(1); }
-          50% { opacity: 0.35; transform: scale(1.1); }
-        }
-        @keyframes spin-slow {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        @keyframes spin-reverse-slow {
-          0% { transform: rotate(360deg); }
-          100% { transform: rotate(0deg); }
-        }
-        @keyframes particle-rise {
-          0% { transform: translateY(20px) scale(0.8); opacity: 0; }
-          20% { opacity: 0.8; }
-          80% { opacity: 0.4; }
-          100% { transform: translateY(-70px) scale(0.4); opacity: 0; }
-        }
-        .animate-float { animation: float 4s ease-in-out infinite; }
-        .animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
-        .animate-spin-slow { animation: spin-slow 20s linear infinite; }
-        .animate-spin-reverse-slow { animation: spin-reverse-slow 25s linear infinite; }
-      `}} />
-
-      <div className="relative w-36 h-36 flex items-center justify-center mb-6">
-        <div className="absolute inset-4 bg-amber-500/10 rounded-full blur-2xl animate-pulse-glow" />
-        <div className="absolute inset-0 rounded-full border-2 border-dashed border-amber-500/10 animate-spin-slow" />
-        <div className="absolute inset-2 rounded-full border border-dotted border-orange-500/20 animate-spin-reverse-slow" />
-
-        <div className="absolute z-10 animate-float flex items-center justify-center text-amber-500/80">
-          <svg className="w-16 h-20 drop-shadow-[0_0_15px_rgba(245,158,11,0.3)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.967 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-            <path strokeLinecap="round" d="M5 8h4M5 11h3M5 14h4M15 8h4M16 11h3M15 14h3" strokeWidth="1" strokeOpacity="0.5" />
-          </svg>
-        </div>
-
-        <div className="absolute inset-0 pointer-events-none">
-          <span className="absolute w-1 h-1 rounded-full bg-amber-400" style={{ animation: 'particle-rise 4s ease-in-out infinite', left: '25%', bottom: '20px', animationDelay: '0.2s' }} />
-          <span className="absolute w-1.5 h-1.5 rounded-full bg-orange-400" style={{ animation: 'particle-rise 5s ease-in-out infinite', left: '45%', bottom: '20px', animationDelay: '1.8s' }} />
-          <span className="absolute w-1 h-1 rounded-full bg-amber-500" style={{ animation: 'particle-rise 3.5s ease-in-out infinite', left: '65%', bottom: '20px', animationDelay: '0.9s' }} />
-          <span className="absolute w-2 h-2 rounded-full bg-amber-300" style={{ animation: 'particle-rise 6s ease-in-out infinite', left: '35%', bottom: '20px', animationDelay: '2.5s' }} />
-          <span className="absolute w-1 h-1 rounded-full bg-orange-500" style={{ animation: 'particle-rise 4.2s ease-in-out infinite', left: '55%', bottom: '20px', animationDelay: '1.1s' }} />
-        </div>
-      </div>
-
-      <div className="max-w-xs">
-        <p className="text-xs uppercase tracking-widest text-amber-500 font-bold mb-1.5 animate-pulse">
-          {mode === "generate" ? "Trwa generowanie rozprawki..." : "Trwa analiza wypracowania..."}
-        </p>
-        <p className="text-[11px] text-stone-400 min-h-[32px] leading-relaxed transition-all duration-500">
-          {loadingSteps[step]}
-        </p>
       </div>
     </div>
   );
