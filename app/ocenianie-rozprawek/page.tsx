@@ -481,9 +481,9 @@ export default function OcenianieRozprawekPage() {
         </div>
 
         <div className="hidden md:flex flex-col items-center select-none">
-          <div className="flex items-center gap-2">
-            <span className="text-xl sm:text-2xl">✨</span>
-            <h1 className="text-sm sm:text-base font-semibold tracking-wide text-stone-100 font-serif">
+          <div className="flex items-center gap-2.5">
+            <span className="text-2xl sm:text-3xl">✨</span>
+            <h1 className="text-base sm:text-lg font-bold tracking-wide text-stone-100 font-serif">
               Asystent Rozprawek AI
             </h1>
           </div>
