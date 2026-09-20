@@ -15,6 +15,7 @@ interface Match {
   annotation: any;
 }
 
+// Baza oficjalnych tematów maturalnych CKE (2023–2026)
 const OFFICIAL_CKE_YEARS = [
   {
     year: "2026",
@@ -71,7 +72,6 @@ const isSpamText = (text: string) => {
   return words.some(word => word.length > 25);
 };
 
-// 🛡️ Bezpieczny konwerter na string zapobiegający crashom Reacta
 const safeString = (val: any): string => {
   if (val === null || val === undefined) return "";
   if (typeof val === "string") return val;
@@ -290,7 +290,6 @@ export default function OcenianieRozprawekPage() {
     triggerAlert("Wczytano pracę z historii (0 kredytów)! 🎉", "success");
   };
 
-  // 🎯 PANCERNA FUNKCJA RENDERUJĄCA PODŚWIETLENIA (ODPORNA NA CRASHE)
   const renderHighlightedText = () => {
     try {
       if (!analysisResult) {
@@ -470,6 +469,7 @@ export default function OcenianieRozprawekPage() {
       {isTopicModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in">
           <div className="bg-[#181311] border border-stone-800 rounded-3xl p-5 sm:p-7 max-w-3xl w-full shadow-2xl flex flex-col gap-5 max-h-[90vh] overflow-hidden">
+            
             <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-stone-800/80 pb-4 gap-4">
               <div className="flex items-center gap-3">
                 <span className="text-2xl sm:text-3xl p-2 rounded-2xl bg-amber-950/40 border border-amber-900/40">📜</span>
@@ -478,19 +478,90 @@ export default function OcenianieRozprawekPage() {
                   <p className="text-[11px] text-stone-400">Wybierz gotowy temat maturalny, aby przeanalizować pracę</p>
                 </div>
               </div>
+
+              <div className="relative w-full sm:w-64">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500 text-xs">🔍</span>
+                <input
+                  type="text"
+                  placeholder="Szukaj (np. bunt, praca)..."
+                  value={topicSearch}
+                  onChange={(e) => setTopicSearch(e.target.value)}
+                  className="w-full bg-stone-950 border border-stone-800 rounded-xl py-2 pl-8 pr-8 text-xs text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-600/75 transition-all font-sans"
+                />
+                {topicSearch && (
+                  <button onClick={() => setTopicSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-300 text-xs">✕</button>
+                )}
+              </div>
             </div>
-            <div className="flex flex-col gap-4 overflow-y-auto pr-1">
-              {currentYearData?.topics.map((t, idx) => (
-                <div
-                  key={idx}
-                  onClick={() => handleSelectCkeTopic(t.text)}
-                  className="p-4 rounded-2xl bg-stone-900/40 border border-stone-800/80 hover:border-amber-500/60 transition-all cursor-pointer"
-                >
-                  <p className="text-xs sm:text-[13px] text-stone-100 font-serif leading-relaxed">„{t.text}”</p>
+
+            {!topicSearch && (
+              <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 border-b border-stone-800/50">
+                <div className="flex gap-2">
+                  {OFFICIAL_CKE_YEARS.map((y) => (
+                    <button
+                      key={y.year}
+                      onClick={() => setActiveYearTab(y.year)}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-2 ${
+                        activeYearTab === y.year
+                          ? "bg-[#c68a4c] text-stone-950 shadow-lg scale-102 font-serif"
+                          : "bg-stone-900/60 border border-stone-800 text-stone-400 hover:text-stone-200 hover:bg-stone-800"
+                      }`}
+                    >
+                      <span>Matura {y.year}</span>
+                    </button>
+                  ))}
                 </div>
-              ))}
+                <span className="text-[10px] text-amber-500/80 font-mono tracking-widest hidden md:inline-block">
+                  {currentYearData?.formula}
+                </span>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-4 overflow-y-auto pr-1 max-h-[60vh]">
+              {topicSearch ? (
+                <div className="space-y-4">
+                  <p className="text-[11px] text-stone-400">Wyniki wyszukiwania dla frazy: <strong className="text-amber-400">„{topicSearch}”</strong></p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {OFFICIAL_CKE_YEARS.flatMap(y => y.topics.map(t => ({ ...t, year: y.year }))).filter(t => t.text.toLowerCase().includes(topicSearch.toLowerCase())).map((t, idx) => (
+                      <div
+                        key={idx}
+                        onClick={() => handleSelectCkeTopic(t.text)}
+                        className="p-4 rounded-2xl bg-stone-900/40 border border-stone-800 hover:border-amber-600/60 transition-all cursor-pointer group flex flex-col justify-between gap-3"
+                      >
+                        <span className="text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-amber-950/60 text-amber-400 border border-amber-900/40 w-max">
+                          Matura {t.year} • {t.session.split(" ")[0]}
+                        </span>
+                        <p className="text-xs sm:text-[13px] text-stone-100 font-serif leading-relaxed">„{t.text}”</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  <div>
+                    <h4 className="text-[11px] uppercase tracking-widest text-amber-400 font-bold mb-2 px-1">Sesja Główna (Maj)</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {currentYearData?.topics.filter(t => t.session.includes("Maj")).map((t, idx) => (
+                        <div
+                          key={idx}
+                          onClick={() => handleSelectCkeTopic(t.text)}
+                          className="p-4 rounded-2xl bg-stone-900/40 border border-stone-800/80 hover:border-amber-500/60 transition-all cursor-pointer group flex flex-col justify-between gap-3"
+                        >
+                          <span className="text-[9px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-amber-950/60 text-amber-300 border border-amber-800/40 w-max">{t.number}</span>
+                          <p className="text-xs sm:text-[13px] text-stone-100 font-serif leading-relaxed">„{t.text}”</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-            <button onClick={() => setIsTopicModalOpen(false)} className="py-2 bg-stone-900 text-xs rounded-xl">Zamknij</button>
+
+            <div className="border-t border-stone-800/80 pt-3 flex justify-between items-center text-[11px] text-stone-500">
+              <span>Wszystkie tematy pochodzą z oficjalnych arkuszy CKE</span>
+              <button onClick={() => setIsTopicModalOpen(false)} className="px-4 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 border border-stone-800 text-stone-300 text-xs font-semibold">Zamknij</button>
+            </div>
+
           </div>
         </div>
       )}
@@ -526,17 +597,53 @@ export default function OcenianieRozprawekPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-8 flex flex-col gap-4">
             <div>
-              <label className="text-xs uppercase tracking-widest text-amber-500 font-semibold mb-2 block">
-                Temat Twojej rozprawki
-              </label>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                <label className="text-xs uppercase tracking-widest text-amber-500 font-semibold">
+                  Temat Twojej rozprawki
+                </label>
+                
+                <button
+                  type="button"
+                  onClick={() => setIsTopicModalOpen(true)}
+                  disabled={isAnalyzing || isGenerating || analysisResult !== null}
+                  className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#231b16] border border-amber-800/40 hover:border-amber-500/70 text-[#c68a4c] text-[11px] font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                >
+                  <span>📚</span>
+                  <span>Wybierz z bazy CKE (2022–2026) ▾</span>
+                </button>
+              </div>
+
               <input 
                 type="text"
-                placeholder="Wpisz temat..."
+                placeholder="Wpisz temat rozprawki lub wybierz z bazy CKE..."
                 value={selectedTopic}
                 onChange={(e) => setSelectedTopic(e.target.value)}
                 disabled={isAnalyzing || isGenerating || analysisResult !== null}
                 className="w-full bg-stone-900/90 border border-stone-800 rounded-xl py-2.5 px-3.5 text-xs text-stone-200 disabled:opacity-60 disabled:cursor-not-allowed"
               />
+            </div>
+
+            {/* TRYB WYBORU GENEROWANIA ROZPRAWKI */}
+            <div className="flex items-center gap-2.5 bg-stone-900/40 border border-stone-800/60 p-3 rounded-xl">
+              <input 
+                type="checkbox"
+                id="generationMode"
+                checked={isGenerationMode}
+                onChange={(e) => {
+                  setIsGenerationMode(e.target.checked);
+                  if (e.target.checked) {
+                    setEssayText(""); 
+                    setGeneratedContexts([]);
+                    setAnalysisResult(null);
+                    setIsGeneratedByAi(false);
+                  }
+                }}
+                disabled={isAnalyzing || isGenerating || analysisResult !== null}
+                className="w-4 h-4 rounded border-stone-800 text-amber-500 bg-stone-950 cursor-pointer accent-[#c68a4c]"
+              />
+              <label htmlFor="generationMode" className="text-xs font-semibold text-stone-300 cursor-pointer select-none">
+                Chcę wygenerować przykładową rozprawkę przez AI (zamiast oceniać własną)
+              </label>
             </div>
 
             {analysisResult && (
@@ -550,9 +657,16 @@ export default function OcenianieRozprawekPage() {
               <div>
                 <textarea
                   rows={12}
-                  placeholder="Wklej treść wypracowania..."
+                  placeholder={
+                    isGenerationMode 
+                      ? "Opcja generowania jest włączona. Wpisz temat powyżej i kliknij przycisk generowania." 
+                      : "Wklej tutaj treść swojej rozprawki (minimum 50 słów)..."
+                  }
                   value={essayText}
-                  onChange={(e) => setEssayText(e.target.value)}
+                  onChange={(e) => {
+                    setEssayText(e.target.value);
+                    setIsGeneratedByAi(false);
+                  }}
                   disabled={isAnalyzing || isGenerating || isGenerationMode || analysisResult !== null}
                   className="w-full bg-stone-900/80 border border-stone-800 rounded-2xl p-4 text-xs sm:text-sm text-stone-200 disabled:opacity-60 disabled:cursor-not-allowed"
                 />
@@ -567,7 +681,7 @@ export default function OcenianieRozprawekPage() {
               </div>
             )}
 
-            {/* 🎯 BLOKADA / ZRESETUJ */}
+            {/* PRZYCISKI AKCJI */}
             {analysisResult ? (
               <div className="flex flex-col gap-2.5 w-full animate-slide-in">
                 <button
@@ -588,20 +702,28 @@ export default function OcenianieRozprawekPage() {
                   <span>Zresetuj edytor i napisz nową rozprawkę</span>
                 </button>
               </div>
+            ) : isGenerationMode ? (
+              <button
+                onClick={handleGenerateEssay}
+                disabled={isAnalyzing || isGenerating}
+                className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs cursor-pointer shadow-md disabled:opacity-50"
+              >
+                {isGenerating ? "✍ Trwa generowanie rozprawki..." : "Generuj przykładową rozprawkę (1 kredyt)"}
+              </button>
             ) : (
               <button
                 onClick={handleAnalyze}
                 disabled={isAnalyzing || isGenerating}
-                className="w-full py-3 rounded-xl bg-[#c68a4c] text-stone-950 font-bold text-xs cursor-pointer shadow-md disabled:opacity-50"
+                className="w-full py-3 rounded-xl bg-[#c68a4c] hover:bg-[#d99c5d] text-stone-950 font-bold text-xs cursor-pointer shadow-md disabled:opacity-50"
               >
-                {isAnalyzing ? "🤖 Trwa analiza tekstu..." : "Przeanalizuj rozprawkę (1 kredyt)"}
+                {isAnalyzing ? "🤖 Asystent Rozprawek AI analizuje..." : "Przeanalizuj rozprawkę (1 kredyt)"}
               </button>
             )}
           </div>
 
           {/* PRAWA KOLUMNA: RAPORT AI */}
           <div className="lg:col-span-4 flex flex-col gap-4">
-            {isAnalyzing ? (
+            {isAnalyzing || isGenerating ? (
               <div className="rounded-2xl border border-amber-950/40 bg-stone-950/20 p-5 flex flex-col justify-center items-center text-center min-h-[300px]">
                 <AtmosphericEssayLoader />
               </div>
