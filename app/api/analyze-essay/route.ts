@@ -80,13 +80,13 @@ export async function POST(req: NextRequest) {
     const topicWords = topic.split(/\s+/).filter(Boolean);
     const essayWords = essayText.split(/\s+/).filter(Boolean);
 
-    // B. BLOKADA SPAMU / CIĄGÓW BEZ SPACJI
-    const hasInvalidTopicWord = topicWords.some((word: string) => word.length > 20);
-    const hasInvalidEssayWord = essayWords.some((word: string) => word.length > 20);
+    // B. BLOKADA SPAMU / CIĄGÓW BEZ SPACJI (MAKSYMALNIE 25 ZNAKÓW NA SŁOWO)
+    const hasInvalidTopicWord = topicWords.some((word: string) => word.length > 25);
+    const hasInvalidEssayWord = essayWords.some((word: string) => word.length > 25);
 
     if (hasInvalidTopicWord || hasInvalidEssayWord) {
       return NextResponse.json(
-        { error: "Tekst zawiera nieprawidłowe, sztucznie wydłużone słowa (maksymalna długość słowa to 20 znaków)." },
+        { error: "Tekst zawiera nieprawidłowe, sztucznie wydłużone słowa (maksymalna długość słowa to 25 znaków)." },
         { status: 400 }
       );
     }
@@ -231,7 +231,7 @@ Zwróć WYŁĄCZNIE poprawny obiekt JSON bez jakichkolwiek znaczników markdown 
     const safeEssayText = essayText.replace(/<essay>/g, "").replace(/<\/essay>/g, "");
     const safeTopic = topic.replace(/<topic>/g, "").replace(/<\/topic>/g, "");
 
-   // Obliczamy dokładny status słów na serwerze (zamiast pozwalać AI zgadywać!)
+    // Obliczamy dokładny status słów na serwerze (zamiast pozwalać AI zgadywać!)
     const isUnder300Words = wordCount < 300;
 
     const userMessage = `
@@ -268,7 +268,7 @@ Zwróć WYŁĄCZNIE poprawny obiekt JSON bez jakichkolwiek znaczników markdown 
         claudeResponse = await anthropic.messages.create({
           model: modelName,
           max_tokens: 4000,
-          thinking: { type: "disabled" }, // 👈 Wyłącza 90-sekundową pętlę myślenia, model generuje od razu JSON!
+          thinking: { type: "disabled" },
           system: [
             {
               type: "text",

@@ -65,10 +65,10 @@ const OFFICIAL_CKE_YEARS = [
   }
 ];
 
-// Zabezpieczenie przed Spamem
+// Zabezpieczenie przed Spamem (maksymalnie 25 znaków na słowo)
 const isSpamText = (text: string) => {
   const words = text.split(/\s+/).filter(Boolean);
-  return words.some(word => word.length > 20);
+  return words.some(word => word.length > 25);
 };
 
 export default function OcenianieRozprawekPage() {
@@ -182,10 +182,10 @@ export default function OcenianieRozprawekPage() {
     }
 
     const topicWords = selectedTopic.split(/\s+/).filter(Boolean);
-    const hasInvalidTopicWord = topicWords.some((word) => word.length > 20);
+    const hasInvalidTopicWord = topicWords.some((word) => word.length > 25);
 
     if (hasInvalidTopicWord) {
-      triggerAlert("Temat zawiera nieprawidłowe, zbyt długie słowa (maksymalnie 20 znaków na słowo)!", "error");
+      triggerAlert("Temat zawiera nieprawidłowe, zbyt długie słowa (maksymalnie 25 znaków na słowo)!", "error");
       return;
     }
 
@@ -205,10 +205,10 @@ export default function OcenianieRozprawekPage() {
     }
 
     const essayWords = essayText.split(/\s+/).filter(Boolean);
-    const hasInvalidEssayWord = essayWords.some((word) => word.length > 20);
+    const hasInvalidEssayWord = essayWords.some((word) => word.length > 25);
 
     if (hasInvalidEssayWord) {
-      triggerAlert("Wypracowanie zawiera nieprawidłowe, zbyt długie słowa (maksymalnie 20 znaków na słowo)!", "error");
+      triggerAlert("Wypracowanie zawiera nieprawidłowe, zbyt długie słowa (maksymalnie 25 znaków na słowo)!", "error");
       return;
     }
 
@@ -274,10 +274,10 @@ export default function OcenianieRozprawekPage() {
     }
 
     const topicWords = selectedTopic.split(/\s+/).filter(Boolean);
-    const hasInvalidTopicWord = topicWords.some((word) => word.length > 20);
+    const hasInvalidTopicWord = topicWords.some((word) => word.length > 25);
 
     if (hasInvalidTopicWord) {
-      triggerAlert("Temat zawiera nieprawidłowe, zbyt długie słowa (maksymalnie 20 znaków na słowo)!", "error");
+      triggerAlert("Temat zawiera nieprawidłowe, zbyt długie słowa (maksymalnie 25 znaków na słowo)!", "error");
       return;
     }
 
@@ -808,7 +808,7 @@ export default function OcenianieRozprawekPage() {
 
               {isTopicSpam && (
                 <p className="text-[11px] text-red-400 font-semibold mt-1 animate-pulse">
-                  ⚠️ Wykryto nieprawidłowe, zbyt długie słowo bez spacji (maksymalnie 20 znaków). Popraw temat, aby odblokować analizę!
+                  ⚠️ Wykryto nieprawidłowe, zbyt długie słowo bez spacji (maksymalnie 25 znaków). Popraw temat, aby odblokować analizę!
                 </p>
               )}
               {isTopicLengthExceeded && (
@@ -921,7 +921,7 @@ export default function OcenianieRozprawekPage() {
 
                 {isEssaySpam && (
                   <p className="text-[11px] text-red-400 font-semibold mt-1 animate-pulse">
-                    ⚠️ Wykryto nieprawidłowe, zbyt długie słowo bez spacji (maksymalnie 20 znaków). Popraw wypracowanie, aby odblokować analizę!
+                    ⚠️ Wykryto nieprawidłowe, zbyt długie słowo bez spacji (maksymalnie 25 znaków). Popraw wypracowanie, aby odblokować analizę!
                   </p>
                 )}
                 {isEssayLengthExceeded && (
