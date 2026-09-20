@@ -355,35 +355,46 @@ export default function OcenianieRozprawekPage() {
   };
 
   // 🎯 ULEPSZONY RENDERER Z OBSŁUGĄ ZBIEGU KILKU BŁĘDÓW W JEDNYM MIEJSCU
+  // 🎯 PANCERNY RENDERER PODŚWIETLEŃ (Ignoruje cudzysłowy Claude'a i wielkość liter)
   const renderHighlightedText = () => {
     if (!analysisResult || !analysisResult.annotations || analysisResult.annotations.length === 0) {
       return <p className="whitespace-pre-wrap leading-relaxed">{essayText}</p>;
     }
 
-    const escapedText = essayText
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-
-    const matches: Match[] = [];
-
-    // 1. Wyszukujemy wszystkie wystąpienia adnotacji w tekście
-    analysisResult.annotations.forEach((anno: any) => {
-      if (!anno.original || !anno.original.trim()) return;
-
-      const escapedOriginal = anno.original
+    // Pomocnik do bezpiecznego kodowania znaków HTML
+    const escapeHtml = (str: string) => {
+      return str
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;");
+    };
 
-      let idx = escapedText.indexOf(escapedOriginal);
-      while (idx !== -1) {
-        matches.push({
-          start: idx,
-          end: idx + escapedOriginal.length,
-          annotation: anno
-        });
-        idx = escapedText.indexOf(escapedOriginal, idx + 1);
+    const matches: Match[] = [];
+
+    // 1. Wyszukujemy adnotacje w surowym tekście ucznia (Smart Case-Insensitive Matching)
+    analysisResult.annotations.forEach((anno: any) => {
+      if (!anno.original || typeof anno.original !== "string" || !anno.original.trim()) return;
+
+      // Usuwamy cudzysłowy „ ”, " ", ' ', które model czasami samowolnie dodaje do słowa
+      let cleanOrig = anno.original.trim().replace(/^[„"'\s«]+|[”"'\s»]+$/g, "").trim();
+      if (!cleanOrig) return;
+
+      try {
+        // Bezpieczny regex ignorujący wielkość liter (flaga 'i')
+        const escapedRegexStr = cleanOrig.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const regex = new RegExp(escapedRegexStr, "gi");
+
+        let match: RegExpExecArray | null;
+        while ((match = regex.exec(essayText)) !== null) {
+          matches.push({
+            start: match.index,
+            end: match.index + match[0].length,
+            annotation: anno
+          });
+          if (match[0].length === 0) regex.lastIndex++;
+        }
+      } catch (err) {
+        console.warn("Błąd parsowania błędu:", err);
       }
     });
 
@@ -391,10 +402,10 @@ export default function OcenianieRozprawekPage() {
       return <p className="whitespace-pre-wrap leading-relaxed">{essayText}</p>;
     }
 
-    // 2. Sortujemy: najpierw po pozycji w tekście, a przy równym starcie dłuższe fragmenty pierwsze
+    // 2. Sortujemy: najpierw po pozycji startowej, a przy równej pozycji dłuższe pierwsze
     matches.sort((a, b) => a.start - b.start || b.end - a.end);
 
-    // 3. Klastrowanie nakładających się błędów
+    // 3. Klastrowanie nakładających się błędów w jeden zakres
     interface ErrorCluster {
       start: number;
       end: number;
@@ -433,14 +444,18 @@ export default function OcenianieRozprawekPage() {
       }
     }
 
-    // 4. Generowanie czystego kodu HTML BEZ sztucznych enterów (naprawia wielkie klocki)
+    // 4. Generowanie czystego HTML z zachowaniem oryginalnego tekstu ucznia
     let resultHtml = "";
     let currentIdx = 0;
 
     clusters.forEach((cluster) => {
-      resultHtml += escapedText.substring(currentIdx, cluster.start);
+      // Tekst przed błędem
+      resultHtml += escapeHtml(essayText.substring(currentIdx, cluster.start));
 
-      const clusterText = escapedText.substring(cluster.start, cluster.end);
+      // Tekst z błędem wprost z wypracowania ucznia
+      const clusterRawText = essayText.substring(cluster.start, cluster.end);
+      const clusterEscapedText = escapeHtml(clusterRawText);
+
       const isMultiError = cluster.annotations.length > 1;
 
       let colorClass = "";
@@ -473,9 +488,9 @@ export default function OcenianieRozprawekPage() {
       }
 
       cluster.annotations.forEach((anno: any, aIdx: number) => {
-        const explanation = (anno.explanation || "").replace(/"/g, "&quot;");
-        const replacement = (anno.replacement || "").replace(/"/g, "&quot;");
-
+        const explanation = escapeHtml(anno.explanation || "");
+        const replacement = escapeHtml(anno.replacement || "");
+        
         let badgeColor = "text-amber-400";
         if (anno.type === "językowy") badgeColor = "text-blue-400";
         if (anno.type === "ortograficzny") badgeColor = "text-purple-400";
@@ -484,17 +499,16 @@ export default function OcenianieRozprawekPage() {
         tooltipContent += `<div class="${aIdx > 0 ? "pt-2 mt-2 border-t border-stone-800/80" : ""}"><div class="flex items-center justify-between mb-0.5"><strong class="${badgeColor} text-[10px] tracking-wider uppercase font-mono">Błąd ${anno.type}:</strong></div><p class="text-stone-300 text-[11px] leading-relaxed my-0.5 whitespace-normal">${explanation}</p>${replacement ? `<span class="text-emerald-400 font-semibold block text-[10.5px] mt-1 whitespace-normal">✓ Poprawnie: ${replacement}</span>` : ""}</div>`;
       });
 
-      const countBadge = isMultiError
-        ? `<span class="inline-flex items-center justify-center text-[9px] font-bold bg-amber-500 text-stone-950 rounded-full w-4 h-4 ml-1 select-none align-middle font-mono shadow-sm">${cluster.annotations.length}</span>`
+      const countBadge = isMultiError 
+        ? `<span class="inline-flex items-center justify-center text-[9px] font-bold bg-amber-500 text-stone-950 rounded-full w-4 h-4 ml-1 select-none align-middle font-mono shadow-sm">${cluster.annotations.length}</span>` 
         : "";
 
-      // Zapis w jednej linii (brak niechcianych enterów w tekście) + styl 'inline' zamiast 'inline-block'
-      resultHtml += `<span class="${colorClass} ${borderClass} relative group inline font-medium cursor-help rounded-sm px-1 py-0.5">${clusterText}${countBadge}<span class="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-80 max-w-[88vw] bg-[#161210] border border-stone-800 text-stone-300 text-[11px] p-3.5 rounded-2xl shadow-2xl z-50 leading-relaxed font-sans font-normal backdrop-blur-md whitespace-normal block text-left">${tooltipContent}</span></span>`;
+      resultHtml += `<span class="${colorClass} ${borderClass} relative group inline font-medium cursor-help rounded-sm px-1 py-0.5">${clusterEscapedText}${countBadge}<span class="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-80 max-w-[88vw] bg-[#161210] border border-stone-800 text-stone-300 text-[11px] p-3.5 rounded-2xl shadow-2xl z-50 leading-relaxed font-sans font-normal backdrop-blur-md whitespace-normal block text-left">${tooltipContent}</span></span>`;
 
       currentIdx = cluster.end;
     });
 
-    resultHtml += escapedText.substring(currentIdx);
+    resultHtml += escapeHtml(essayText.substring(currentIdx));
 
     return (
       <div 
