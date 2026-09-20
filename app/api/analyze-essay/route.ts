@@ -243,7 +243,7 @@ ${safeEssayText}
 Oceń powyższą rozprawkę zgodnie z oficjalnymi kryteriami CKE Formuła 2023. Zwróć tylko JSON.
 `;
 
-    // 7. WYWOŁANIE MODELU CLAUDE SONNET (Z OBSŁUGĄ KASKADY I CACHEM)
+    // 7. WYWOŁANIE CLAUDE Z WYŁĄCZONYM MYŚLENIEM (SZYBKA ODPOWIEDŹ BEZ ZAWIESZANIA I BEZ PUSTYCH BLOKÓW)
     const CLAUDE_MODELS_TO_TRY = [
       "claude-sonnet-5",
       "claude-sonnet-4-6",
@@ -259,7 +259,8 @@ Oceń powyższą rozprawkę zgodnie z oficjalnymi kryteriami CKE Formuła 2023. 
         console.log(`-> Wywołanie Claude (${modelName})...`);
         claudeResponse = await anthropic.messages.create({
           model: modelName,
-          max_tokens: 8000, // Zwiększono limit na proces myślenia i pełny JSON
+          max_tokens: 4000,
+          thinking: { type: "disabled" }, // 👈 Wyłącza 90-sekundową pętlę myślenia, model generuje od razu JSON!
           system: [
             {
               type: "text",
@@ -289,22 +290,27 @@ Oceń powyższą rozprawkę zgodnie z oficjalnymi kryteriami CKE Formuła 2023. 
       throw new Error("CLAUDE_API_ERROR");
     }
 
-    // 🎯 Bezpieczne wyciąganie tekstu z bloków odpowiedzi Claude
+    // 🎯 Bezpieczne wyciąganie tekstu z odpowiedzi Claude
     let responseText = "";
-    for (const block of claudeResponse.content) {
-      if (block.type === "text" && block.text) {
-        responseText += block.text;
+    if (Array.isArray(claudeResponse.content)) {
+      for (const block of claudeResponse.content) {
+        if (block.type === "text" && block.text) {
+          responseText += block.text;
+        }
       }
     }
 
-    // Fallback gdyby odpowiedź znalazła się w innym bloku
+    // Fallback gdyby odpowiedź znalazła się bez oznaczonego typu
     if (!responseText.trim()) {
       for (const block of claudeResponse.content) {
         if (block.text) responseText += block.text;
       }
     }
 
-    console.log("Pobrany tekst odpowiedzi z Claude (długość znaków):", responseText.length);
+    if (!responseText.trim()) {
+      console.error("Pusta odpowiedź. Bloki z Claude:", JSON.stringify(claudeResponse.content));
+      throw new Error("Otrzymano pustą odpowiedź od AI.");
+    }
 
     const parsedResult = extractAndParseJSON(responseText);
 
