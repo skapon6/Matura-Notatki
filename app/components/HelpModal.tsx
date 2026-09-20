@@ -1,3 +1,4 @@
+// app/components/HelpModal.tsx
 "use client";
 
 import React, { useState } from "react";
@@ -118,13 +119,13 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, currentTh
             {activeSection === "essay" && (
               <div className="p-4 pt-1 border-t border-stone-800/40 text-xs text-stone-400 leading-relaxed space-y-2 animate-slide-in">
                 <p>
-                  Wklej temat i treść swojej rozprawki, a wirtualny egzaminator sprawdzi ją i wystawi ocenę punktową. 
+                  Wklej temat i treść swojej rozprawki, a wirtualny egzaminator sprawdzi ją i wystawi ocenę punktową w oparciu o oficjalny klucz CKE. 
+                </p>
+                <p>
+                  <strong>Technologia Anthropic Claude:</strong> Moduł oparty jest na zaawansowanym, potężnym modelu językowej inteligencji <strong className="text-stone-100 font-semibold">Claude (Anthropic)</strong>, który z aptekarską precyzją analizuje tekst pod kątem merytorycznym, rzeczowym, kompozycyjnym i językowym.
                 </p>
                 <p>
                   W zakładce z podglądem błędów zobaczysz swój tekst z kolorowymi podkreśleniami. Wystarczy, że <strong className="text-stone-100 font-semibold">najedziesz myszką na zaznaczony błąd</strong>, aby przeczytać proste wyjaśnienie, dlaczego jest to błąd i jak zapisać to poprawnie.
-                </p>
-                <p>
-                  <strong>Inteligentne podpowiedzi:</strong> Nasz system pamięta wcześniejsze, zweryfikowane przez nauczycieli poprawki. Jeśli piszesz na podobny temat, asystent automatycznie dostosuje swoje uwagi do tych wskazówek, dbając o sprawiedliwą ocenę.
                 </p>
               </div>
             )}
@@ -206,7 +207,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, currentTh
                 </p>
                 <strong className="text-stone-300">Pojemność notesu: 100</strong> 
                 <p className="mt-2 text-[11px] text-amber-500/90 font-medium italic border-l-2 border-amber-500/30 pl-2.5">
-                • Możesz przechować maksymalnie 100 najważniejszych cytatów (aby zachować czytelność i porządek). Jeśli osiągniesz limit, usuń starsze wpisy w notesie na stronie głównej.
+                  • Możesz przechować maksymalnie 100 najważniejszych cytatów (aby zachować czytelność i porządek). Jeśli osiągniesz limit, usuń starsze wpisy w notesie na stronie głównej.
                   Wskazówka: Złota gwiazdka pojawi się tylko wtedy, gdy zaznaczony fragment nie jest ani za krótki, ani za długi (od 5 do 400 znaków). Dzięki temu system dba o to, byś zapisywał samą „esencję”, idealną do wykorzystania w rozprawce!
                 </p>
               </div>
@@ -229,8 +230,11 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, currentTh
                 <p>
                   Darmowe konto pozwala na czytanie części notatek. Kupując jeden z pakietów dostępowych (Mini, Medium lub roczny Premium), odblokowujesz całą bazę wiedzy, mapy myśli i otrzymujesz darmowe tokeny na start. <strong className="text-stone-100 font-semibold">W dowolnym momencie możesz również osobno dokupić dodatkowe pakiety kredytów (tokenów)</strong>, jeśli zabraknie Ci ich na analizy lub symulacje egzaminów ustnych.
                 </p>
+                <p className="text-[11px] text-stone-400 italic">
+                  * Korzystamy z najwyższej klasy technologii językowej <strong className="text-stone-300 font-semibold">Anthropic Claude</strong>, co gwarantuje, że każda ocena i analiza opiera się na rzeczywistym zrozumieniu tekstu, a nie na losowych algorytmach.
+                </p>
                 
-                {/* Wykaz zużycia kredytów - zaktualizowany o koszt 2 i 3 tokenów */}
+                {/* Wykaz zużycia kredytów */}
                 <div className="p-3.5 rounded-xl bg-stone-950/50 border border-stone-800 flex flex-col gap-1.5 text-stone-300 leading-relaxed font-sans">
                   <span className="text-[10px] text-amber-500 font-bold uppercase tracking-wider block mb-1">
                     📉 Jak zużywane są Twoje kredyty:
