@@ -206,10 +206,12 @@ export default function OcenianieRozprawekPage() {
 
   const handleAnalyze = async () => {
     if (isGeneratedByAi) {
+      playSound("error");
       triggerAlert("Ta praca została wygenerowana jako wzorzec AI. Napisz własną rozprawkę!", "error");
       return;
     }
     if (!selectedTopic.trim()) {
+      playSound("error");
       triggerAlert("Wprowadź temat rozprawki przed rozpoczęciem analizy!", "error");
       return;
     }
@@ -217,11 +219,13 @@ export default function OcenianieRozprawekPage() {
     const essayWords = essayText.split(/\s+/).filter(Boolean);
     const wordCount = essayWords.length;
     if (wordCount < 50) {
+      playSound("error");
       triggerAlert("Rozprawka jest za krótka! Wklej co najmniej 50 słów.", "error");
       return;
     }
 
     if (!profile || profile.essay_credits <= 0) {
+      playSound("error");
       triggerAlert("Brak wolnych kredytów na ocenę! Doładuj kredyty lub kup nowy pakiet.", "error");
       return;
     }
@@ -265,10 +269,12 @@ export default function OcenianieRozprawekPage() {
 
   const handleGenerateEssay = async () => {
     if (!selectedTopic.trim()) {
+      playSound("error");
       triggerAlert("Wprowadź temat rozprawki!", "error");
       return;
     }
     if (!profile || profile.essay_credits <= 0) {
+      playSound("error");
       triggerAlert("Brak wolnych kredytów! Doładuj kredyty lub kup nowy pakiet.", "error");
       return;
     }
@@ -448,12 +454,12 @@ export default function OcenianieRozprawekPage() {
       return (
         <div 
           dangerouslySetInnerHTML={{ __html: resultHtml }} 
-          className="whitespace-pre-wrap leading-loose text-stone-300 font-sans text-sm sm:text-base font-serif"
+          className="whitespace-pre-wrap leading-loose text-stone-300 font-sans text-base sm:text-lg font-serif"
         />
       );
     } catch (err) {
       console.error("Awaryjny fallback podświetlania:", err);
-      return <p className="whitespace-pre-wrap leading-relaxed text-stone-300 font-sans text-xs sm:text-sm">{essayText}</p>;
+      return <p className="whitespace-pre-wrap leading-relaxed text-stone-300 font-sans text-sm sm:text-base">{essayText}</p>;
     }
   };
 
@@ -703,8 +709,8 @@ export default function OcenianieRozprawekPage() {
           </div>
         )}
 
-        {/* 🌟 KARTA GŁÓWNA - MAX-W-6XL (ZWIĘKSZONA SZEROKOŚĆ) */}
-        <div className={`max-w-6xl w-full ${currentTheme.cardBg} border ${currentTheme.cardBorder} rounded-3xl p-6 sm:p-10 shadow-xl mt-8 mb-12 flex flex-col gap-6 transition-colors duration-500`}>
+        {/* 🌟 KARTA GŁÓWNA - MAX-W-5XL (PRAWIDŁOWA SZEROKOŚĆ) */}
+        <div className={`max-w-5xl w-full ${currentTheme.cardBg} border ${currentTheme.cardBorder} rounded-3xl p-6 sm:p-8 shadow-xl mt-8 mb-12 flex flex-col gap-6 transition-colors duration-500`}>
           
           <div className="p-4 rounded-2xl bg-stone-950/40 border border-stone-800/60 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -719,9 +725,9 @@ export default function OcenianieRozprawekPage() {
             </span>
           </div>
 
-          {/* 🌟 ZMIANA PROPORCJI GRID: 8 Kolumn na Edytor, 4 Kolumny na Wynik */}
+          {/* 🌟 ZMIANA PROPORCJI GRID: 9 Kolumn na Edytor, 3 Kolumny na Wynik */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <div className="lg:col-span-8 flex flex-col gap-5">
+            <div className="lg:col-span-9 flex flex-col gap-5">
               
               <div>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
@@ -747,7 +753,7 @@ export default function OcenianieRozprawekPage() {
                   value={selectedTopic}
                   onChange={(e) => setSelectedTopic(e.target.value)}
                   disabled={isAnalyzing || isGenerating || analysisResult !== null}
-                  className="w-full bg-stone-900/50 hover:bg-stone-900/70 focus:bg-stone-900/90 border border-stone-800 rounded-2xl p-4 sm:p-5 text-base sm:text-lg text-stone-100 font-serif font-bold leading-relaxed focus:outline-none focus:border-amber-500/70 focus:ring-1 focus:ring-amber-500/30 disabled:opacity-60 disabled:cursor-not-allowed shadow-inner transition-all resize-none min-h-[90px]"
+                  className="w-full bg-stone-900/50 hover:bg-stone-900/70 focus:bg-stone-900/90 border border-stone-800 rounded-2xl p-5 sm:p-6 text-base sm:text-lg text-stone-100 font-serif font-bold leading-relaxed focus:outline-none focus:border-amber-500/70 focus:ring-1 focus:ring-amber-500/30 disabled:opacity-60 disabled:cursor-not-allowed shadow-inner transition-all resize-none min-h-[96px]"
                 />
               </div>
 
@@ -819,7 +825,7 @@ export default function OcenianieRozprawekPage() {
                       e.target.style.height = `${e.target.scrollHeight}px`;
                     }}
                     disabled={isAnalyzing || isGenerating || isGenerationMode || analysisResult !== null}
-                    className="w-full min-h-[350px] bg-stone-900/50 hover:bg-stone-900/70 focus:bg-stone-900/90 border border-stone-800 rounded-2xl p-6 sm:p-8 text-sm sm:text-base text-stone-200 font-serif leading-loose focus:outline-none focus:border-amber-600/50 disabled:opacity-60 disabled:cursor-not-allowed shadow-inner transition-colors resize-none overflow-hidden"
+                    className="w-full min-h-[350px] bg-stone-900/50 hover:bg-stone-900/70 focus:bg-stone-900/90 border border-stone-800 rounded-2xl p-6 sm:p-8 text-base sm:text-lg text-stone-200 font-serif leading-loose focus:outline-none focus:border-amber-600/50 disabled:opacity-60 disabled:cursor-not-allowed shadow-inner transition-colors resize-none overflow-hidden"
                   />
                 </div>
               ) : (
@@ -872,8 +878,8 @@ export default function OcenianieRozprawekPage() {
               )}
             </div>
 
-            {/* PRAWA KOLUMNA: RAPORT AI (4 KOLUMNY Z 12) */}
-            <div className="lg:col-span-4 flex flex-col gap-5">
+            {/* PRAWA KOLUMNA: RAPORT AI (3 KOLUMNY Z 12) */}
+            <div className="lg:col-span-3 flex flex-col gap-5">
               {isAnalyzing || isGenerating ? (
                 <div className="rounded-2xl border border-amber-950/40 bg-stone-950/20 p-5 flex flex-col justify-center items-center text-center min-h-[400px]">
                   <AtmosphericEssayLoader />
