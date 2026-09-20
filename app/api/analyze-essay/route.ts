@@ -231,17 +231,25 @@ Zwróć WYŁĄCZNIE poprawny obiekt JSON bez jakichkolwiek znaczników markdown 
     const safeEssayText = essayText.replace(/<essay>/g, "").replace(/<\/essay>/g, "");
     const safeTopic = topic.replace(/<topic>/g, "").replace(/<\/topic>/g, "");
 
+   // Obliczamy dokładny status słów na serwerze (zamiast pozwalać AI zgadywać!)
+    const isUnder300Words = wordCount < 300;
+
     const userMessage = `
-[TEMAT ROZPRAWKI]
-<topic>${safeTopic}</topic>
+    [DANE TECHNICZNE WYPRACOWANIA]
+    - Dokładna liczba słów (obliczona przez serwer): ${wordCount} słów.
+    - Status limitu 300 słów: ${isUnder300Words ? "NIE SPEŁNIONO (mniej niż 300 słów - wyzeruj KW i JW)" : "SPEŁNIONO (300 słów lub więcej - oceń pełne kryteria KW i JW!)"}
 
-[TREŚĆ ROZPRAWKI UCZNIA]
-<essay>
-${safeEssayText}
-</essay>
+    [TEMAT ROZPRAWKI]
+    <topic>${safeTopic}</topic>
 
-Oceń powyższą rozprawkę zgodnie z oficjalnymi kryteriami CKE Formuła 2023. Zwróć tylko JSON.
-`;
+    [TREŚĆ ROZPRAWKI UCZNIA]
+    <essay>
+    ${safeEssayText}
+    </essay>
+
+    Oceń powyższą rozprawkę zgodnie z oficjalnymi kryteriami CKE Formuła 2023. 
+    WAŻNE: Opieraj się WYŁĄCZNIE na podanej wyżej liczbie słów (${wordCount} słów). ${isUnder300Words ? "Praca ma mniej niż 300 słów, wyzeruj KW i JW." : "Praca MA PONAD 300 SŁÓW, więc KATEGORYCZNIE NIE WOLNO Ci wyzerować kompozycji (KW) ani języka (JW) z powodu długości! Oceń je w pełnej skali punktowej."} Zwróć tylko JSON.
+    `;
 
     // 7. WYWOŁANIE CLAUDE Z WYŁĄCZONYM MYŚLENIEM (SZYBKA ODPOWIEDŹ BEZ ZAWIESZANIA I BEZ PUSTYCH BLOKÓW)
     const CLAUDE_MODELS_TO_TRY = [
