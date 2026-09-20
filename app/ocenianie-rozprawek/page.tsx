@@ -203,7 +203,6 @@ const handleAnalyze = async () => {
       return;
     }
 
-    // ... dalsza część kodu analizy
 
     setIsAnalyzing(true);
     setAnalysisResult(null);
@@ -671,26 +670,49 @@ const handleAnalyze = async () => {
             </div>
 
             {/* TRYB WYBORU GENEROWANIA ROZPRAWKI */}
-            <div className="flex items-center gap-2.5 bg-stone-900/40 border border-stone-800/60 p-3 rounded-xl">
-              <input 
-                type="checkbox"
-                id="generationMode"
-                checked={isGenerationMode}
-                onChange={(e) => {
-                  setIsGenerationMode(e.target.checked);
-                  if (e.target.checked) {
-                    setEssayText(""); 
-                    setGeneratedContexts([]);
-                    setAnalysisResult(null);
-                    setIsGeneratedByAi(false);
-                  }
-                }}
-                disabled={isAnalyzing || isGenerating || analysisResult !== null}
-                className="w-4 h-4 rounded border-stone-800 text-amber-500 bg-stone-950 cursor-pointer accent-[#c68a4c]"
-              />
-              <label htmlFor="generationMode" className="text-xs font-semibold text-stone-300 cursor-pointer select-none">
-                Chcę wygenerować przykładową rozprawkę przez AI (zamiast oceniać własną)
-              </label>
+            {/* TRYB WYBORU GENEROWANIA ROZPRAWKI – NOWOCZESNY KAFELEK */}
+            <div 
+              onClick={() => {
+                if (isAnalyzing || isGenerating || analysisResult !== null) return;
+                const newState = !isGenerationMode;
+                setIsGenerationMode(newState);
+                if (newState) {
+                  setEssayText(""); 
+                  setGeneratedContexts([]);
+                  setAnalysisResult(null);
+                  setIsGeneratedByAi(false);
+                }
+              }}
+              className={`group relative flex items-center gap-3.5 p-4 rounded-2xl border transition-all cursor-pointer select-none ${
+                isGenerationMode 
+                  ? "bg-amber-950/20 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.1)]" 
+                  : "bg-stone-900/40 border-stone-800/80 hover:border-stone-700 hover:bg-stone-900/70"
+              } ${(isAnalyzing || isGenerating || analysisResult !== null) ? "opacity-50 cursor-not-allowed" : ""}`}
+            >
+              {/* Niestandardowy, ładny element zaznaczenia */}
+              <div className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-all shrink-0 ${
+                isGenerationMode 
+                  ? "bg-[#c68a4c] border-amber-400 text-stone-950 shadow-sm scale-105" 
+                  : "bg-stone-950 border-stone-700 group-hover:border-stone-500"
+              }`}>
+                {isGenerationMode && (
+                  <svg className="w-3.5 h-3.5 stroke-[3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">💡</span>
+                  <span className={`text-xs font-bold transition-colors ${isGenerationMode ? "text-amber-300" : "text-stone-200"}`}>
+                    Tryb generowania wzorca przez AI
+                  </span>
+                </div>
+                <p className="text-[11px] text-stone-400 leading-relaxed">
+                  Zamiast oceniać Twoją pracę, sztuczna inteligencja napisze dla Ciebie idealną rozprawkę maturalną na ten temat.
+                </p>
+              </div>
             </div>
 
             {analysisResult && (
