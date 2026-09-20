@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import { getThemeClasses, CozyTheme } from "../lib/theme";
+import { playSound } from "../lib/sounds";
 
 interface Match {
   start: number;
@@ -292,7 +293,6 @@ export default function OcenianieRozprawekPage() {
         return <p className="whitespace-pre-wrap leading-relaxed">{essayText}</p>;
       }
 
-      // Bezpieczne pobranie adnotacji jako tablicy
       const rawAnnotations = Array.isArray(analysisResult.annotations)
         ? analysisResult.annotations
         : typeof analysisResult.annotations === "object" && analysisResult.annotations !== null
@@ -441,7 +441,6 @@ export default function OcenianieRozprawekPage() {
   const currentWordCount = essayText.split(/\s+/).filter(Boolean).length;
   const currentYearData = OFFICIAL_CKE_YEARS.find(y => y.year === activeYearTab);
 
-  // 🛡️ Bezpieczne pobranie listy kryteriów niezależnie od tego czy AI zwróciło obiekt czy tablicę
   const detailsArray = Array.isArray(analysisResult?.details)
     ? analysisResult.details
     : typeof analysisResult?.details === "object" && analysisResult?.details !== null
@@ -502,7 +501,7 @@ export default function OcenianieRozprawekPage() {
               <p className="text-xs text-stone-400 mt-1">Interaktywna weryfikacja prac z języka polskiego</p>
             </div>
           </div>
-          <Link href="/" className={`text-xs px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} bg-stone-900/60 text-stone-400 hover:text-stone-100 transition-all`}>
+          <Link href="/" className={`self-start sm:self-center text-xs px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} bg-stone-900/60 text-stone-400 hover:text-stone-100 transition-all`}>
             ← Wróć do kącika
           </Link>
         </div>
@@ -531,14 +530,14 @@ export default function OcenianieRozprawekPage() {
                 placeholder="Wpisz temat..."
                 value={selectedTopic}
                 onChange={(e) => setSelectedTopic(e.target.value)}
-                disabled={isAnalyzing || isGenerating}
-                className="w-full bg-stone-900/90 border border-stone-800 rounded-xl py-2.5 px-3.5 text-xs text-stone-200"
+                disabled={isAnalyzing || isGenerating || analysisResult !== null}
+                className="w-full bg-stone-900/90 border border-stone-800 rounded-xl py-2.5 px-3.5 text-xs text-stone-200 disabled:opacity-60 disabled:cursor-not-allowed"
               />
             </div>
 
             {analysisResult && (
               <div className="flex border-b border-stone-800 gap-2 mb-1">
-                <button onClick={() => setActiveTab("write")} className={`px-4 py-2 text-xs font-semibold uppercase ${activeTab === "write" ? "text-[#c68a4c] border-b-2 border-[#c68a4c]" : "text-stone-500"}`}>✍ Edytor tekstu</button>
+                <button onClick={() => setActiveTab("write")} className={`px-4 py-2 text-xs font-semibold uppercase ${activeTab === "write" ? "text-[#c68a4c] border-b-2 border-[#c68a4c]" : "text-stone-500"}`}>✍ Edytor tekstu (Zablokowany)</button>
                 <button onClick={() => setActiveTab("preview")} className={`px-4 py-2 text-xs font-semibold uppercase ${activeTab === "preview" ? "text-emerald-400 border-b-2 border-emerald-400" : "text-stone-500"}`}>🔍 Podgląd korekt i błędów</button>
               </div>
             )}
@@ -550,8 +549,8 @@ export default function OcenianieRozprawekPage() {
                   placeholder="Wklej treść wypracowania..."
                   value={essayText}
                   onChange={(e) => setEssayText(e.target.value)}
-                  disabled={isAnalyzing || isGenerating || isGenerationMode}
-                  className="w-full bg-stone-900/80 border border-stone-800 rounded-2xl p-4 text-xs sm:text-sm text-stone-200"
+                  disabled={isAnalyzing || isGenerating || isGenerationMode || analysisResult !== null}
+                  className="w-full bg-stone-900/80 border border-stone-800 rounded-2xl p-4 text-xs sm:text-sm text-stone-200 disabled:opacity-60 disabled:cursor-not-allowed"
                 />
               </div>
             ) : (
@@ -564,16 +563,38 @@ export default function OcenianieRozprawekPage() {
               </div>
             )}
 
-            <button
-              onClick={handleAnalyze}
-              disabled={isAnalyzing || isGenerating}
-              className="w-full py-3 rounded-xl bg-[#c68a4c] text-stone-950 font-bold text-xs cursor-pointer shadow-md disabled:opacity-50"
-            >
-              {isAnalyzing ? "🤖 Trwa analiza tekstu..." : "Przeanalizuj rozprawkę (1 kredyt)"}
-            </button>
+            {/* 🎯 BLOKADA / ZRESETUJ */}
+            {analysisResult ? (
+              <div className="flex flex-col gap-2.5 w-full animate-slide-in">
+                <button
+                  type="button"
+                  onClick={() => {
+                    playSound("click");
+                    setAnalysisResult(null);
+                    setEssayText("");
+                    setSelectedTopic("");
+                    setIsGeneratedByAi(false);
+                    setActiveTab("write");
+                    triggerAlert("Zresetowano edytor. Możesz wpisać nową rozprawkę!", "success");
+                  }}
+                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-400 hover:from-amber-500 hover:to-amber-300 text-stone-950 font-extrabold text-xs sm:text-sm transition-all shadow-lg active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <span>🔄</span>
+                  <span>Zresetuj edytor i napisz nową rozprawkę</span>
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleAnalyze}
+                disabled={isAnalyzing || isGenerating}
+                className="w-full py-3 rounded-xl bg-[#c68a4c] text-stone-950 font-bold text-xs cursor-pointer shadow-md disabled:opacity-50"
+              >
+                {isAnalyzing ? "🤖 Trwa analiza tekstu..." : "Przeanalizuj rozprawkę (1 kredyt)"}
+              </button>
+            )}
           </div>
 
-          {/* 🛡️ PRAWA KOLUMNA: W 100% ODPORNA NA CRASHE */}
+          {/* PRAWA KOLUMNA: RAPORT AI */}
           <div className="lg:col-span-4 flex flex-col gap-4">
             {isAnalyzing ? (
               <div className="rounded-2xl border border-amber-950/40 bg-stone-950/20 p-5 flex flex-col justify-center items-center text-center min-h-[300px]">
@@ -616,7 +637,7 @@ export default function OcenianieRozprawekPage() {
           </div>
         </div>
 
-        {/* 📅 HISTORIA PRAC (ODZYSKIWANIE ZA 0 TOKENÓW) */}
+        {/* HISTORIA PRAC */}
         {history.length > 0 && (
           <div className="border-t border-stone-800/60 pt-6 mt-2">
             <h3 className="text-xs uppercase tracking-widest text-amber-500 font-bold mb-4">
