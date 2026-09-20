@@ -102,7 +102,6 @@ export default function OcenianieRozprawekPage() {
   const router = useRouter();
   const [currentTheme, setCurrentTheme] = useState<any>(getThemeClasses("library"));
 
-  // Globalny odtwarzacz Lo-Fi
   const {
     lofiActive,
     currentTrackIndex,
@@ -469,8 +468,8 @@ export default function OcenianieRozprawekPage() {
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-500 ${currentTheme.bg} text-stone-200 font-sans`}>
       
-      {/* 🌟 DEDYKOWANY NAGŁÓWEK MODUŁU (JAK W MATURZE USTNEJ) */}
-      <header className={`border-b ${currentTheme.cardBorder} px-4 sm:px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 backdrop-blur-md sticky top-0 z-40 ${currentTheme.cardBg} transition-colors duration-500 w-full`}>
+      {/* 🌟 DEDYKOWANY NAGŁÓWEK MODUŁU Z KOLOREM TŁA APLIKACJI */}
+      <header className={`border-b ${currentTheme.cardBorder} px-4 sm:px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 backdrop-blur-md sticky top-0 z-40 ${currentTheme.bg} transition-colors duration-500 w-full`}>
         <div className="flex w-full md:w-auto items-center justify-between md:justify-start gap-4">
           <Link
             href="/"
@@ -690,17 +689,6 @@ export default function OcenianieRozprawekPage() {
 
         <div className={`max-w-4xl w-full ${currentTheme.cardBg} border ${currentTheme.cardBorder} rounded-3xl p-6 sm:p-8 shadow-xl mt-8 flex flex-col gap-6 transition-colors duration-500`}>
           
-          <div className="flex items-center justify-between border-b border-stone-800/60 pb-5">
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">✨</span>
-              <div>
-                <h1 className="text-xl sm:text-2xl font-bold font-serif text-stone-100">Asystent Rozprawek AI</h1>
-                <p className="text-xs text-stone-400 mt-1">Interaktywna weryfikacja prac z języka polskiego</p>
-              </div>
-            </div>
-            {/* PRZYCISK WRÓĆ ZOSTAŁ USUNIĘTY STĄD (JEST W GŁÓWNYM NAGŁÓWKU) */}
-          </div>
-
           <div className="p-4 rounded-2xl bg-stone-950/40 border border-stone-800/60 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="text-2xl">📊</span>
