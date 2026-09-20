@@ -181,7 +181,7 @@ export default function OcenianieRozprawekPage() {
     triggerAlert("Wstawiono oficjalny temat z bazy CKE! 📜", "success");
   };
 
-  const handleAnalyze = async () => {
+const handleAnalyze = async () => {
     if (isGeneratedByAi) {
       triggerAlert("Ta praca została wygenerowana jako wzorzec AI. Napisz własną rozprawkę!", "error");
       return;
@@ -199,9 +199,11 @@ export default function OcenianieRozprawekPage() {
     }
 
     if (!profile || profile.essay_credits <= 0) {
-      triggerAlert("Brak wolnych kredytów na ocenę! Kup pakiet Premium.", "error");
+      triggerAlert("Brak wolnych kredytów na ocenę! Doładuj kredyty lub kup nowy pakiet.", "error");
       return;
     }
+
+    // ... dalsza część kodu analizy
 
     setIsAnalyzing(true);
     setAnalysisResult(null);
@@ -654,7 +656,7 @@ export default function OcenianieRozprawekPage() {
                   className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#231b16] border border-amber-800/40 hover:border-amber-500/70 text-[#c68a4c] text-[11px] font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
                 >
                   <span>📚</span>
-                  <span>Wybierz z bazy CKE (2022–2026) ▾</span>
+                  <span>Wybierz z bazy CKE (2023–2026) ▾</span>
                 </button>
               </div>
 
