@@ -129,7 +129,7 @@ export default function RegulaminPage() {
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-[#c68a4c] uppercase tracking-wider font-serif">7. Wyłączenie Odpowiedzialności (Zastrzeżenie AI)</h3>
             <p>
-              Wszystkie analizy, oceny, punktacja, uwagi, komentarze oraz pytania dopytujące są generowane przy użyciu algorytmów sztucznej inteligencji (Google Gemini). Serwis dokłada wszelkich starań, aby system opierał się na oficjalnych wytycznych CKE Formuły 2023, jednak <strong className="text-stone-100">usługa ma charakter wyłącznie pomocniczy i edukacyjny</strong>.
+              Wszystkie analizy, oceny, punktacja, uwagi, komentarze oraz pytania dopytujące są generowane przy użyciu algorytmów sztucznej inteligencji (Google Gemini oraz Anthropic Claude). Serwis dokłada wszelkich starań, aby system opierał się na oficjalnych wytycznych CKE Formuły 2023, jednak <strong className="text-stone-100">usługa ma charakter wyłącznie pomocniczy i edukacyjny</strong>.
             </p>
             <p>
               Serwis nie gwarantuje, że oficjalny egzaminator CKE podczas państwowego egzaminu oceni pracę użytkownika w identyczny sposób. Administrator nie ponosi odpowiedzialności za ostateczny wynik egzaminacyjny uzyskany przez użytkownika przed Państwową Komisją Egzaminacyjną, ani za decyzje edukacyjne podjęte na podstawie analiz Serwisu.
