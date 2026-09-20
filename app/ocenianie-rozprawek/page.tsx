@@ -132,7 +132,19 @@ export default function OcenianieRozprawekPage() {
   const [isGeneratedByAi, setIsGeneratedByAi] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [generatedContexts, setGeneratedContexts] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
+const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
+  
+  // 🌟 Referencja i logika automatycznego rozszerzania edytora tekstu
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [essayText, activeTab]);
+  
+  
 
   const [isTopicModalOpen, setIsTopicModalOpen] = useState(false);
   const [activeYearTab, setActiveYearTab] = useState("2026");
@@ -786,21 +798,24 @@ export default function OcenianieRozprawekPage() {
 
               {activeTab === "write" ? (
                 <div>
-                  <textarea
-                    rows={12}
-                    placeholder={
-                      isGenerationMode 
-                        ? "Opcja generowania jest włączona. Wpisz temat powyżej i kliknij przycisk generowania." 
-                        : "Wklej tutaj treść swojej rozprawki (minimum 50 słów)..."
-                    }
-                    value={essayText}
-                    onChange={(e) => {
-                      setEssayText(e.target.value);
-                      setIsGeneratedByAi(false);
-                    }}
-                    disabled={isAnalyzing || isGenerating || isGenerationMode || analysisResult !== null}
-                    className="w-full bg-stone-900/80 border border-stone-800 rounded-2xl p-4 text-xs sm:text-sm text-stone-200 disabled:opacity-60 disabled:cursor-not-allowed"
-                  />
+                <textarea
+                  ref={textareaRef}
+                  placeholder={
+                    isGenerationMode 
+                      ? "Opcja generowania jest włączona. Wpisz temat powyżej i kliknij przycisk generowania." 
+                      : "Wklej tutaj treść swojej rozprawki (minimum 50 słów)..."
+                  }
+                  value={essayText}
+                  onChange={(e) => {
+                    setEssayText(e.target.value);
+                    setIsGeneratedByAi(false);
+                    // Automatyczne powiększanie w trakcie pisania
+                    e.target.style.height = "auto";
+                    e.target.style.height = `${e.target.scrollHeight}px`;
+                  }}
+                  disabled={isAnalyzing || isGenerating || isGenerationMode || analysisResult !== null}
+                  className="w-full min-h-[350px] bg-stone-900/50 hover:bg-stone-900/70 focus:bg-stone-900/90 border border-stone-800 rounded-2xl p-6 sm:p-8 text-sm sm:text-base text-stone-200 font-serif leading-loose focus:outline-none focus:border-amber-600/50 disabled:opacity-60 disabled:cursor-not-allowed shadow-inner transition-colors resize-none overflow-hidden"
+                />
                 </div>
               ) : (
                 <div className="bg-stone-950/40 border border-stone-800 rounded-2xl p-5 min-h-[300px] shadow-inner">
