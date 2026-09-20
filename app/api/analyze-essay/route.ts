@@ -157,6 +157,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 6. DYNAMICZNY PROMPT SYSTEMOWY DLA CLAUDE
+    // 6. DYNAMICZNY PROMPT SYSTEMOWY DLA CLAUDE Z WYMUSZONYM ANNOTATIONS
     const systemPrompt = `Jesteś oficjalnym, doświadczonym i skrupulatnym egzaminatorem CKE oceniającym wypracowania maturalne z języka polskiego (poziom podstawowy, Formuła 2023, skala 35 punktów). 
 
 Twoim zadaniem jest dokładna, sprawiedliwa ocena pracy zgodnie z oficjalnym kluczem CKE. 
@@ -188,6 +189,14 @@ ${similarEssaysContext}
    - Jeśli błędów językowych jest >= 18: przyznaj za 4a BEZWZGLĘDNIE 0/7 PKT!
    - 4b (Ortografia): 0–2 pkt (0-1 błąd = 2 pkt, 2-3 błędy = 1 pkt, 4+ = 0 pkt).
    - 4c (Interpunkcja): 0–2 pkt (0-4 błędy = 2 pkt, 5-14 błędów = 1 pkt, 15+ = 0-1 pkt).
+
+5. KRYTYCZNY WYMÓG: TABLICA "annotations" (PODŚWIETLENIA BŁĘDÓW W TEKŚCIE):
+   - W tablicy "annotations" MUSISZ bezwzględnie wypisać KAŻDY błąd językowy, ortograficzny, interpunkcyjny i rzeczowy, który zauważysz w tekście ucznia!
+   - Ta tablica NIE MOŻE być pusta, jeśli praca ma jakiekolwiek usterki.
+   - "original": DOKŁADNY, krótki (1–4 słowa) fragment tekstu ucznia z błędem, BEZ CUDZYSŁOWÓW (np. "kochanki Oleńki", a nie "„kochanki Oleńki”").
+   - "replacement": poprawna forma.
+   - "type": dokładnie jeden z: "rzeczowy" | "językowy" | "ortograficzny" | "interpunkcyjny".
+   - "explanation": zwięzłe wyjaśnienie reguły (1 zdanie).
 
 === FORMAT ODPOWIEDZI ===
 Zwróć WYŁĄCZNIE poprawny obiekt JSON bez jakichkolwiek znaczników markdown (np. bez \`\`\`json).
@@ -250,6 +259,7 @@ Zwróć WYŁĄCZNIE poprawny obiekt JSON bez jakichkolwiek znaczników markdown 
     Oceń powyższą rozprawkę zgodnie z oficjalnymi kryteriami CKE Formuła 2023. 
     WAŻNE: Opieraj się WYŁĄCZNIE na podanej wyżej liczbie słów (${wordCount} słów). ${isUnder300Words ? "Praca ma mniej niż 300 słów, wyzeruj KW i JW." : "Praca MA PONAD 300 SŁÓW, więc KATEGORYCZNIE NIE WOLNO Ci wyzerować kompozycji (KW) ani języka (JW) z powodu długości! Oceń je w pełnej skali punktowej."} Zwróć tylko JSON.
     `;
+    
 
     // 7. WYWOŁANIE CLAUDE Z WYŁĄCZONYM MYŚLENIEM (SZYBKA ODPOWIEDŹ BEZ ZAWIESZANIA I BEZ PUSTYCH BLOKÓW)
     const CLAUDE_MODELS_TO_TRY = [
