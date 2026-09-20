@@ -459,17 +459,26 @@ export default function OcenianieRozprawekPage() {
     <div className={`min-h-screen flex flex-col transition-colors duration-500 ${currentTheme.bg} text-stone-200 font-sans`}>
       
       {/* 🌟 GLOBALNY NAGŁÓWEK PLATFORMY */}
-      <Header />
+{/* GŁÓWNY NAGŁÓWEK MODUŁU */}
+      <header className={`border-b ${currentTheme.cardBorder} px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4 backdrop-blur-md sticky top-0 z-40 ${currentTheme.cardBg} transition-colors duration-500 w-full`}>
+        <Link 
+          href="/" 
+          onClick={() => playSound("click")}
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 transition-all text-xs font-medium ${currentTheme.subText} hover:text-stone-100`}
+        >
+          ← Wróć do kącika
+        </Link>
 
-      <div className="flex-1 flex flex-col items-center p-6 w-full">
-        {notification && (
-          <div className={`fixed top-6 right-6 z-50 px-5 py-4 rounded-2xl border shadow-2xl backdrop-blur-md max-w-sm ${
-            notification.type === "success" ? "bg-emerald-950/90 border-emerald-500/30 text-emerald-200" : "bg-red-950/90 border-red-500/30 text-red-200"
-          }`}>
-            <p className="text-xs font-semibold leading-relaxed pr-2">{notification.message}</p>
-          </div>
-        )}
+        <div className="flex items-center gap-2 select-none">
+          <span className="text-xl">✨</span>
+          <h1 className="text-sm sm:text-base font-semibold tracking-wide text-stone-100 font-serif">
+            Asystent Rozprawek AI
+          </h1>
+        </div>
 
+        {/* Pusty div dla zachowania idealnego wyśrodkowania */}
+        <div className="w-24 hidden sm:block"></div>
+      </header>
         {/* MODAL TEMATÓW CKE */}
         {isTopicModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in">
@@ -863,6 +872,6 @@ export default function OcenianieRozprawekPage() {
 
         </div>
       </div>
-    </div>
+
   );
 }
