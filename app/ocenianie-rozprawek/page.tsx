@@ -8,7 +8,7 @@ import { supabase } from "../lib/supabase";
 import { getThemeClasses, CozyTheme } from "../lib/theme";
 import { playSound } from "../lib/sounds";
 import { AtmosphericEssayLoader } from "../components/AtmosphericEssayLoader";
-import Header from "../components/Header";
+import { Header } from "../components/Header";
 
 interface Match {
   start: number;
