@@ -537,15 +537,18 @@ export default function OcenianieRozprawekPage() {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-5">
+                <div className="space-y-6">
+                  {/* SESJA GŁÓWNA (MAJ) */}
                   <div>
-                    <h4 className="text-[11px] uppercase tracking-widest text-amber-400 font-bold mb-2 px-1">Sesja Główna (Maj)</h4>
+                    <h4 className="text-[11px] uppercase tracking-widest text-amber-400 font-bold mb-2 px-1 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-amber-400"></span> Sesja Główna (Maj)
+                    </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {currentYearData?.topics.filter(t => t.session.includes("Maj")).map((t, idx) => (
                         <div
                           key={idx}
                           onClick={() => handleSelectCkeTopic(t.text)}
-                          className="p-4 rounded-2xl bg-stone-900/40 border border-stone-800/80 hover:border-amber-500/60 transition-all cursor-pointer group flex flex-col justify-between gap-3"
+                          className="p-4 rounded-2xl bg-stone-900/40 border border-stone-800/80 hover:border-amber-500/60 transition-all cursor-pointer group flex flex-col justify-between gap-3 shadow-sm"
                         >
                           <span className="text-[9px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-amber-950/60 text-amber-300 border border-amber-800/40 w-max">{t.number}</span>
                           <p className="text-xs sm:text-[13px] text-stone-100 font-serif leading-relaxed">„{t.text}”</p>
@@ -553,6 +556,48 @@ export default function OcenianieRozprawekPage() {
                       ))}
                     </div>
                   </div>
+
+                  {/* SESJA DODATKOWA (CZERWIEC) */}
+                  {currentYearData?.topics.some(t => t.session.includes("Czerwiec")) && (
+                    <div>
+                      <h4 className="text-[11px] uppercase tracking-widest text-sky-400 font-bold mb-2 px-1 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-sky-400"></span> Sesja Dodatkowa (Czerwiec)
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {currentYearData?.topics.filter(t => t.session.includes("Czerwiec")).map((t, idx) => (
+                          <div
+                            key={idx}
+                            onClick={() => handleSelectCkeTopic(t.text)}
+                            className="p-4 rounded-2xl bg-stone-900/40 border border-stone-800/80 hover:border-sky-500/60 transition-all cursor-pointer group flex flex-col justify-between gap-3 shadow-sm"
+                          >
+                            <span className="text-[9px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-sky-950/60 text-sky-300 border border-sky-800/40 w-max">{t.number}</span>
+                            <p className="text-xs sm:text-[13px] text-stone-100 font-serif leading-relaxed">„{t.text}”</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* SESJA POPRAWKOWA (SIERPIEŃ) */}
+                  {currentYearData?.topics.some(t => t.session.includes("Sierpień")) && (
+                    <div>
+                      <h4 className="text-[11px] uppercase tracking-widest text-orange-400 font-bold mb-2 px-1 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-orange-400"></span> Sesja Poprawkowa (Sierpień)
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {currentYearData?.topics.filter(t => t.session.includes("Sierpień")).map((t, idx) => (
+                          <div
+                            key={idx}
+                            onClick={() => handleSelectCkeTopic(t.text)}
+                            className="p-4 rounded-2xl bg-stone-900/40 border border-stone-800/80 hover:border-orange-500/60 transition-all cursor-pointer group flex flex-col justify-between gap-3 shadow-sm"
+                          >
+                            <span className="text-[9px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-orange-950/60 text-orange-300 border border-orange-800/40 w-max">{t.number}</span>
+                            <p className="text-xs sm:text-[13px] text-stone-100 font-serif leading-relaxed">„{t.text}”</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
