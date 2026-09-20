@@ -1,5 +1,6 @@
 // app/api/analyze-essay/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createClient } from "@supabase/supabase-js";
 import { getSupabaseServer } from "../../lib/supabaseServer";
@@ -7,6 +8,12 @@ import { ckeGuidelines } from "../../lib/ckeGuidelines";
 
 export const dynamic = "force-dynamic";
 
+// Klient Claude (Anthropic) do weryfikacji merytorycznej i językowej
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY || "",
+});
+
+// Klient Gemini wykorzystywany WYŁĄCZNIE do darmowych wektorów embedding dla bazy RAG
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 const supabaseAdmin = createClient(
@@ -112,42 +119,23 @@ export async function POST(req: NextRequest) {
     newCredits = deductedCredits;
     creditDeducted = true;
 
-    // 4. Generowanie wektora embedding dla RAG
+    // 4. KROK RAG: Generowanie wektora embedding przez Gemini
     let embeddingVector: number[] | null = null;
-    let embedRetries = 3;
-    let embedDelay = 3000;
-
-    for (let i = 0; i < embedRetries; i++) {
-      try {
-        const embeddingModel = genAI.getGenerativeModel({ model: "models/gemini-embedding-001" });
-        const embeddingResult = await embeddingModel.embedContent({
-          content: { role: "user", parts: [{ text: essayText }] },
-          outputDimensionality: 768,
-        } as any);
-        
-        if (embeddingResult.embedding?.values) {
-          embeddingVector = embeddingResult.embedding.values;
-          break;
-        }
-      } catch (embedError: any) {
-        const isRetryable = 
-          embedError?.status === 429 || 
-          embedError?.status === 503 || 
-          embedError?.message?.includes("429") || 
-          embedError?.message?.includes("503") || 
-          embedError?.message?.includes("RESOURCE_EXHAUSTED") || 
-          embedError?.message?.includes("UNAVAILABLE");
-
-        if (isRetryable && i < embedRetries - 1) {
-          await new Promise((resolve) => setTimeout(resolve, embedDelay));
-          embedDelay *= 1.5;
-          continue;
-        }
-        break;
+    try {
+      const embeddingModel = genAI.getGenerativeModel({ model: "models/gemini-embedding-001" });
+      const embeddingResult = await embeddingModel.embedContent({
+        content: { role: "user", parts: [{ text: essayText }] },
+        outputDimensionality: 768,
+      } as any);
+      
+      if (embeddingResult.embedding?.values) {
+        embeddingVector = embeddingResult.embedding.values;
       }
+    } catch (embedError) {
+      console.warn("Błąd generowania embeddingu (kontynuujemy bez bazy RAG):", embedError);
     }
 
-    // 5. Dopasowanie podobnych wypracowań z bazy (RAG)
+    // 5. KROK RAG: Odpytanie bazy Supabase o wzorce
     let similarEssaysContext = "";
     if (embeddingVector) {
       try {
@@ -158,102 +146,81 @@ export async function POST(req: NextRequest) {
         });
 
         if (similar && similar.length > 0) {
-          similarEssaysContext = `\n\n=== REPREZENTATYWNE PRZYKŁADY Z BAZY WIEDZY ===\n`;
+          similarEssaysContext = `\n\n=== PODOBNE PRACE Z BAZY WZORCÓW ===\n`;
           similar.forEach((item: any, index: number) => {
-            similarEssaysContext += `
-Przykład ${index + 1}:
-Temat: "${item.topic}"
-Ocena: ${item.score}
----\n`;
+            similarEssaysContext += `Przykład ${index + 1}: Temat: "${item.topic}", Ocena: ${item.score}\n---\n`;
           });
         }
       } catch (dbError) {
-        console.error("Błąd RAG:", dbError);
+        console.warn("Błąd wyszukiwania podobnych prac:", dbError);
       }
     }
 
-    // 6. 🎯 WYWAŻONY, SPRAWIEDLIWY SYSTEM PROMPT Z RZETELNYM WYMOGIEM 300 SŁÓW
-    const systemPrompt = `Jesteś doświadczonym, profesjonalnym i wyważonym egzaminatorem CKE oceniającym wypracowania maturalne z języka polskiego (poziom podstawowy, Formuła 2023, skala 35 punktów). 
+    // 6. DYNAMICZNY PROMPT SYSTEMOWY DLA CLAUDE
+    const systemPrompt = `Jesteś oficjalnym, doświadczonym i skrupulatnym egzaminatorem CKE oceniającym wypracowania maturalne z języka polskiego (poziom podstawowy, Formuła 2023, skala 35 punktów). 
 
-Twoim celem jest SPRAWIEDLIWA, DOKŁADNA i REALISTYCZNA ocena – dokładnie taka, jaką uczeń otrzymałby od egzaminatora na oficjalnym egzaminie maturalnym. Nie bądź mściwy ani przesadnie dosłowny, ale rzetelnie stosuj zasady państwowe CKE.
+Twoim zadaniem jest dokładna, sprawiedliwa ocena pracy zgodnie z oficjalnym kluczem CKE. 
 
-=== BAZA WIEDZY CKE ===
+=== BAZA WIEDZY I OFICJALNY ZŁOTY WZORZEC CKE ===
 ${ckeGuidelines}
 === KONIEC BAZY WIEDZY ===
 ${similarEssaysContext}
 
-=== PROTOKÓŁ I ZASADY OCENIANIA CKE ===
+=== KRYTERIA I ZASADY PUNKTACJI CKE ===
+1. WERYFIKACJA OBJĘTOŚCI:
+   - Wymóg formalny: minimum 300 słów.
+   - Jeśli słów < 300: przyznaj KW = 0/7 oraz JW = 0/11 (oficjalna zasada CKE!).
+   - Jeśli słów >= 300: oceń pełne 4 kryteria.
 
-1. KROK 1 – WERYFIKACJA FORMALNA I OBJĘTOŚĆ (MINIMUM 300 SŁÓW):
-   - Policz dokładnie słowa w tekście wypracowania.
-   - JEŚLI PRACA LICZY MNIEJ NIŻ 300 SŁÓW:
-     * Zgodnie z oficjalną zasadą CKE przyznaj: KW = 0/7 oraz JW = 0/11!
-     * W takim wypadku oceniasz WYŁĄCZNIE kryteria: SFWP (0-1) oraz KLiK (0-16). Maksymalny możliwy wynik wynosi 17/35.
-     * W podsumowaniu wpisz wyraźne wyjaśnienie: "Praca nie osiągnęła wymaganego progu 300 słów (liczy X słów). Zgodnie z oficjalnymi zasadami CKE skutkuje to wyzerowaniem punktów za kompozycję (KW: 0/7) oraz za język (JW: 0/11)."
-   - JEŚLI PRACA LICZY 300 SŁÓW LUB WIĘCEJ:
-     * Praca podlega pełnej ocenie we wszystkich 4 kryteriach: SFWP (0-1), KLiK (0-16), KW (0-7), JW (0-11).
+2. KLiK (0–16 pkt):
+   - 13–16 pkt: Pogłębiona argumentacja, oba utwory w pełni funkcjonalne pod tezę.
+   - 9–12 pkt: Zadowalająca argumentacja, poprawna analiza lektur.
+   - 8 pkt: Jedna lektura funkcjonalna, druga częściowo funkcjonalna, powierzchowna argumentacja (dokładnie jak w Złotym Wzorcu CKE!).
+   - 1–4 pkt: Wyłącznie powierzchowne streszczenie fabuły.
 
-2. KROK 2 – SFWP: Spełnienie formalnych warunków polecenia (0–1 pkt):
-   - 1 pkt: Praca jest wypowiedzią argumentacyjną, zawiera tezę lub hipotezę, odwołuje się do lektury obowiązkowej i nie zawiera błędu kardynalnego.
-   - 0 pkt: Brak tezy, praca niebędąca rozprawką lub wystąpienie błędu kardynalnego (wtedy cała praca otrzymuje 0/35).
+3. KW: Kompozycja (0–7 pkt):
+   - 3a (Struktura): 0–3 pkt.
+   - 3b (Spójność): 0–3 pkt (zlicz zaburzenia logiczne i przeskoki).
+   - 3c (Styl): 0–1 pkt.
 
-3. KROK 3 – KLiK: Kompetencje literackie i kulturowe (0–16 pkt):
-   - Oceniaj sprawiedliwie poziom rozwinięcia argumentacji i funkcjonalność utworów:
-     * 13–16 pkt: Pogłębiona, dojrzała argumentacja, trafne wnioski, utwory i konteksty wykorzystane w pełni funkcjonalnie pod tezę.
-     * 9–12 pkt: Zadowalająca argumentacja, poprawna analiza lektur powiązana z tematem (nawet z drobnymi uproszczeniami lub skrótami).
-     * 5–8 pkt: Argumentacja częściowa – uczeń streszcza elementy fabuły, ale wiąże je z tezą; występują uogólnienia lub drobne błędy rzeczowe nienaruszające sensu lektury.
-     * 1–4 pkt: Wyłącznie powierzchowne streszczenie, brak argumentacji, rażące zniekształcenie lektury.
-     * 0 pkt: Brak odwołania do lektur lub całkowicie błędna interpretacja.
-
-4. KROK 4 – KW: Kompozycja wypowiedzi (0–7 pkt):
-   - 3a (Układ tekstu: 0–3 pkt): 3 pkt za wyraźną trójdzielność (wstęp, rozwinięcie z podziałem na akapity, zakończenie). 2 pkt przy drobnych zachwianiach proporcji.
-   - 3b (Spójność tekstu: 0–3 pkt): 3 pkt za płynny, logiczny wywód. 2 pkt przy sporadycznych przeskokach myślowych, które nie zaburzają ogólnego sensu. 1 pkt tylko przy wyraźnym chaosie.
-   - 3c (Styl: 0–1 pkt): 1 pkt za styl stosowny do sytuacji egzaminacyjnej.
-
-5. KROK 5 – JW: Język wypowiedzi (0–11 pkt):
-   - 4a (Poprawność językowa: 0–7 pkt): Oceniasz naturalny, szkolny język:
-     * 6–7 pkt: Bardzo wysoka poprawność, bogata leksyka, zaledwie pojedyncze potknięcia.
-     * 4–5 pkt: Typowy, dobry poziom uczniowski (kilka drobnych usterek składniowych lub leksykalnych nieutrudniających odbioru).
-     * 2–3 pkt: Liczne błędy utrudniające zrozumienie myśli.
-   - 4b (Ortografia: 0–2 pkt): 2 pkt (0–1 błąd), 1 pkt (2–3 błędy), 0 pkt (4+).
-   - 4c (Interpunkcja: 0–2 pkt): 2 pkt (pojedyncze błędy), 1 pkt (powtarzające się usterki przecinkowe), 0 pkt (całkowity brak przecinków).
-
-6. IDENTYFIKACJA BŁĘDÓW DO PODŚWIETLEŃ (annotations):
-   - Podświetlaj tylko RZECZYWISTE usterki w tekście ucznia (rzeczowe, językowe, ortograficzne, interpunkcyjne).
-   - Podaj dokładny fragment, zwięzłe wyjaśnienie reguły oraz poprawną propozycję zamiennika.
+4. JW: Język i styl (0–11 pkt) – APTEKARSKI AUDYT JĘZYKOWY:
+   - Policz wszystkie usterki językowe (składnia, leksyka, frazeologia).
+   - Jeśli błędów językowych jest >= 18: przyznaj za 4a BEZWZGLĘDNIE 0/7 PKT!
+   - 4b (Ortografia): 0–2 pkt (0-1 błąd = 2 pkt, 2-3 błędy = 1 pkt, 4+ = 0 pkt).
+   - 4c (Interpunkcja): 0–2 pkt (0-4 błędy = 2 pkt, 5-14 błędów = 1 pkt, 15+ = 0-1 pkt).
 
 === FORMAT ODPOWIEDZI ===
-Zwróć WYŁĄCZNIE poprawny obiekt JSON (bez znaczników \`\`\`json).
+Zwróć WYŁĄCZNIE obiekt JSON bez jakichkolwiek znaczników markdown (np. bez \`\`\`json).
 
 {
-  "_scoring_log": "Brudnopis oceniania: liczba słów (czy >= 300), błąd kardynalny (TAK/NIE), kalkulacja KLiK, KW, JW.",
+  "_scoring_log": "Brudnopis: 1) Słowa: X. 2) KLiK: uzasadnienie i punkty. 3) KW: 3a, 3b, 3c. 4) JW: liczba błędów językowych (X), ortograficznych (Y), interpunkcyjnych (Z) -> punkty. Suma: X/35.",
   "score": "X/35",
   "details": [
     {
       "criterion": "Spełnienie formalnych warunków polecenia",
       "points": "X/1",
-      "comment": "Zwięzłe uzasadnienie spełnienia wymogów formalnych."
+      "comment": "Zwięzłe uzasadnienie."
     },
     {
       "criterion": "Kompetencje literackie i kulturowe",
       "points": "X/16",
-      "comment": "Sprawiedliwa ocena poziomu argumentacji, doboru lektur i funkcjonalności odwołań."
+      "comment": "Rzetelna ocena funkcjonalności utworów i argumentacji w oparciu o tabelę CKE."
     },
     {
       "criterion": "Kompozycja wypowiedzi",
       "points": "X/7",
-      "comment": "Ocena układu trójdzielnego, akapitów i spójności logicznej wywodu."
+      "comment": "Ocena układu trójdzielnego, akapitów i spójności wywodu."
     },
     {
       "criterion": "Język wypowiedzi",
       "points": "X/11",
-      "comment": "Podsumowanie poprawności językowej, ortografii i interpunkcji."
+      "comment": "Ocena zakresu oraz zliczonych błędów językowych, ortograficznych i interpunkcyjnych."
     }
   ],
-  "summary": "Konstruktywne, wyważone podsumowanie. Pochwal dobre pomysły i wskaż 2-3 najważniejsze rzeczy do dopracowania.",
+  "summary": "Konstruktywne podsumowanie egzaminatora z wytycznymi, co uczeń musi poprawić.",
   "annotations": [
     {
-      "original": "dokładny fragment tekstu z błędem",
+      "original": "dokładny fragment z błędem z tekstu ucznia",
       "replacement": "poprawna forma",
       "type": "rzeczowy | językowy | ortograficzny | interpunkcyjny",
       "explanation": "Zwięzłe wyjaśnienie reguły."
@@ -273,89 +240,63 @@ Zwróć WYŁĄCZNIE poprawny obiekt JSON (bez znaczników \`\`\`json).
 ${safeEssayText}
 </essay>
 
-Oceń powyższe wypracowanie obiektywnie, sprawiedliwie i zgodnie z oficjalnymi wytycznymi CKE Formuła 2023.
+Oceń powyższą rozprawkę zgodnie z oficjalnymi kryteriami CKE Formuła 2023. Zwróć tylko JSON.
 `;
 
-    // 7. Kaskada modeli z płynnym fallbackiem
-    const MODELS_TO_TRY = [
-      "gemini-3.7-flash",
-      "gemini-3.6-flash",
-      "gemini-3.5-flash",
-      "gemini-2.5-flash"
+    // 7. WYWOŁANIE MODELU CLAUDE SONNET (Z OBSŁUGĄ KASKADY)
+    const CLAUDE_MODELS_TO_TRY = [
+      "claude-sonnet-5",
+      "claude-3-7-sonnet-20250219",
+      "claude-3-5-sonnet-latest",
     ];
 
-    let result: any = null;
+    let claudeResponse: any = null;
     let finalModelUsed = "";
     let modelSuccess = false;
-    let lastError: any = null;
 
-    for (const currentModelName of MODELS_TO_TRY) {
-      console.log(`-> Próba uruchomienia analizy na modelu: ${currentModelName}`);
-      
-      const model = genAI.getGenerativeModel({
-        model: currentModelName,
-        systemInstruction: systemPrompt,
-      });
-
-      let textRetries = 3;
-      let textDelay = 4000;
-      let modelSuccessInner = false;
-
-      for (let i = 0; i < textRetries; i++) {
-        try {
-          console.log(`-> Wywołanie Gemini (${currentModelName}) - Analiza (Próba ${i + 1}/${textRetries})...`);
-          result = await model.generateContent({
-            contents: [{ role: "user", parts: [{ text: userMessage }] }],
-            generationConfig: {
-              responseMimeType: "application/json",
-              temperature: 0.2,
+    for (const modelName of CLAUDE_MODELS_TO_TRY) {
+      try {
+        console.log(`-> Wywołanie Claude (${modelName})...`);
+        claudeResponse = await anthropic.messages.create({
+          model: modelName,
+          max_tokens: 3000,
+          temperature: 0.1,
+          system: systemPrompt,
+          messages: [
+            {
+              role: "user",
+              content: userMessage,
             },
-          });
-          
-          modelSuccessInner = true;
-          finalModelUsed = currentModelName;
-          break;
-        } catch (error: any) {
-          lastError = error;
-          const isRetryable = 
-            error?.status === 429 || 
-            error?.status === 503 || 
-            error?.message?.includes("429") || 
-            error?.message?.includes("503") || 
-            error?.message?.includes("RESOURCE_EXHAUSTED") || 
-            error?.message?.includes("UNAVAILABLE");
+          ],
+        });
 
-          if (isRetryable && i < textRetries - 1) {
-            const jitter = Math.floor(Math.random() * 1500) + 1000;
-            const finalDelay = textDelay + jitter;
-            console.warn(`  [PRZECIĄŻENIE ${currentModelName}] Retry za ${(finalDelay / 1000).toFixed(2)}s...`);
-            await new Promise((resolve) => setTimeout(resolve, finalDelay));
-            textDelay *= 1.5;
-            continue;
-          }
-          break;
-        }
-      }
-
-      if (modelSuccessInner && result) {
-        console.log(`-> Sukces! Analiza ukończona za pomocą: ${finalModelUsed}`);
+        finalModelUsed = modelName;
         modelSuccess = true;
+        console.log(`-> Sukces! Analiza ukończona za pomocą: ${finalModelUsed}`);
         break;
+      } catch (claudeErr: any) {
+        console.warn(`Błąd modelu ${modelName}:`, claudeErr?.message || claudeErr);
+        // Jeśli model nie jest dostępny, próbuje kolejnego z listy
+        continue;
       }
     }
 
-    if (!modelSuccess || !result) {
-      console.error("Wszystkie próby na modelach zakończyły się niepowodzeniem:", lastError);
-      throw new Error("SERVERS_OVERLOADED");
+    if (!modelSuccess || !claudeResponse) {
+      throw new Error("CLAUDE_API_ERROR");
     }
 
-    const responseText = result.response.text();
+    // Wyciągamy czysty tekst z odpowiedzi Claude
+    const responseText = claudeResponse.content
+      .filter((block: any) => block.type === "text")
+      .map((block: any) => block.text)
+      .join("");
+
     const parsedResult = extractAndParseJSON(responseText);
 
     const clientResult = { ...parsedResult };
     delete clientResult._scoring_log;
 
-    // 8. Zapis do bazy
+    // 8. Zapis oceny do bazy Supabase
     const { error: insertError } = await supabaseAdmin
       .from("essay_evaluations")
       .insert({
@@ -368,7 +309,7 @@ Oceń powyższe wypracowanie obiektywnie, sprawiedliwie i zgodnie z oficjalnymi 
       });
 
     if (insertError) {
-      console.error("Błąd zapisu oceny do bazy:", insertError);
+      console.error("Błąd zapisu do bazy:", insertError);
     }
 
     return NextResponse.json({
@@ -378,8 +319,9 @@ Oceń powyższe wypracowanie obiektywnie, sprawiedliwie i zgodnie z oficjalnymi 
     });
 
   } catch (error: any) {
-    console.error("Błąd analizy:", error);
+    console.error("Błąd analizy Claude:", error);
 
+    // Rollback tokena
     if (creditDeducted && userId) {
       try {
         await supabaseAdmin.rpc('increment_credit', { user_id_param: userId });
@@ -389,13 +331,8 @@ Oceń powyższe wypracowanie obiektywnie, sprawiedliwie i zgodnie z oficjalnymi 
       }
     }
 
-    const isOverload = error?.message === "SERVERS_OVERLOADED" || error?.status === 503;
-    const errorMessage = isOverload
-      ? "Serwery Google AI są obecnie przeciążone. Twój kredyt nie został pobrany. Spróbuj ponownie za chwilę!"
-      : "Wystąpił nieoczekiwany błąd podczas analizy. Twój kredyt został zwrócony.";
-
     return NextResponse.json(
-      { error: errorMessage },
+      { error: "Wystąpił błąd podczas analizy wypracowania przez Claude AI. Twój kredyt został zwrócony." },
       { status: 500 }
     );
   }
