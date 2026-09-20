@@ -190,7 +190,7 @@ ${similarEssaysContext}
    - 4c (Interpunkcja): 0–2 pkt (0-4 błędy = 2 pkt, 5-14 błędów = 1 pkt, 15+ = 0-1 pkt).
 
 === FORMAT ODPOWIEDZI ===
-Zwróć WYŁĄCZNIE obiekt JSON bez jakichkolwiek znaczników markdown (np. bez \`\`\`json).
+Zwróć WYŁĄCZNIE poprawny obiekt JSON bez jakichkolwiek znaczników markdown (np. bez \`\`\`json).
 
 {
   "_scoring_log": "Brudnopis: 1) Słowa: X. 2) KLiK: uzasadnienie i punkty. 3) KW: 3a, 3b, 3c. 4) JW: liczba błędów językowych (X), ortograficznych (Y), interpunkcyjnych (Z) -> punkty. Suma: X/35.",
@@ -243,7 +243,7 @@ ${safeEssayText}
 Oceń powyższą rozprawkę zgodnie z oficjalnymi kryteriami CKE Formuła 2023. Zwróć tylko JSON.
 `;
 
-// 7. WYWOŁANIE MODELU CLAUDE SONNET (Z AKTUALNYMI IDENTYFIKATORAMI I CACHEM)
+    // 7. WYWOŁANIE MODELU CLAUDE SONNET (Z OBSŁUGĄ KASKADY I CACHEM)
     const CLAUDE_MODELS_TO_TRY = [
       "claude-sonnet-5",
       "claude-sonnet-4-6",
@@ -259,8 +259,7 @@ Oceń powyższą rozprawkę zgodnie z oficjalnymi kryteriami CKE Formuła 2023. 
         console.log(`-> Wywołanie Claude (${modelName})...`);
         claudeResponse = await anthropic.messages.create({
           model: modelName,
-          max_tokens: 3000,
-          // ⚠️ Usunięto parametr temperature (wymóg Claude Sonnet 5 zapobiegający błędowi 400!)
+          max_tokens: 8000, // Zwiększono limit na proces myślenia i pełny JSON
           system: [
             {
               type: "text",
@@ -290,11 +289,22 @@ Oceń powyższą rozprawkę zgodnie z oficjalnymi kryteriami CKE Formuła 2023. 
       throw new Error("CLAUDE_API_ERROR");
     }
 
-    // Wyciągamy czysty tekst z odpowiedzi Claude
-    const responseText = claudeResponse.content
-      .filter((block: any) => block.type === "text")
-      .map((block: any) => block.text)
-      .join("");
+    // 🎯 Bezpieczne wyciąganie tekstu z bloków odpowiedzi Claude
+    let responseText = "";
+    for (const block of claudeResponse.content) {
+      if (block.type === "text" && block.text) {
+        responseText += block.text;
+      }
+    }
+
+    // Fallback gdyby odpowiedź znalazła się w innym bloku
+    if (!responseText.trim()) {
+      for (const block of claudeResponse.content) {
+        if (block.text) responseText += block.text;
+      }
+    }
+
+    console.log("Pobrany tekst odpowiedzi z Claude (długość znaków):", responseText.length);
 
     const parsedResult = extractAndParseJSON(responseText);
 
