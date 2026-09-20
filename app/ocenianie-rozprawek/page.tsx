@@ -461,7 +461,19 @@ return (
       {/* 🌟 GLOBALNY NAGŁÓWEK PLATFORMY */}
       <Header currentTheme={currentTheme} user={user} profile={profile} {...({} as any)} />
 
-      <div className="flex-1 flex flex-col items-center p-6 w-full">
+      {/* Pasek nawigacyjny z przyciskiem powrotu (identyczny jak na screenie) */}
+      <div className="w-full max-w-6xl px-6 pt-4 flex items-center justify-between">
+        <Link
+          href="/"
+          onClick={() => playSound("click")}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-stone-900/50 hover:bg-stone-800/80 text-stone-400 hover:text-stone-200 text-xs font-medium border border-stone-800/80 transition-all shadow-sm backdrop-blur-sm"
+        >
+          <span>←</span>
+          <span>Wróć do kącika</span>
+        </Link>
+      </div>
+
+      <div className="flex-1 flex flex-col items-center p-6 pt-2 w-full">
         {notification && (
           <div className={`fixed top-6 right-6 z-50 px-5 py-4 rounded-2xl border shadow-2xl backdrop-blur-md max-w-sm ${
             notification.type === "success" ? "bg-emerald-950/90 border-emerald-500/30 text-emerald-200" : "bg-red-950/90 border-red-500/30 text-red-200"
@@ -615,7 +627,7 @@ return (
 
         <div className={`max-w-4xl w-full ${currentTheme.cardBg} border ${currentTheme.cardBorder} rounded-3xl p-6 sm:p-8 shadow-xl mt-8 flex flex-col gap-6 transition-colors duration-500`}>
           
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-stone-800/60 pb-5 gap-4">
+          <div className="flex items-center justify-between border-b border-stone-800/60 pb-5">
             <div className="flex items-center gap-3">
               <span className="text-3xl">✨</span>
               <div>
@@ -623,6 +635,7 @@ return (
                 <p className="text-xs text-stone-400 mt-1">Interaktywna weryfikacja prac z języka polskiego</p>
               </div>
             </div>
+          </div>
             <Link 
               href="/" 
               onClick={() => playSound("click")}
