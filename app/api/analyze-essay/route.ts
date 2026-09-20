@@ -161,6 +161,7 @@ export async function POST(req: NextRequest) {
     const systemPrompt = `Jesteś oficjalnym, doświadczonym i skrupulatnym egzaminatorem CKE oceniającym wypracowania maturalne z języka polskiego (poziom podstawowy, Formuła 2023, skala 35 punktów). 
 
 Twoim zadaniem jest dokładna, sprawiedliwa ocena pracy zgodnie z oficjalnym kluczem CKE. 
+- ABSOLUTNY ZAKAZ SAMODZIELNEGO LICZENIA SŁÓW: Zawsze i bezwzględnie musisz opierać się TYLKO i WYŁĄCZNIE na liczbie słów podanej w sekcji [DANE TECHNICZNE WYPRACOWANIA] obliczonej przez serwer. Nie wolno Ci przeliczać słów na własną rękę ani kwestionować danych serwerowych!
 
 === BAZA WIEDZY I OFICJALNY ZŁOTY WZORZEC CKE ===
 ${ckeGuidelines}
@@ -168,6 +169,7 @@ ${ckeGuidelines}
 ${similarEssaysContext}
 
 === KRYTERIA I ZASADY PUNKTACJI CKE ===
+
 1. WERYFIKACJA OBJĘTOŚCI:
    - Wymóg formalny: minimum 300 słów.
    - Jeśli słów < 300: przyznaj KW = 0/7 oraz JW = 0/11 (oficjalna zasada CKE!).
@@ -191,6 +193,7 @@ ${similarEssaysContext}
    - Jeśli błędów językowych jest >= 18: przyznaj za 4a BEZWZGLĘDNIE 0/7 PKT!
    - 4b (Ortografia): 0–2 pkt (0-1 błąd = 2 pkt, 2-3 błędy = 1 pkt, 4+ = 0 pkt).
    - 4c (Interpunkcja): 0–2 pkt (0-4 błędy = 2 pkt, 5-14 błędów = 1 pkt, 15+ = 0-1 pkt).
+   - APTEKARSKA SKRUPULATNOŚĆ JĘZYKOWA: Nie pomijaj błędów interpunkcyjnych (w tym zbędnych przecinków przed "niż", "jak") oraz drobnych potknięć słownikowych. Analizuj tekst z bezwzględnym rygorem egzaminatora państwowego.
 
 5. KRYTYCZNY WYMÓG: TABLICA "annotations" (PODŚWIETLENIA BŁĘDÓW W TEKŚCIE):
    - W tablicy "annotations" MUSISZ bezwzględnie wypisać KAŻDY błąd językowy, ortograficzny, interpunkcyjny i rzeczowy, który zauważysz w tekście ucznia!
@@ -259,8 +262,7 @@ Zwróć WYŁĄCZNIE poprawny obiekt JSON bez jakichkolwiek znaczników markdown 
     </essay>
 
     Oceń powyższą rozprawkę zgodnie z oficjalnymi kryteriami CKE Formuła 2023. 
-    WAŻNE: Opieraj się WYŁĄCZNIE na podanej wyżej liczbie słów (${wordCount} słów). ${isUnder300Words ? "Praca ma mniej niż 300 słów, wyzeruj KW i JW." : "Praca MA PONAD 300 SŁÓW, więc KATEGORYCZNIE NIE WOLNO Ci wyzerować kompozycji (KW) ani języka (JW) z powodu długości! Oceń je w pełnej skali punktowej."} Zwróć tylko JSON.
-    `;
+WAŻNE: Opieraj się WYŁĄCZNIE na podanej wyżej liczbie słów z serwera (${wordCount} słów). Ponieważ wynosi ona ${wordCount}, co ${isUnder300Words ? "jest poniżej 300 słów" : "jest POWYŻEJ 300 słów"}, ${isUnder300Words ? "wyzeruj KW i JW." : "KATEGORYCZNIE OŚWIADCZAM: praca ma ponad 300 słów, więc NIE WOLNO Ci zerować KW ani JW z powodu długości! Oceń je normalnie w pełnej skali."} Zwróć tylko JSON.    `;
     
 
     // 7. WYWOŁANIE CLAUDE Z WYŁĄCZONYM MYŚLENIEM (SZYBKA ODPOWIEDŹ BEZ ZAWIESZANIA I BEZ PUSTYCH BLOKÓW)
