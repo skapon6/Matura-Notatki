@@ -701,8 +701,7 @@ const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
           </div>
         )}
 
-        <div className={`max-w-7xl w-full ${currentTheme.cardBg} border ${currentTheme.cardBorder} rounded-3xl p-6 sm:p-10 shadow-xl mt-8 mb-12 flex flex-col gap-8 transition-colors duration-500`}>         
-          <div className="p-4 rounded-2xl bg-stone-950/40 border border-stone-800/60 flex items-center justify-between">
+          <div className={`max-w-5xl w-full ${currentTheme.cardBg} border ${currentTheme.cardBorder} rounded-3xl p-6 sm:p-8 shadow-xl mt-8 mb-12 flex flex-col gap-6 transition-colors duration-500`}>          <div className="p-4 rounded-2xl bg-stone-950/40 border border-stone-800/60 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="text-2xl">📊</span>
               <div>
@@ -715,8 +714,8 @@ const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
             </span>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div className="lg:col-span-8 flex flex-col gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="lg:col-span-9 flex flex-col gap-5">
               <div>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                   <label className="text-xs uppercase tracking-widest text-amber-500 font-semibold">
@@ -797,13 +796,13 @@ const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
 
               {activeTab === "write" ? (
                 <div>
-               <textarea 
+                <textarea 
                   rows={2}
-                  placeholder="Wpisz pełny temat rozprawki lub wybierz z bazy CKE..."
+                  placeholder="Wpisz temat rozprawki lub wybierz z bazy CKE..."
                   value={selectedTopic}
                   onChange={(e) => setSelectedTopic(e.target.value)}
                   disabled={isAnalyzing || isGenerating || analysisResult !== null}
-                  className="w-full bg-stone-900/50 hover:bg-stone-900/70 focus:bg-stone-900/90 border border-stone-800 rounded-2xl p-4 sm:p-5 text-sm sm:text-base text-stone-100 font-medium leading-relaxed focus:outline-none focus:border-amber-500/70 focus:ring-1 focus:ring-amber-500/30 disabled:opacity-60 disabled:cursor-not-allowed shadow-inner transition-all resize-none min-h-[80px]"
+                  className="w-full bg-stone-900/50 hover:bg-stone-900/70 focus:bg-stone-900/90 border border-stone-800 rounded-2xl p-5 sm:p-6 text-base sm:text-lg text-stone-100 font-serif font-bold leading-relaxed focus:outline-none focus:border-amber-500/70 focus:ring-1 focus:ring-amber-500/30 disabled:opacity-60 disabled:cursor-not-allowed shadow-inner transition-all resize-none min-h-[96px]"
                 />
                 </div>
               ) : (
