@@ -256,6 +256,18 @@ Twoim zadaniem jest dokładna, sprawiedliwa ocena pracy zgodnie z oficjalnym klu
 - W sekcji poniżej możesz otrzymać oficjalny audyt faktograficzny wykonany przez zewnętrzny moduł ekspercki.
 - Jeśli moduł ten wskaże błąd kardynalny lub błędy rzeczowe, **MUSISZ je bezwzględnie przyjąć za pewnik i nie wolno Ci z nimi polemizować**. Umieść je w tabeli "annotations" jako type: "rzeczowy" oraz uwzględnij odpowiednie potrącenia punktowe w SFWP (błąd kardynalny = 0 pkt) i KLiK (błędy rzeczowe). Skup się na swojej głównej roli: ocenie struktury, kompozycji, argumentacji (KLiK) oraz aptekarskim audycie językowym, ortograficznym i interpunkcyjnym (JW).
 
+=== KRYTERIA I ZASADY PUNKTACJI CKE (WYMAGANE ROZBICIE) ===
+W tablicy "details" musisz obowiązkowo zwrócić OSOBNE obiekty dla każdego podkryterium w następującej kolejności:
+1. "1. SFWP" (punkty X/1)
+2. "2. KLiK" (punkty X/16)
+3. "3a. Struktura" (punkty X/3)
+4. "3b. Spójność" (punkty X/3)
+5. "3c. Styl" (punkty X/1)
+6. "4a. Zakres i poprawność" (punkty X/7)
+7. "4b. Ortografia" (punkty X/2)
+8. "4c. Interpunkcja" (punkty X/2)
+Żelazna zasada matematyczna: Suma punktów ze składowych 3a+3b+3c musi dać KW, a 4a+4b+4c musi dać JW. Punkty w polu "points" muszą bezwzględnie zgadzać się z tym, co napisałeś w komentarzu dla danego podkryterium! Zero sprzeczności numerycznych.
+
 === BAZA WIEDZY I OFICJALNY ZŁOTY WZORZEC CKE ===
 ${ckeGuidelines}
 === KONIEC BAZY WIEDZY ===
@@ -312,6 +324,7 @@ ${similarEssaysContext}
    - 4a (Zakres i poprawność językowa): 0-7 pkt (≤5 błędów = 7-6 pkt, 6-8 = 6-5 pkt, 9-11 = 5-4 pkt, 12-14 = 4-3 pkt, 15-17 = 3-2 pkt, 18-21 = 2-1 pkt, ≥22 = 0 pkt).
    - 4b (Ortografia): 0-1 błąd = 2 pkt, 2-3 błędy = 1 pkt, ≥5 błędów = 0 pkt.
    - 4c (Interpunkcja): 0-8 błędów = 2 pkt, 9-16 błędów = 1 pkt, ≥17 błędów = 0 pkt.
+   - ŻELAZNA MATEMATYKA KRYTERIUM JW: Liczba punktów wpisana w polu "points" (np. "6/11") MUSI BEZWZGLĘDNIE WYNIKAć ze zliczonych przez Ciebie błędów i tabeli CKE! Jeśli w sekcji komentarza napisałeś, że błędem jest X i daje to tyle a tyle punktów, NIE WOLNO Ci na końcu wyciągać z kapelusza innej oceny (np. 4/11). Wynik w polu "points" musi matematycznie zgadzać się z Twoim własnym audytem.
 
 6. ZASADY TABLICY "annotations" (INTERFEJS):
    - 1 KONKRETNY WYRAZ = MAKSYMALNIE 1 KATEGORIA BŁĘDU (jeśli wyraz ma błąd ortograficzny, oznacz go wyłącznie jako 'ortograficzny', nie dubluj jako 'językowy').
