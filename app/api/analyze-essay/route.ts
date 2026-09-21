@@ -19,7 +19,7 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// 🎯 SCHEMAT NARZĘDZIA Z WYMUSZONĄ PEŁNĄ LISTĄ BŁĘDÓW
+// 🎯 DEDYKOWANE NARZĘDZIE CKE DLA CLAUDE
 const ckeEvaluationTool: Anthropic.Tool = {
   name: "ocen_rozprawke_cke",
   description: "Zapisz oficjalny protokół oceny wypracowania maturalnego CKE z języka polskiego.",
@@ -32,7 +32,7 @@ const ckeEvaluationTool: Anthropic.Tool = {
       },
       annotations: {
         type: "array",
-        description: "KOMPLETNA I WYCZERPUJĄCA LISTA WSZYSTKICH BŁĘDÓW W TEKŚCIE. Zakaz podawania jedynie kilku próbek! Każda pojedyncza usterka (językowa, ortograficzna, każdy brakujący przecinek, błąd spacji czy błąd rzeczowy), którą odliczasz w punktacji, MUSI mieć tutaj swój osobny obiekt.",
+        description: "Lista wszystkich unikalnych usterek w tekście. ZASADA: Na jeden konkretny wyraz przypada maksymalnie jeden błąd (nie powielaj ortografii jako błędu językowego). Jeśli w jednym zdaniu występuje kilka błędów na różnych słowach, zaznacz każdy z nich oddzielnie!",
         items: {
           type: "object",
           properties: {
@@ -42,7 +42,7 @@ const ckeEvaluationTool: Anthropic.Tool = {
             },
             replacement: {
               type: "string",
-              description: "Poprawna forma (np. wstawiony przecinek, poprawna litera, lepsze słowo)."
+              description: "Poprawna forma (np. wstawiony przecinek, poprawna litera, lepsze słowo, sprostowanie faktu)."
             },
             type: {
               type: "string",
@@ -184,33 +184,41 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 🌟 KROK 5B: SZYBKI AUDYT FAKTÓW FABULARNYCH PRZEZ GEMINI FLASH (~1s)
-    let factCheckContext = "";
+    // 🌟 KROK 5B: SZYBKI I PRECYZYJNY AUDYT FAKTÓW ORAZ BŁĘDÓW KARDYNALNYCH PRZEZ GEMINI FLASH
+    let geminiFactAudit = "";
     try {
-      const factModel = genAI.getGenerativeModel({ model: "gemini-3.5-flash" });
-      const factPrompt = `Jesteś bezwzględnym weryfikatorem faktów literackich (CKE Matura z języka polskiego).
-      Przeanalizuj poniższe wypracowanie i wskaż WYŁĄCZNIE obiektywne błędy rzeczowe/fabularne:
-      - Czy bohaterowie nie zostali zamienieni? (np. kto z kim rozmawiał, kto co komu wręczył, kto kogo zabił)
-      - Czy wydarzenia, miejsca akcji i motywy są w 100% zgodne z fabułą lektur?
-      Nie oceniaj języka, stylu ani kompozycji. 
+      const factModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const factPrompt = `Jesteś bezwzględnym, encyklopedycznym weryfikatorem faktów literackich i historycznych do egzaminu maturalnego CKE z języka polskiego.
 
-Zwróć odpowiedź w poprawnym formacie JSON:
+Twoim wyłącznym zadaniem jest wykrycie:
+1. BŁĘDÓW KARDYNALNYCH:
+   - Całkowicie nieuprawniona interpretacja lektury obowiązkowej, będąca falsyfikacją losów głównego bohatera lub głównego wątku (np. Wokulski żeni się z Izabelą i żyją szczęśliwie; Raskolnikow jest niewinny; Roland ucieka z pola walki).
+2. BŁĘDÓW RZECZOWYCH (Faktograficznych):
+   - Zamiana bohaterów (np. Stańczyk ukazuje się Poecie zamiast Dziennikarzowi; Cichowski wywieziony na Sybir zamiast więziony w Warszawie).
+   - Pomylenie narzędzi, rekwizytów i sposobu czynów (np. Raskolnikow zabija lichwiarkę sztyletem/nożem zamiast siekierą ze stróżówki; Konrad Wallenrod używa pistoletu zamiast trucizny; Stańczyk wręcza Poecie kaduceusz).
+   - Pomylenie wydarzeń historycznych i powstań (np. Rzecki walczący w powstaniu styczniowym zamiast w Wiośnie Ludów na Węgrzech).
+   - Pomylenie imion, nazwisk, autorów i realiów.
+
+Nie oceniaj stylu, języka, kompozycji ani ortografii!
+
+Zwróć odpowiedź w czystym formacie JSON:
 {
+  "has_cardinal_error": boolean,
+  "cardinal_error_description": string | null,
   "has_factual_errors": boolean,
   "errors": [
     {
-      "original": "dokładny krótki cytat 1-4 słowa z tekstu ucznia",
-      "explanation": "zwięzłe wyjaśnienie błędu rzeczowego",
+      "original": "dokładny krótki cytat (1-4 słowa) z tekstu ucznia z błędem",
+      "explanation": "konkretne wyjaśnienie błędu rzeczowego",
       "replacement": "poprawny fakt"
     }
   ]
 }
-Jeśli w wypracowaniu nie ma żadnych błędów rzeczowych, zwróć: {"has_factual_errors": false, "errors": []}
 
-TEMAT ROZPRAWKI:
+TEMAT:
 ${topic}
 
-TEKST WYPRACOWANIA:
+WYPRACOWANIE UCZNIA:
 ${essayText}`;
 
       const factRes = await factModel.generateContent({
@@ -219,18 +227,23 @@ ${essayText}`;
       });
 
       const factJson = JSON.parse(factRes.response.text());
+
+      if (factJson.has_cardinal_error) {
+        geminiFactAudit += `\n🚨 WYKRYTO BŁĄD KARDYNALNY: ${factJson.cardinal_error_description} -> Zgodnie z CKE praca = 0/35 pkt (SFWP=0, KLiK=0, KW=0, JW=0)!\n`;
+      }
+
       if (factJson.has_factual_errors && Array.isArray(factJson.errors) && factJson.errors.length > 0) {
-        factCheckContext = `\n\n=== AUDYT FAKTÓW FABULARNYCH DLA LEKTUR (GEMINI FACT-CHECK) ===\n` +
+        geminiFactAudit += `\n=== AUDYT FAKTÓW FABULARNYCH (GEMINI FLASH) ===\n` +
           factJson.errors.map((err: any, i: number) => 
-            `${i + 1}. Fragment z błędem: "${err.original}" | Błąd: ${err.explanation} | Sprostowanie: ${err.replacement}`
+            `${i + 1}. Fragment: "${err.original}" | Błąd: ${err.explanation} | Sprostowanie: ${err.replacement}`
           ).join("\n") +
-          `\nZALECENIE: Powyższe błędy fabularne zostały zweryfikowane encyklopedycznie. Uwzględnij je przy punktacji KLiK (odejmij odpowiednio punkty) i dodaj do tablicy "annotations" jako type: "rzeczowy". Uważaj, aby nie powielać tego samego błędu wielokrotnie!`;
+          `\nWskazówka CKE: Każdy powyższy błąd fabularny potraktuj jako błąd RZECZOWY (-1 pkt w KLiK) i dodaj do tablicy annotations jako type: "rzeczowy".`;
       }
     } catch (e) {
-      console.warn("Błąd audytu faktów Gemini Flash (kontynuujemy bez asysty):", e);
+      console.warn("Błąd audytu faktów Gemini Flash:", e);
     }
 
-    // 6. TWÓJ ORYGINALNY PROMPT SYSTEMOWY (NIETKNIĘTY)
+    // 6. PROMPT SYSTEMOWY DLA CLAUDE ZGODNY Z INFORMATOREM CKE
     const systemPrompt = `Jesteś oficjalnym, doświadczonym i skrupulatnym egzaminatorem CKE oceniającym wypracowania maturalne z języka polskiego (poziom podstawowy, Formuła 2023, skala 35 punktów). 
 
 Twoim zadaniem jest dokładna, sprawiedliwa ocena pracy zgodnie z oficjalnym kluczem CKE. 
@@ -241,51 +254,65 @@ ${ckeGuidelines}
 === KONIEC BAZY WIEDZY ===
 ${similarEssaysContext}
 
-=== KRYTERIA I ZASADY PUNKTACJI CKE ===
+=== OFICJALNE ZASADY I KRYTERIA CKE (INFORMATOR MATURALNY) ===
 
-1. WERYFIKACJA OBJĘTOŚCI:
+1. WERYFIKACJA OBJĘTOŚCI (< 300 słów):
    - Wymóg formalny: minimum 300 słów.
    - Jeśli słów < 300: przyznaj KW = 0/7 oraz JW = 0/11 (oficjalna zasada CKE!).
    - Jeśli słów >= 300: oceń pełne 4 kryteria.
 
-2. KLiK (0–16 pkt) & BŁĘDY RZECZOWE:
-   - RYGOR FAKTOGRAFICZNY (ZERO POBŁAŻLIWOŚCI): Pod żadnym pozorem nie usprawiedliwiaj przeinaczeń fabularnych jako „drobnych niejednoznaczności”, „skrótów myślowych” czy „dopuszczalnych uproszczeń”! Egzaminator CKE bezwzględnie karze za błędy faktograficzne.
-   - ODDZIELENIE SYMBOLIKI OD FAKTÓW: Nawet jeśli wywód ucznia brzmi dojrzale, a interpretacja motywu czy symbolu jest trafna, to jeśli fakt fabularny (kto, komu, co zrobił, w jakich okolicznościach, gdzie, kiedy) jest niezgodny z treścią utworu – JEST TO BEZWZGLĘDNY BŁĄD RZECZOWY!
-   - CO STANOWI BŁĄD RZECZOWY (-1 PKT W KLiK):
-     * Błędne przypisanie czynu, relacji, dialogu, symbolu, rekwizytu lub wydarzenia do niewłaściwego bohatera (np. pomylenie postaci w danej scenie, przypisanie jednemu bohaterowi doświadczeń innego).
-     * Przeinaczenie faktów z fabuły utworu, motywacji postaci, chronologii zdarzeń lub finału losów bohaterów drugoplanowych.
-     * Pomylenie imion, nazwisk, tytułów utworów, autorów lub faktów historycznych/biograficznych.
-   - Za KAŻDY unikalny błąd rzeczowy bezwzględnie odejmij 1 punkt od wyjściowej punktacji KLiK (pamiętaj: błąd kardynalny zeruje całą pracę, a zwykły błąd rzeczowy odejmuje 1 pkt).
-   - Skala bazowa KLiK (przed potrąceniami za błędy rzeczowe):
-     * 13–16 pkt: Pogłębiona argumentacja, oba utwory w pełni funkcjonalne pod tezę.
-     * 9–12 pkt: Zadowalająca argumentacja, poprawna analiza lektur.
-     * 8 pkt: Jedna lektura funkcjonalna, druga częściowo funkcjonalna, powierzchowna argumentacja.
-     * 1–4 pkt: Wyłącznie powierzchowne streszczenie fabuły.
+2. SFWP – Spełnienie formalnych warunków polecenia (0–1 pkt):
+   - Jeśli w pracy wystąpił BŁĄD KARDYNALNY (stwierdzony w audycie faktów lub w tekście) -> SFWP = 0/1 pkt.
+     ZASADA CKE: SFWP = 0 pkt powoduje, że WSZYSTKIE pozostałe kryteria (KLiK, KW, JW) = 0 pkt! Cała praca = 0/35 pkt.
+   - 1 pkt: brak błędu kardynalnego, odwołanie do lektury obowiązkowej (analityczne), praca dotyczy problemu i jest wypowiedzią argumentacyjną.
 
-3. KW: Kompozycja (0–7 pkt):
-   - 3a (Struktura): 0–3 pkt.
-   - 3b (Spójność): 0–3 pkt (zlicz zaburzenia logiczne i przeskoki).
+3. KLiK – Kompetencje literackie i kulturowe (0–16 pkt):
+   Polecenie CKE wymaga: (1) wybranej lektury obowiązkowej, (2) innego utworu literackiego oraz (3) wybranych kontekstów.
+   
+   TABELA CKE DLA LICZBY UTWORÓW I KONTEKSTÓW:
+   A. [TYLKO JEDEN UTWÓR LITERACKI W PRACY (brak drugiego utworu / brak drugiego argumentu)]:
+      - Jeśli uczeń odwołał się tylko do 1 utworu (nawet jeśli w pełni funkcjonalnie), MAKSYMALNA NOTA W KLIK TO ZALEDWIE 1–4 PKT:
+        * 4 pkt: 1 utwór funkcjonalny + 2 konteksty funkcjonalne
+        * 3 pkt: 1 utwór funkcjonalny + 1 kontekst funkcjonalny
+        * 2 pkt: 1 utwór funkcjonalny + konteksty częściowo funkcjonalne
+        * 1 pkt: 1 utwór funkcjonalny + brak funkcjonalnych kontekstów
+      - Kategoryczny zakaz przyznawania 5, 8, 12 czy 14 punktów, jeśli praca nie zawiera drugiego utworu literackiego!
+   
+   B. [DWA UTWORY LITERACKIE W PEŁNI FUNKCJONALNE]:
+      - 16 pkt: 2 utwory funkcjonalne + 2 konteksty funkcjonalne + erudycja
+      - 15 pkt: 2 utwory funkcjonalne + min. 1 kontekst funkcjonalny
+      - 14 pkt: 2 utwory funkcjonalne + konteksty częściowo funkcjonalne
+      - 13 pkt: 2 utwory funkcjonalne + BRAK funkcjonalnych kontekstów (brak kontekstów ścina ocenę do 13 pkt!)
+   
+   C. [JEDEN W PEŁNI + DRUGI CZĘŚCIOWO FUNKCJONALNY]:
+      - 12 pkt (2 konteksty funkcjonalne), 11 pkt (1 kontekst), 10 pkt (częściowe konteksty), 9 pkt (brak funkcjonalnych kontekstów).
+   
+   D. [DWA UTWORY CZĘŚCIOWO FUNKCJONALNE]:
+      - 8-5 pkt w zależności od kontekstów.
+
+   BŁĘDY RZECZOWE: Odejmij bezwzględnie 1 punkt za każdy unikalny błąd rzeczowy potwierdzony w audycie faktów lub w tekście.
+
+4. KW – Kompozycja (0–7 pkt):
+   - 3a (Struktura): 0–3 pkt. Jeśli uczeń przywołał tylko 1 utwór i 1 argument, struktura jest niepełna (max 1-2 pkt).
+   - 3b (Spójność): 0–3 pkt.
    - 3c (Styl): 0–1 pkt.
 
-4. JW: Język i styl (0–11 pkt) – APTEKARSKI AUDYT JĘZYKOWY:
-   - Policz absolutnie WSZYSTKIE usterki: językowe, ortograficzne i interpunkcyjne.
-   - BŁĘDY ORTOGRAFICZNE (Kryterium 4b): Zalicza się tu również pisanie małą literą nazw własnych, narodowości, mieszkańców krajów/miast oraz nazw zakonów (np. "krzyżaków" zamiast "Krzyżaków", "polak", "warszawiak"). Każde takie odstępstwo to bezwzględny błąd ortograficzny!
-   - BŁĘDY INTERPUNKCYJNE (Kryterium 4c): Wymóg bezwzględnego ścigania zbędnych lub brakujących przecinków. Każdy zbędny przecinek przed spójnikami porównawczymi typu "niż", "jak" łączącymi równoważniki zdań MUSI zostać wykryty i odjęty w liczbie błędów!
-   - Jeśli błędów językowych jest >= 18: przyznaj za 4a BEZWZGLĘDNIE 0/7 PKT!
-   - 4b (Ortografia): 0–2 pkt (0-1 błąd = 2 pkt, 2-3 błędy = 1 pkt, 4+ = 0 pkt).
-   - 4c (Interpunkcja): 0–2 pkt (0-4 błędy = 2 pkt, 5-14 błędów = 1 pkt, 15+ = 0-1 pkt).
-   - APTEKARSKA SKRUPULATNOŚĆ JĘZYKOWA: Nie pomijaj błędów interpunkcyjnych oraz drobnych potknięć słownikowych. Analizuj tekst z bezwzględnym rygorem egzaminatora państwowego.
+5. JW – Język i styl (0–11 pkt) – APTEKARSKI AUDYT JĘZYKOWY:
+   - Policz dokładnie wszystkie usterki i precyzyjnie przypisz kategorię:
+     * "interpunkcyjny": brakujące lub zbędne przecinki (np. przed niż/jak), spacje przed znakami interpunkcyjnymi.
+     * "ortograficzny": błędy pisowni (ó/u, rz/ż, ch/h, nie z częściami mowy, mała litera w nazwach własnych, narodowościach i zakonach).
+     * "językowy": błędy leksykalne, frazeologiczne, pleonazmy, błędy składniowe, odmiana wyrazów.
+   - 4a (Zakres i poprawność językowa): 0-7 pkt (≤5 błędów = 7-6 pkt, 6-8 = 6-5 pkt, 9-11 = 5-4 pkt, 12-14 = 4-3 pkt, 15-17 = 3-2 pkt, 18-21 = 2-1 pkt, ≥22 = 0 pkt).
+   - 4b (Ortografia): 0-1 błąd = 2 pkt, 2-4 błędy = 1 pkt, ≥5 błędów = 0 pkt.
+   - 4c (Interpunkcja): 0-8 błędów = 2 pkt, 9-16 błędów = 1 pkt, ≥17 błędów = 0 pkt.
 
-5. KRYTYCZNY WYMÓG: TABLICA "annotations" (PODŚWIETLENIA BŁĘDÓW W INTERFEJSIE):
-   - ABSOLUTNY ZAKAZ PODAWANIA PRÓBEK! Jeśli w kryteriach piszesz "naliczono 14 błędów językowych i 10 interpunkcyjnych", to tablica "annotations" MUSI zawierać dokładnie WSZYSTKIE te błędy (np. 24 oddzielne obiekty)! Każda usterka, za którą odejmujesz punkty, musi mieć swój wpis.
-   - JAK OZNACZAĆ BRAKUJĄCY PRZECINEK: W polu "original" podaj słowo przed i słowo po brakującym przecinku z tekstu ucznia (np. "bohaterka pomimo że"), a w "replacement" podaj poprawną formę z przecinkiem ("bohaterka, pomimo że").
-   - JAK OZNACZAĆ BŁĘDNE SPACJE / INTERPUNKCJĘ: Np. "original": "Zewnętrznej , " -> "replacement": "Zewnętrznej,".
-   - "original": MUSI TO BYĆ BEZWZGLĘDNA KOPIA 1:1 (COPY-PASTE) fragmentu tekstu ucznia (1-4 słowa).
+6. ZASADY TABLICY "annotations" (INTERFEJS):
+   - 1 KONKRETNY WYRAZ = MAKSYMALNIE 1 KATEGORIA BŁĘDU (jeśli wyraz ma błąd ortograficzny, oznacz go wyłącznie jako 'ortograficzny', nie dubluj jako 'językowy').
+   - WIELE BŁĘDÓW W TYM SAMYM ZDANIU: Jeśli w jednym zdaniu występuje kilka usterek na RÓŻNYCH słowach (np. błąd interpunkcyjny, błąd ortograficzny i błąd rzeczowy) – OZNACZ KAŻDY Z NICH JAKO OSOBNY WPIS! Nie pomijaj drugiego błędu tylko dlatego, że w tym samym zdaniu był już inny.
+   - "original": dokładny fragment (1-4 słowa) skopiowany 1:1 z tekstu ucznia.
    - "replacement": poprawna forma.
-   - "type": dokładnie jeden z: "rzeczowy" | "językowy" | "ortograficzny" | "interpunkcyjny".
-   - "explanation": zwięzłe wyjaśnienie reguły (1 zdanie).
 
-Zwróć pełną ocenę za pomocą dedykowanego narzędzia ocen_rozprawke_cke.`;
+Wywołaj narzędzie ocen_rozprawke_cke.`;
 
     const safeEssayText = essayText.replace(/<essay>/g, "").replace(/<\/essay>/g, "");
     const safeTopic = topic.replace(/<topic>/g, "").replace(/<\/topic>/g, "");
@@ -303,15 +330,16 @@ Zwróć pełną ocenę za pomocą dedykowanego narzędzia ocen_rozprawke_cke.`;
     <essay>
     ${safeEssayText}
     </essay>
-    ${factCheckContext}
+    ${geminiFactAudit}
 
     Oceń powyższą rozprawkę zgodnie z oficjalnymi kryteriami CKE Formuła 2023. 
-WAŻNE DLA INTERFEJSU:
-1. W tablicy "annotations" wypisz WSZYSTKIE wykryte usterki (językowe, ortograficzne, interpunkcyjne ze spacjami i brakującymi przecinkami, rzeczowe). 
-2. Nie ograniczaj się do 2-3 przykładów! Liczba wpisów w "annotations" ma odpowiadać liczbie błędów podanych w kryterium JW i KLiK, aby uczeń widział każde podświetlenie w tekście.
+WAŻNE DLA OCENY:
+1. Zwróć uwagę na liczbę argumentów i utworów literackich (jeśli uczeń użył TYLKO JEDNEGO utworu, KLiK wynosi max 1-4 pkt wg tabeli CKE!).
+2. Uwzględnij błędy rzeczowe i kardynalne z audytu faktów.
+3. Wypisz usterki w tablicy "annotations". Na jedno słowo przypada max 1 błąd, ale jeśli w zdaniu są błędy na różnych słowach, oznacz każdy z nich.
 Wywołaj narzędzie ocen_rozprawke_cke.`;
 
-    // 7. WYWOŁANIE CLAUDE Z ZWIĘKSZONYM BUFOREM TOKENÓW (8000 ZAMIAST 4000)
+    // 7. WYWOŁANIE CLAUDE Z ZWIĘKSZONYM BUFOREM DO 12 000 TOKENÓW
     const CLAUDE_MODELS_TO_TRY = [
       "claude-sonnet-5",
       "claude-sonnet-4-6",
@@ -324,10 +352,10 @@ Wywołaj narzędzie ocen_rozprawke_cke.`;
 
     for (const modelName of CLAUDE_MODELS_TO_TRY) {
       try {
-        console.log(`-> Wywołanie Claude (${modelName}) z Tool Calling...`);
+        console.log(`-> Wywołanie Claude (${modelName}) z limitem 12k tokenów...`);
         claudeResponse = await anthropic.messages.create({
           model: modelName,
-          max_tokens: 8000,
+          max_tokens: 12000, // 🎯 12 000 tokenów wyjściowych zgodnie z życzeniem
           thinking: { type: "disabled" },
           tools: [ckeEvaluationTool],
           tool_choice: { type: "tool", name: "ocen_rozprawke_cke" },
@@ -367,34 +395,39 @@ Wywołaj narzędzie ocen_rozprawke_cke.`;
     }
 
     const parsedResult = toolUseBlock.input as any;
-    console.log("-> Odebrano dane z Claude. Klucze:", Object.keys(parsedResult));
 
-    // Normalizacja annotations
     if (!Array.isArray(parsedResult.annotations)) {
       parsedResult.annotations = [];
     }
 
-    // 🛡️ ANTY-DUPLIKACJA I OCHRONA PRZED NAKŁADANIEM SIĘ BŁĘDÓW (GEMINI + CLAUDE)
+    // 🛡️ PRECYZYJNA ANTY-DUPLIKACJA:
+    // Nie nakładamy dwóch błędów na DOKŁADNIE TO SAMO SŁOWO,
+    // ale zachowujemy wszystkie różne błędy w tym samym zdaniu na osobnych słowach!
     const dedupedAnnotations: any[] = [];
     for (const anno of parsedResult.annotations) {
       const cleanOrig = String(anno.original || "").trim().toLowerCase();
       if (!cleanOrig) continue;
 
-      // Sprawdzamy czy w deduped nie ma już błędu o identycznym lub nakładającym się fragmencie
-      const isDuplicate = dedupedAnnotations.some((existing) => {
+      const isSameWordDuplicate = dedupedAnnotations.some((existing) => {
         const existOrig = String(existing.original || "").trim().toLowerCase();
-        const isSameOrContained = existOrig === cleanOrig || existOrig.includes(cleanOrig) || cleanOrig.includes(existOrig);
-        // Jeśli ten sam fragment ma błąd tego samego typu lub rzeczowy, nie dublujemy
-        return isSameOrContained && (existing.type === anno.type || existing.type === "rzeczowy" || anno.type === "rzeczowy");
+        if (existOrig === cleanOrig) return true;
+
+        // Sprawdzamy pokrycie wyrazów
+        const existWords = existOrig.split(/[\s,.;:!?]+/).filter(Boolean);
+        const cleanWords = cleanOrig.split(/[\s,.;:!?]+/).filter(Boolean);
+        const commonWords = existWords.filter((w) => cleanWords.includes(w));
+
+        // Dubel występuje tylko wtedy, gdy oba wpisy wskazują na to samo pojedyncze słowo
+        return commonWords.length > 0 && (existWords.length === 1 && cleanWords.length === 1);
       });
 
-      if (!isDuplicate) {
+      if (!isSameWordDuplicate) {
         dedupedAnnotations.push(anno);
       }
     }
     parsedResult.annotations = dedupedAnnotations;
 
-    // Normalizacja details (jeśli model zwrócił obiekt zamiast tablicy)
+    // Normalizacja details
     if (!Array.isArray(parsedResult.details) && typeof parsedResult.details === "object" && parsedResult.details !== null) {
       parsedResult.details = Object.entries(parsedResult.details).map(([k, v]: [string, any]) => ({
         criterion: k,
@@ -403,36 +436,8 @@ Wywołaj narzędzie ocen_rozprawke_cke.`;
       }));
     }
 
-    // Fallback dla wyniku (gdyby model nazwał to np. total_score lub samą liczbą)
     if (!parsedResult.score) {
       parsedResult.score = parsedResult.total_score || parsedResult.points || "0/35";
-    }
-
-    // 🛡️ DODATKOWY AUTO-EXTRACTOR (Gdyby model pominął któryś z cytowanych w recenzji błędów)
-    if (Array.isArray(parsedResult.details)) {
-      parsedResult.details.forEach((d: any) => {
-        const commentText = String(d?.comment || "");
-        const regexPair = /['„"]([^'”"]+)['”"]\s+zamiast\s+['„"]([^'”"]+)['”"]/gi;
-        let match: RegExpExecArray | null;
-
-        while ((match = regexPair.exec(commentText)) !== null) {
-          const originalCandidate = match[1].trim();
-          const replacementCandidate = match[2].trim();
-
-          const alreadyExists = parsedResult.annotations.some(
-            (a: any) => a.original?.toLowerCase() === originalCandidate.toLowerCase()
-          );
-
-          if (!alreadyExists && essayText.toLowerCase().includes(originalCandidate.toLowerCase())) {
-            parsedResult.annotations.push({
-              original: originalCandidate,
-              replacement: replacementCandidate,
-              type: String(d.criterion).toLowerCase().includes("orto") ? "ortograficzny" : "językowy",
-              explanation: `Błąd wskazany przez egzaminatora: powinno być „${replacementCandidate}”.`
-            });
-          }
-        }
-      });
     }
 
     // 8. Zapis oceny do bazy Supabase (z bezpiecznym fallbackiem)
@@ -449,7 +454,6 @@ Wywołaj narzędzie ocen_rozprawke_cke.`;
 
     if (insertError) {
       console.error("Błąd zapisu do bazy:", insertError);
-      throw new Error("Nie udało się zapisać wyniku analizy w bazie.");
     }
 
     return NextResponse.json({
