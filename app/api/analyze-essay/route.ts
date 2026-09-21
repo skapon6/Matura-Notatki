@@ -434,6 +434,21 @@ Wywołaj narzędzie ocen_rozprawke_cke.`;
       parsedResult.annotations = [];
     }
 
+    // 🌟 AUTOMATYCZNE PRZELICZANIE SUMY PUNKTÓW (ZABEZPIECZENIE PRZED MATEMATYCZNYMI HALUCYNACJAMI CLAUDE'A)
+    if (Array.isArray(parsedResult.details)) {
+      let calculatedTotal = 0;
+      parsedResult.details.forEach((d: any) => {
+        const pointsStr = String(d?.points || "0");
+        // Wyciągamy pierwszą cyfrę/liczbę przed ukośnikiem (np. z "12/16" wyciąga 12, z "1/1" wyciąga 1)
+        const match = pointsStr.match(/^(\d+(?:\.\d+)?)/);
+        if (match) {
+          calculatedTotal += parseFloat(match[1]);
+        }
+      });
+      // Zawsze nadpisujemy pole score prawdziwą, matematyczną sumą składowych!
+      parsedResult.score = `${calculatedTotal}/35`;
+    }
+
     // 🛡️ PRECYZYJNA ANTY-DUPLIKACJA:
     // Nie nakładamy dwóch błędów na DOKŁADNIE TO SAMO SŁOWO,
     // ale zachowujemy wszystkie różne błędy w tym samym zdaniu na osobnych słowach!
