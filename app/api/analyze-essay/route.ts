@@ -203,12 +203,18 @@ ${similarEssaysContext}
    - Jeśli słów >= 300: oceń pełne 4 kryteria.
 
 2. KLiK (0–16 pkt) & BŁĘDY RZECZOWE:
-   - Przeprowadź bezwzględnie wnikliwą i surową analizę treści pod kątem wszelkiego rodzaju błędów rzeczowych, przeinaczeń fabularnych, fałszu merytorycznego, anachronizmów oraz błędów kardynalnych.
-   - Za każdy unikalny błąd rzeczowy odetnij 1 punkt z kryterium KLiK (pamiętaj o zasadzie: błąd kardynalny lub zbyt wiele błędów rzeczowych może zniszczyć całą punktację).
-   - 13–16 pkt: Pogłębiona argumentacja, oba utwory w pełni funkcjonalne pod tezę, brak błędów rzeczowych.
-   - 9–12 pkt: Zadowalająca argumentacja, poprawna analiza lektur.
-   - 8 pkt: Jedna lektura funkcjonalna, druga częściowo funkcjonalna, powierzchowna argumentacja.
-   - 1–4 pkt: Wyłącznie powierzchowne streszczenie fabuły.
+   - RYGOR FAKTOGRAFICZNY (ZERO POBŁAŻLIWOŚCI): Pod żadnym pozorem nie usprawiedliwiaj przeinaczeń fabularnych jako „drobnych niejednoznaczności”, „skrótów myślowych” czy „dopuszczalnych uproszczeń”! Egzaminator CKE bezwzględnie karze za błędy faktograficzne.
+   - ODDZIELENIE SYMBOLIKI OD FAKTÓW: Nawet jeśli wywód ucznia brzmi dojrzale, a interpretacja motywu czy symbolu jest trafna, to jeśli fakt fabularny (kto, komu, co zrobił, w jakich okolicznościach, gdzie, kiedy) jest niezgodny z treścią utworu – JEST TO BEZWZGLĘDNY BŁĄD RZECZOWY!
+   - CO STANOWI BŁĄD RZECZOWY (-1 PKT W KLiK):
+     * Błędne przypisanie czynu, relacji, dialogu, symbolu, rekwizytu lub wydarzenia do niewłaściwego bohatera (np. pomylenie postaci w danej scenie, przypisanie jednemu bohaterowi doświadczeń innego).
+     * Przeinaczenie faktów z fabuły utworu, motywacji postaci, chronologii zdarzeń lub finału losów bohaterów drugoplanowych.
+     * Pomylenie imion, nazwisk, tytułów utworów, autorów lub faktów historycznych/biograficznych.
+   - Za KAŻDY unikalny błąd rzeczowy bezwzględnie odejmij 1 punkt od wyjściowej punktacji KLiK (pamiętaj: błąd kardynalny zeruje całą pracę, a zwykły błąd rzeczowy odejmuje 1 pkt).
+   - Skala bazowa KLiK (przed potrąceniami za błędy rzeczowe):
+     * 13–16 pkt: Pogłębiona argumentacja, oba utwory w pełni funkcjonalne pod tezę.
+     * 9–12 pkt: Zadowalająca argumentacja, poprawna analiza lektur.
+     * 8 pkt: Jedna lektura funkcjonalna, druga częściowo funkcjonalna, powierzchowna argumentacja.
+     * 1–4 pkt: Wyłącznie powierzchowne streszczenie fabuły.
 
 3. KW: Kompozycja (0–7 pkt):
    - 3a (Struktura): 0–3 pkt.
