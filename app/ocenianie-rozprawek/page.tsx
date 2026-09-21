@@ -102,7 +102,6 @@ export default function OcenianieRozprawekPage() {
   const router = useRouter();
   const [currentTheme, setCurrentTheme] = useState<any>(getThemeClasses("library"));
 
-  // Globalny odtwarzacz Lo-Fi z contextu
   const {
     lofiActive,
     currentTrackIndex,
@@ -135,7 +134,6 @@ export default function OcenianieRozprawekPage() {
   const [generatedContexts, setGeneratedContexts] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
 
-  // 🌟 Referencja do auto-powiększania pola tekstowego rozprawki
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -488,7 +486,7 @@ export default function OcenianieRozprawekPage() {
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-500 ${currentTheme.bg} text-stone-200 font-sans`}>
       
-      {/* 🌟 DEDYKOWANY NAGŁÓWEK MODUŁU (PRZEZROCZYSTY JAK W MATURZE USTNEJ) */}
+      {/* 🌟 DEDYKOWANY NAGŁÓWEK MODUŁU */}
       <header className={`border-b ${currentTheme.cardBorder} px-4 sm:px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 backdrop-blur-md sticky top-0 z-40 transition-colors duration-500 w-full`}>
         <div className="flex w-full md:w-auto items-center justify-between md:justify-start gap-4">
           <button
@@ -709,8 +707,8 @@ export default function OcenianieRozprawekPage() {
           </div>
         )}
 
-        {/* 🌟 KARTA GŁÓWNA - MAX-W-5XL (PRAWIDŁOWA SZEROKOŚĆ) */}
-        <div className={`max-w-5xl w-full ${currentTheme.cardBg} border ${currentTheme.cardBorder} rounded-3xl p-6 sm:p-8 shadow-xl mt-8 mb-12 flex flex-col gap-6 transition-colors duration-500`}>
+        {/* 🌟 GŁÓWNA KARTA – POSZERZONA DO MAX-W-[1200PX] */}
+        <div className={`max-w-[1200px] w-full ${currentTheme.cardBg} border ${currentTheme.cardBorder} rounded-3xl p-6 sm:p-10 shadow-2xl mt-8 mb-12 flex flex-col gap-6 transition-colors duration-500`}>
           
           <div className="p-4 rounded-2xl bg-stone-950/40 border border-stone-800/60 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -725,9 +723,9 @@ export default function OcenianieRozprawekPage() {
             </span>
           </div>
 
-          {/* 🌟 ZMIANA PROPORCJI GRID: 9 Kolumn na Edytor, 3 Kolumny na Wynik */}
+          {/* 🌟 SIATKA: 8 KOLUMN NA EDYTOR, 4 KOLUMNY NA WYNIKI */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <div className="lg:col-span-9 flex flex-col gap-5">
+            <div className="lg:col-span-8 flex flex-col gap-5">
               
               <div>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
@@ -746,14 +744,14 @@ export default function OcenianieRozprawekPage() {
                   </button>
                 </div>
 
-                {/* 🌟 POWIĘKSZONE, CZYTELNE POLE TEMATU */}
+                {/* 🌟 POWIĘKSZONY, MASYWNY TEMAT */}
                 <textarea 
                   rows={2}
                   placeholder="Wpisz temat rozprawki lub wybierz z bazy CKE..."
                   value={selectedTopic}
                   onChange={(e) => setSelectedTopic(e.target.value)}
                   disabled={isAnalyzing || isGenerating || analysisResult !== null}
-                  className="w-full bg-stone-900/50 hover:bg-stone-900/70 focus:bg-stone-900/90 border border-stone-800 rounded-2xl p-5 sm:p-6 text-base sm:text-lg text-stone-100 font-serif font-bold leading-relaxed focus:outline-none focus:border-amber-500/70 focus:ring-1 focus:ring-amber-500/30 disabled:opacity-60 disabled:cursor-not-allowed shadow-inner transition-all resize-none min-h-[96px]"
+                  className="w-full bg-stone-900/50 hover:bg-stone-900/70 focus:bg-stone-900/90 border border-stone-800 rounded-2xl p-5 sm:p-6 text-lg sm:text-xl text-stone-100 font-serif font-black leading-relaxed focus:outline-none focus:border-amber-500/70 focus:ring-1 focus:ring-amber-500/30 disabled:opacity-60 disabled:cursor-not-allowed shadow-inner transition-all resize-none min-h-[96px]"
                 />
               </div>
 
@@ -825,11 +823,11 @@ export default function OcenianieRozprawekPage() {
                       e.target.style.height = `${e.target.scrollHeight}px`;
                     }}
                     disabled={isAnalyzing || isGenerating || isGenerationMode || analysisResult !== null}
-                    className="w-full min-h-[350px] bg-stone-900/50 hover:bg-stone-900/70 focus:bg-stone-900/90 border border-stone-800 rounded-2xl p-6 sm:p-8 text-base sm:text-lg text-stone-200 font-serif leading-loose focus:outline-none focus:border-amber-600/50 disabled:opacity-60 disabled:cursor-not-allowed shadow-inner transition-colors resize-none overflow-hidden"
+                    className="w-full min-h-[400px] bg-stone-900/50 hover:bg-stone-900/70 focus:bg-stone-900/90 border border-stone-800 rounded-2xl p-6 sm:p-8 text-base sm:text-lg text-stone-200 font-serif leading-loose focus:outline-none focus:border-amber-600/50 disabled:opacity-60 disabled:cursor-not-allowed shadow-inner transition-colors resize-none overflow-hidden"
                   />
                 </div>
               ) : (
-                <div className="bg-stone-950/40 border border-stone-800 rounded-2xl p-6 min-h-[350px] shadow-inner">
+                <div className="bg-stone-950/40 border border-stone-800 rounded-2xl p-6 min-h-[400px] shadow-inner">
                   <div className="mb-5 border-b border-stone-900 pb-3 flex justify-between items-center">
                     <span className="text-xs uppercase tracking-widest text-emerald-400 font-semibold">Zweryfikowana treść:</span>
                     <span className="text-[10px] text-stone-500">Najedź myszką na błąd</span>
@@ -878,8 +876,8 @@ export default function OcenianieRozprawekPage() {
               )}
             </div>
 
-            {/* PRAWA KOLUMNA: RAPORT AI (3 KOLUMNY Z 12) */}
-            <div className="lg:col-span-3 flex flex-col gap-5">
+            {/* PRAWA KOLUMNA: RAPORT AI (4 KOLUMNY Z 12) */}
+            <div className="lg:col-span-4 flex flex-col gap-5">
               {isAnalyzing || isGenerating ? (
                 <div className="rounded-2xl border border-amber-950/40 bg-stone-950/20 p-5 flex flex-col justify-center items-center text-center min-h-[400px]">
                   <AtmosphericEssayLoader />
@@ -893,17 +891,23 @@ export default function OcenianieRozprawekPage() {
                     </span>
                   </div>
 
-                  <div className="space-y-4">
-                    {detailsArray.map((detail: any, i: number) => (
-                      <div key={i} className="text-[11.5px] border-b border-stone-900/55 pb-3 last:border-none">
-                        <div className="flex justify-between font-bold text-stone-200 mb-1.5">
-                          <span>{safeString(detail.criterion)}</span>
-                          <span className="text-[#c68a4c] font-mono text-sm">{safeString(detail.points)}</span>
+                  {detailsArray.length === 0 ? (
+                    <div className="p-4 bg-red-950/40 border border-red-900/50 rounded-xl text-xs text-red-400 text-center leading-relaxed">
+                       ⚠️ Wystąpił błąd w generowaniu opisu punktów (model pominął ten krok). Zresetuj edytor i spróbuj ponownie, aby otrzymać pełny protokół.
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {detailsArray.map((detail: any, i: number) => (
+                        <div key={i} className="text-[11.5px] border-b border-stone-900/55 pb-3 last:border-none">
+                          <div className="flex justify-between font-bold text-stone-200 mb-1.5">
+                            <span>{safeString(detail.criterion)}</span>
+                            <span className="text-[#c68a4c] font-mono text-sm">{safeString(detail.points)}</span>
+                          </div>
+                          <p className="text-stone-400 font-sans leading-relaxed">{safeString(detail.comment)}</p>
                         </div>
-                        <p className="text-stone-400 font-sans leading-relaxed">{safeString(detail.comment)}</p>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
 
                   {analysisResult.summary && (
                     <div className="border-t border-stone-800 pt-4 mt-2">

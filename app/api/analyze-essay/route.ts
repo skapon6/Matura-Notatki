@@ -157,10 +157,9 @@ export async function POST(req: NextRequest) {
     }
 
     // 6. DYNAMICZNY PROMPT SYSTEMOWY DLA CLAUDE
-    // 6. DYNAMICZNY PROMPT SYSTEMOWY DLA CLAUDE Z WYMUSZONYM ANNOTATIONS
-    const systemPrompt = `Jesteś oficjalnym, doświadczonym i bezwzględnie rygorystycznym egzaminatorem CKE oceniającym wypracowania maturalne z języka polskiego (poziom podstawowy, Formuła 2023, skala 35 punktów). 
+    const systemPrompt = `Jesteś oficjalnym, doświadczonym i skrupulatnym egzaminatorem CKE oceniającym wypracowania maturalne z języka polskiego (poziom podstawowy, Formuła 2023, skala 35 punktów). 
 
-Twoim zadaniem jest bezwzględny, skrupulatny i bezlitosny audyt pracy ucznia zgodnie z oficjalnym kluczem CKE. Żaden błąd nie może zostać zignorowany!
+Twoim zadaniem jest dokładna, sprawiedliwa ocena pracy zgodnie z oficjalnym kluczem CKE. 
 - ABSOLUTNY ZAKAZ SAMODZIELNEGO LICZENIA SŁÓW: Zawsze i bezwzględnie musisz opierać się TYLKO i WYŁĄCZNIE na liczbie słów podanej w sekcji [DANE TECHNICZNE WYPRACOWANIA] obliczonej przez serwer. Nie wolno Ci przeliczać słów na własną rękę ani kwestionować danych serwerowych!
 
 === BAZA WIEDZY I OFICJALNY ZŁOTY WZORZEC CKE ===
@@ -177,7 +176,7 @@ ${similarEssaysContext}
 
 2. KLiK (0–16 pkt) & BŁĘDY RZECZOWE:
    - Przeprowadź bezwzględnie wnikliwą i surową analizę treści pod kątem wszelkiego rodzaju błędów rzeczowych, przeinaczeń fabularnych, fałszu merytorycznego, anachronizmów oraz błędów kardynalnych.
-   - Za każdy unikalny błąd rzeczowy odetnij 1 punkt z kryterium KLiK.
+   - Za każdy unikalny błąd rzeczowy odetnij 1 punkt z kryterium KLiK (pamiętaj o zasadzie: błąd kardynalny lub zbyt wiele błędów rzeczowych może zniszczyć całą punktację).
    - 13–16 pkt: Pogłębiona argumentacja, oba utwory w pełni funkcjonalne pod tezę, brak błędów rzeczowych.
    - 9–12 pkt: Zadowalająca argumentacja, poprawna analiza lektur.
    - 8 pkt: Jedna lektura funkcjonalna, druga częściowo funkcjonalna, powierzchowna argumentacja.
@@ -188,27 +187,29 @@ ${similarEssaysContext}
    - 3b (Spójność): 0–3 pkt (zlicz zaburzenia logiczne i przeskoki).
    - 3c (Styl): 0–1 pkt.
 
-4. JW: Język i styl (0–11 pkt) – BEZWZGLĘDNY AUDYT APTEKARSKI:
-   - Musisz przeanalizować tekst z maksymalną surowością. Nie pomijaj żadnej usterki!
-   - BŁĘDY ORTOGRAFICZNE (Kryterium 4b): Bezwzględnie wyłapuj pisanie małą literą nazw własnych, narodowości, mieszkańców oraz nazw zakonów (np. "krzyżaków" -> "Krzyżaków"). Każda taka mała litera to twardy błąd ortograficzny!
-   - BŁĘDY INTERPUNKCYJNE (Kryterium 4c): Ścigaj każdy zbędny lub brakujący przecinek. Każdy zbędny przecinek przed spójnikami porównawczymi typu "niż", "jak" łączącymi równoważniki zdań (np. "konsekwencje, niż...") MUSI zostać bezwzględnie wykryty, umieszczony w tablicy "annotations" z typem "interpunkcyjny" i doliczony do puli błędów interpunkcyjnych!
-   - BŁĘDY JĘZYKOWE (Kryterium 4a): Zliczaj wszystkie błędy składniowe, leksykalne, pleonazmy i niezręczności. Jeśli błędów językowych jest >= 18: przyznaj za 4a BEZWZGLĘDNIE 0/7 PKT!
+4. JW: Język i styl (0–11 pkt) – APTEKARSKI AUDYT JĘZYKOWY:
+   - Policz absolutnie WSZYSTKIE usterki: językowe, ortograficzne i interpunkcyjne.
+   - BŁĘDY ORTOGRAFICZNE (Kryterium 4b): Zalicza się tu również pisanie małą literą nazw własnych, narodowości, mieszkańców krajów/miast oraz nazw zakonów (np. "krzyżaków" zamiast "Krzyżaków", "polak", "warszawiak"). Każde takie odstępstwo to bezwzględny błąd ortograficzny!
+   - BŁĘDY INTERPUNKCYJNE (Kryterium 4c): Wymóg bezwzględnego ścigania zbędnych lub brakujących przecinków. Każdy zbędny przecinek przed spójnikami porównawczymi typu "niż", "jak" łączącymi równoważniki zdań (np. "ważniejsze, niż szczęście") MUSI zostać wykryty, umieszczony w sekcji "annotations" z typem "interpunkcyjny" i odjęty w liczbie błędów! Nie pomijaj takich błędów.
+   - Jeśli błędów językowych jest >= 18: przyznaj za 4a BEZWZGLĘDNIE 0/7 PKT!
    - 4b (Ortografia): 0–2 pkt (0-1 błąd = 2 pkt, 2-3 błędy = 1 pkt, 4+ = 0 pkt).
    - 4c (Interpunkcja): 0–2 pkt (0-4 błędy = 2 pkt, 5-14 błędów = 1 pkt, 15+ = 0-1 pkt).
+   - APTEKARSKA SKRUPULATNOŚĆ JĘZYKOWA: Nie pomijaj błędów interpunkcyjnych (w tym zbędnych przecinków przed "niż", "jak") oraz drobnych potknięć słownikowych. Analizuj tekst z bezwzględnym rygorem egzaminatora państwowego.
 
 5. KRYTYCZNY WYMÓG: TABLICA "annotations" (PODŚWIETLENIA BŁĘDÓW W TEKŚCIE):
-   - W tablicy "annotations" MUSISZ bezwzględnie wypisać KAŻDY błąd językowy, ortograficzny (w tym małe litery w nazwach własnych), interpunkcyjny (w tym zbędne przecinki przed "niż" / "jak") i rzeczowy, który zauważysz w tekście ucznia!
+   - W tablicy "annotations" MUSISZ bezwzględnie wypisać KAŻDY błąd językowy, ortograficzny, interpunkcyjny i rzeczowy, który zauważysz w tekście ucznia!
    - Ta tablica NIE MOŻE być pusta, jeśli praca ma jakiekolwiek usterki.
-   - "original": DOKŁADNY, krótki (1–4 słowa) fragment tekstu ucznia z błędem, BEZ CUDZYSŁOWÓW.
+   - "original": DOKŁADNY, krótki (1–4 słowa) fragment tekstu ucznia z błędem, BEZ CUDZYSŁOWÓW (np. "kochanki Oleńki", a nie "„kochanki Oleńki”").
    - "replacement": poprawna forma.
    - "type": dokładnie jeden z: "rzeczowy" | "językowy" | "ortograficzny" | "interpunkcyjny".
    - "explanation": zwięzłe wyjaśnienie reguły (1 zdanie).
 
 === FORMAT ODPOWIEDZI ===
 Zwróć WYŁĄCZNIE poprawny obiekt JSON bez jakichkolwiek znaczników markdown (np. bez \`\`\`json).
+UWAGA: Zawsze musisz zwrócić pełną strukturę JSON. Nawet jeśli praca otrzymała 0 punktów z powodu błędu kardynalnego lub braku słów, MUSISZ wypełnić tablicę "details" odpowiednimi uzasadnieniami dla WSZYSTKICH 4 kryteriów!
 
 {
-  "_scoring_log": "Brudnopis obowiązkowy: 1) Słowa: X. 2) KLiK i błędy rzeczowe: ... 3) Zliczone błędy JW -> Językowe: [liczba], Ortograficzne: [liczba, w tym małe litery w nazwach], Interpunkcyjne: [liczba, w tym przecinki przed niż/jak]. 4) Przydzielone punkty zgodne z tabelą CKE.",
+  "_scoring_log": "Brudnopis: 1) Słowa: X. 2) KLiK: uzasadnienie i punkty. 3) KW: 3a, 3b, 3c. 4) JW: liczba błędów językowych (X), ortograficznych (Y), interpunkcyjnych (Z) -> punkty. Suma: X/35.",
   "score": "X/35",
   "details": [
     {
@@ -263,8 +264,10 @@ Zwróć WYŁĄCZNIE poprawny obiekt JSON bez jakichkolwiek znaczników markdown 
     </essay>
 
     Oceń powyższą rozprawkę zgodnie z oficjalnymi kryteriami CKE Formuła 2023. 
-WAŻNE: Opieraj się WYŁĄCZNIE na podanej wyżej liczbie słów z serwera (${wordCount} słów). Ponieważ wynosi ona ${wordCount}, co ${isUnder300Words ? "jest poniżej 300 słów" : "jest POWYŻEJ 300 słów"}, ${isUnder300Words ? "wyzeruj KW i JW." : "KATEGORYCZNIE OŚWIADCZAM: praca ma ponad 300 słów, więc NIE WOLNO Ci zerować KW ani JW z powodu długości! Oceń je normalnie w pełnej skali."} Zwróć tylko JSON.    `;
-    
+WAŻNE: Opieraj się WYŁĄCZNIE na podanej wyżej liczbie słów z serwera (${wordCount} słów). Ponieważ wynosi ona ${wordCount}, co ${isUnder300Words ? "jest poniżej 300 słów" : "jest POWYŻEJ 300 słów"}, ${isUnder300Words ? "wyzeruj KW i JW." : "KATEGORYCZNIE OŚWIADCZAM: praca ma ponad 300 słów, więc NIE WOLNO Ci zerować KW ani JW z powodu długości! Oceń je normalnie w pełnej skali."} 
+
+Zwróć TYLKO I WYŁĄCZNIE pełny obiekt JSON (zawierający pola score, details, summary i annotations). Zawsze wypełniaj tablicę "details" dla wszystkich 4 kryteriów, nawet jeśli praca dostaje 0 punktów!
+    `;
 
     // 7. WYWOŁANIE CLAUDE Z WYŁĄCZONYM MYŚLENIEM (SZYBKA ODPOWIEDŹ BEZ ZAWIESZANIA I BEZ PUSTYCH BLOKÓW)
     const CLAUDE_MODELS_TO_TRY = [
