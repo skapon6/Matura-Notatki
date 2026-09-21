@@ -16,11 +16,18 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
   const [cozyTheme, setCozyTheme] = useState<CozyTheme>("library");
   const currentTheme = getThemeClasses(cozyTheme);
 
+  // 🌟 Dynamiczne wczytywanie i natychmiastowe reagowanie na zmianę motywu
   useEffect(() => {
-    const savedTheme = localStorage.getItem("app_theme") as CozyTheme;
-    if (savedTheme) {
-      setCozyTheme(savedTheme);
-    }
+    const handleThemeUpdate = () => {
+      const savedTheme = localStorage.getItem("app_theme") as CozyTheme;
+      if (savedTheme) {
+        setCozyTheme(savedTheme);
+      }
+    };
+
+    handleThemeUpdate();
+    window.addEventListener("storage", handleThemeUpdate);
+    return () => window.removeEventListener("storage", handleThemeUpdate);
   }, []);
 
   const {
@@ -40,7 +47,6 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEra, setSelectedEra] = useState("Wszystkie");
-  // 🎯 Typ notatki: lektura / epoka / pomocnik
   const [selectedType, setSelectedType] = useState<"all" | "lektura" | "epoka" | "pomocnik">("all");
   const [showOnlyFree, setShowOnlyFree] = useState(false);
   const [readFilter, setReadFilter] = useState<"all" | "read" | "unread">("all");
@@ -148,7 +154,6 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
     if (readFilter === "read" && !readNotes.includes(note.id)) return false;
     if (readFilter === "unread" && readNotes.includes(note.id)) return false;
 
-    // Filtrowanie po typie (lektura / epoka / pomocnik)
     if (selectedType !== "all") {
       if (selectedType === "pomocnik") {
         if (note.type === "epoka" || note.type === "lektura") return false;
@@ -217,7 +222,7 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
                 </svg>
               ) : (
                 <svg className="w-4 h-4 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 001.555-.832l3.197-2.132a1 1 0 000-1.664z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               )}
@@ -253,10 +258,10 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
 
       {/* GŁÓWNY PANEL FILTROWANIA */}
       <main className="max-w-7xl mx-auto w-full p-6 flex flex-col gap-6 flex-1 select-none animate-slide-in">
-        <div className={`p-6 rounded-3xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} shadow-md flex flex-col gap-3.5`}>
+        <div className={`p-6 rounded-3xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} shadow-md flex flex-col gap-3.5 transition-colors duration-500`}>
           
           {/* 🎯 1. FILTR STATUSU */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 border-b border-stone-800/40 pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 border-b border-stone-850/50 pb-3">
             <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider pl-1">Status:</span>
             <div className="flex gap-1.5 flex-wrap">
               {[
@@ -267,7 +272,7 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
                 <button 
                   key={status.id} 
                   onClick={() => { playSound("click"); setReadFilter(status.id); }} 
-                  className={`text-[10px] px-3.5 py-1.5 rounded-xl border font-bold uppercase transition-all cursor-pointer ${readFilter === status.id ? "bg-amber-500/20 text-amber-400 border-amber-500/40 font-bold" : "border-stone-800/60 bg-stone-950/40 text-stone-400 hover:border-stone-700 hover:text-stone-200"}`}
+                  className={`text-[10px] px-3.5 py-1.5 rounded-xl border font-bold uppercase transition-all cursor-pointer ${readFilter === status.id ? "bg-amber-500/20 text-amber-400 border-amber-500/40 font-bold" : `border ${currentTheme.btnBorder} ${currentTheme.cardBg} ${currentTheme.subText} hover:text-stone-200`}`}
                 >
                   {status.label}
                 </button>
@@ -275,8 +280,8 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
             </div>
           </div>
 
-          {/* 🎯 2. NOWY FILTR TYPU (Lektury / Epoki / Pomocniki) */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 border-b border-stone-800/40 pb-3">
+          {/* 🎯 2. FILTR TYPU */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 border-b border-stone-850/50 pb-3">
             <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider pl-1">Typ materiału:</span>
             <div className="flex gap-1.5 flex-wrap">
               {[
@@ -288,7 +293,7 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
                 <button 
                   key={type.id} 
                   onClick={() => { playSound("click"); setSelectedType(type.id); }} 
-                  className={`text-[10px] px-3.5 py-1.5 rounded-xl border font-bold uppercase transition-all cursor-pointer ${selectedType === type.id ? "bg-amber-500/20 text-amber-400 border-amber-500/40 font-bold" : "border-stone-800/60 bg-stone-950/40 text-stone-400 hover:border-stone-700 hover:text-stone-200"}`}
+                  className={`text-[10px] px-3.5 py-1.5 rounded-xl border font-bold uppercase transition-all cursor-pointer ${selectedType === type.id ? "bg-amber-500/20 text-amber-400 border-amber-500/40 font-bold" : `border ${currentTheme.btnBorder} ${currentTheme.cardBg} ${currentTheme.subText} hover:text-stone-200`}`}
                 >
                   {type.label}
                 </button>
@@ -299,7 +304,7 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
           {/* 🎯 3. FILTR EPOK */}
           <div className="flex flex-wrap gap-2 pt-0.5">
             {eras.map((era) => (
-              <button key={era} onClick={() => { playSound("click"); setSelectedEra(era); }} className={`text-xs px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${selectedEra === era ? "bg-amber-500/20 text-amber-400 border-amber-500/40 font-bold" : "border-stone-800/60 bg-stone-950/40 text-stone-400 hover:border-stone-700 hover:text-stone-200"}`}>{era}</button>
+              <button key={era} onClick={() => { playSound("click"); setSelectedEra(era); }} className={`text-xs px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${selectedEra === era ? "bg-amber-500/20 text-amber-400 border-amber-500/40 font-bold" : `border ${currentTheme.btnBorder} ${currentTheme.cardBg} ${currentTheme.subText} hover:text-stone-200`}`}>{era}</button>
             ))}
           </div>
           
@@ -309,22 +314,27 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
             placeholder="Wyszukaj lekturę, motyw lub epokę..." 
             value={searchQuery} 
             onChange={(e) => setSearchQuery(e.target.value)} 
-            className="w-full bg-stone-950/80 border border-stone-800/80 rounded-2xl py-3 px-5 text-sm text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60 mt-1" 
+            className={`w-full bg-stone-950/80 border ${currentTheme.cardBorder} rounded-2xl py-3 px-5 text-sm text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-700/60 mt-1`} 
           />
         </div>
 
-        {/* SIATKA KAFELKÓW */}
+        {/* 🌟 SIATKA KAFELKÓW DOSTOSOWANA DO MOTYWU */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sortedNotes.map((note) => {
             const isLocked = !note.is_free && !hasAccess;
             const isFreeNote = !hasAccess && note.is_free;
             const isRead = readNotes.includes(note.id);
 
-            const cardBorderClass = isFreeNote ? "border-emerald-700/60 shadow-lg shadow-emerald-950/30" : "border-stone-800/60";
-            const cardBgClass = isFreeNote ? "bg-emerald-950/20" : "bg-[#161210]";
+            // 🎯 Tutaj podpinamy kolor tła i ramki z aktywnego motywu zamiast sztywnych wartości
+            const cardBorderClass = isFreeNote ? "border-emerald-700/60 shadow-lg shadow-emerald-950/30" : currentTheme.cardBorder;
+            const cardBgClass = isFreeNote ? "bg-emerald-950/20" : currentTheme.cardBg;
 
             return (
-              <CozyGlowCard key={note.id} currentTheme={currentTheme} className={`p-6 flex flex-col justify-between gap-4 shadow-lg border ${cardBorderClass} ${cardBgClass} hover:scale-[1.01] transition-all duration-300`}>
+              <CozyGlowCard 
+                key={note.id} 
+                currentTheme={currentTheme} 
+                className={`p-6 flex flex-col justify-between gap-4 shadow-lg border ${cardBorderClass} ${cardBgClass} hover:scale-[1.01] transition-all duration-300`}
+              >
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5 flex-wrap">
@@ -346,7 +356,7 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
                         </span>
                       )}
                     </div>
-                    <span className="text-[9px] uppercase tracking-widest font-extrabold text-stone-400 px-2 py-0.5 rounded border border-stone-800">
+                    <span className={`text-[9px] uppercase tracking-widest font-extrabold px-2 py-0.5 rounded border ${currentTheme.btnBorder} ${currentTheme.subText}`}>
                       ⏱️ {note.read_time || 15} min
                     </span>
                   </div>
@@ -354,21 +364,21 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
                   <h2 className="text-lg font-bold text-stone-100 font-serif leading-snug">
                     {note.title}
                   </h2>
-                  <p className="text-xs text-stone-400 leading-relaxed font-sans line-clamp-3">{getNoteDescription(note)}</p>
+                  <p className={`text-xs ${currentTheme.subText} leading-relaxed font-sans line-clamp-3`}>{getNoteDescription(note)}</p>
                 </div>
 
                 <div className="flex flex-col gap-3 mt-2">
                   {Array.isArray(note.chips) && (
                     <div className="flex flex-wrap gap-1.5">
                       {note.chips.map((chip: string) => (
-                        <span key={chip} className="text-xs text-stone-400 bg-stone-950 px-2.5 py-1 rounded-md border border-stone-900 transition-colors hover:text-stone-200">#{chip}</span>
+                        <span key={chip} className={`text-xs ${currentTheme.subText} bg-stone-950/50 px-2.5 py-1 rounded-md border ${currentTheme.btnBorder} transition-colors hover:text-stone-200`}>#{chip}</span>
                       ))}
                     </div>
                   )}
 
-                  <div className="flex items-center justify-between text-[11px] text-stone-500 font-sans px-1">
+                  <div className={`flex items-center justify-between text-[11px] ${currentTheme.subText} font-sans px-1`}>
                     <span>{getBottomLeftMetadata(note)}</span>
-                    <span className={`font-semibold ${isFreeNote ? 'text-emerald-400' : 'text-stone-500'}`}>
+                    <span className={`font-semibold ${isFreeNote ? 'text-emerald-400' : currentTheme.subText}`}>
                       {isFreeNote ? "Pełny dostęp za free ✨" : `⏱️ ${note.read_time || 15} min`}
                     </span>
                   </div>
@@ -380,7 +390,7 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
                       className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border cursor-pointer active:scale-95 ${
                         isRead
                           ? "bg-emerald-950/40 border-emerald-900/50 text-emerald-400 hover:bg-emerald-900/40 shadow-inner"
-                          : "bg-stone-900/40 border-stone-800/60 text-stone-400 hover:bg-stone-800/60 hover:text-stone-200"
+                          : `bg-stone-900/40 border ${currentTheme.btnBorder} ${currentTheme.subText} hover:bg-stone-800/60 hover:text-stone-200`
                       }`}
                     >
                       {isRead ? "✔️ Przeczytane" : "✔️ Zaznacz"}
@@ -390,11 +400,11 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
                       href={`/notes/${note.slug}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`flex-[2] py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-md text-center ${
+                      className={`flex-[2] py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-md text-center cursor-pointer active:scale-95 ${
                         isFreeNote
                           ? "bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-extrabold shadow-emerald-950/50"
                           : isLocked 
-                            ? "bg-stone-900 border border-stone-800 text-amber-400 hover:bg-stone-850 hover:text-amber-300" 
+                            ? `bg-stone-900 border ${currentTheme.btnBorder} text-amber-400 hover:bg-stone-850 hover:text-amber-300` 
                             : "bg-amber-500 text-stone-950 hover:bg-amber-400"
                       }`}
                     >
