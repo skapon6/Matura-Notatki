@@ -920,7 +920,7 @@ export default function OcenianieRozprawekPage() {
                 </button>
               )}
 
-              {/* 🌟 NOWY FIOLETOWY PULSUJĄCY BANER (IDENTYCZNY JAK W MATURZE USTNEJ) */}
+              {/* 🌟 IDENTYCZNY JAK W MATURZE USTNEJ FIOLETOWY BANER */}
               {(isAnalyzing || isGenerating) && (
                 <div className="p-4 rounded-2xl bg-purple-950/20 border border-purple-900/30 text-left text-[11px] text-purple-300/95 leading-relaxed font-sans mt-3 animate-pulse">
                   ⚠️ <strong className="text-purple-400 font-bold">
