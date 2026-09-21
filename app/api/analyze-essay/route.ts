@@ -244,10 +244,15 @@ ${essayText}`;
     }
 
     // 6. PROMPT SYSTEMOWY DLA CLAUDE ZGODNY Z INFORMATOREM CKE
+// 6. DYNAMICZNY PROMPT SYSTEMOWY DLA CLAUDE (TWOJA WERSJA + INTEGRACJA FAKTÓW GEMINI)
     const systemPrompt = `Jesteś oficjalnym, doświadczonym i skrupulatnym egzaminatorem CKE oceniającym wypracowania maturalne z języka polskiego (poziom podstawowy, Formuła 2023, skala 35 punktów). 
 
 Twoim zadaniem jest dokładna, sprawiedliwa ocena pracy zgodnie z oficjalnym kluczem CKE. 
 - ABSOLUTNY ZAKAZ SAMODZIELNEGO LICZENIA SŁÓW: Zawsze i bezwzględnie musisz opierać się TYLKO i WYŁĄCZNIE na liczbie słów podanej w sekcji [DANE TECHNICZNE WYPRACOWANIA] obliczonej przez serwer. Nie wolno Ci przeliczać słów na własną rękę ani kwestionować danych serwerowych!
+
+=== ZASADA WSPÓŁPRACY Z MODUŁEM FAKTÓW (GEMINI) ===
+- W sekcji poniżej możesz otrzymać oficjalny audyt faktograficzny wykonany przez zewnętrzny moduł ekspercki.
+- Jeśli moduł ten wskaże błąd kardynalny lub błędy rzeczowe, **MUSISZ je bezwzględnie przyjąć za pewnik i nie wolno Ci z nimi polemizować**. Umieść je w tabeli "annotations" jako type: "rzeczowy" oraz uwzględnij odpowiednie potrącenia punktowe w SFWP (błąd kardynalny = 0 pkt) i KLiK (błędy rzeczowe). Skup się na swojej głównej roli: ocenie struktury, kompozycji, argumentacji (KLiK) oraz aptekarskim audycie językowym, ortograficznym i interpunkcyjnym (JW).
 
 === BAZA WIEDZY I OFICJALNY ZŁOTY WZORZEC CKE ===
 ${ckeGuidelines}
@@ -303,7 +308,7 @@ ${similarEssaysContext}
      * "ortograficzny": błędy pisowni (ó/u, rz/ż, ch/h, nie z częściami mowy, mała litera w nazwach własnych, narodowościach i zakonach).
      * "językowy": błędy leksykalne, frazeologiczne, pleonazmy, błędy składniowe, odmiana wyrazów.
    - 4a (Zakres i poprawność językowa): 0-7 pkt (≤5 błędów = 7-6 pkt, 6-8 = 6-5 pkt, 9-11 = 5-4 pkt, 12-14 = 4-3 pkt, 15-17 = 3-2 pkt, 18-21 = 2-1 pkt, ≥22 = 0 pkt).
-   - 4b (Ortografia): 0-1 błąd = 2 pkt, 2-4 błędy = 1 pkt, ≥5 błędów = 0 pkt.
+   - 4b (Ortografia): 0-1 błąd = 2 pkt, 2-3 błędy = 1 pkt, ≥5 błędów = 0 pkt.
    - 4c (Interpunkcja): 0-8 błędów = 2 pkt, 9-16 błędów = 1 pkt, ≥17 błędów = 0 pkt.
 
 6. ZASADY TABLICY "annotations" (INTERFEJS):
@@ -335,8 +340,9 @@ Wywołaj narzędzie ocen_rozprawke_cke.`;
     Oceń powyższą rozprawkę zgodnie z oficjalnymi kryteriami CKE Formuła 2023. 
 WAŻNE DLA OCENY:
 1. Zwróć uwagę na liczbę argumentów i utworów literackich (jeśli uczeń użył TYLKO JEDNEGO utworu, KLiK wynosi max 1-4 pkt wg tabeli CKE!).
-2. Uwzględnij błędy rzeczowe i kardynalne z audytu faktów.
+2. Uwzględnij błędy rzeczowe i kardynalne z audytu faktów. INSTRUKCJA DLA CIEBIE: Powyższe błędy rzeczowe/kardynalne zostały zweryfikowane przez niezależny moduł ekspercki. Nie podważaj ich! Musisz bezwzględnie przyjąć je za prawdę, uwzględnić w punktacji KLiK (i SFWP jeśli to błąd kardynalny) oraz umieścić w tablicy "annotations"
 3. Wypisz usterki w tablicy "annotations". Na jedno słowo przypada max 1 błąd, ale jeśli w zdaniu są błędy na różnych słowach, oznacz każdy z nich.
+
 Wywołaj narzędzie ocen_rozprawke_cke.`;
 
     // 7. WYWOŁANIE CLAUDE Z ZWIĘKSZONYM BUFOREM DO 12 000 TOKENÓW
