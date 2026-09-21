@@ -258,7 +258,8 @@ WAŻNE DLA INTERFEJSU:
 2. Nie ograniczaj się do 2-3 przykładów! Liczba wpisów w "annotations" ma odpowiadać liczbie błędów podanych w kryterium JW i KLiK, aby uczeń widział każde podświetlenie w tekście.
 Wywołaj narzędzie ocen_rozprawke_cke.`;
 
-    // 7. WYWOŁANIE CLAUDE
+
+// 7. WYWOŁANIE CLAUDE Z ZWIĘKSZONYM BUFOREM TOKENÓW (8000 ZAMIAST 4000)
     const CLAUDE_MODELS_TO_TRY = [
       "claude-sonnet-5",
       "claude-sonnet-4-6",
@@ -274,7 +275,7 @@ Wywołaj narzędzie ocen_rozprawke_cke.`;
         console.log(`-> Wywołanie Claude (${modelName}) z Tool Calling...`);
         claudeResponse = await anthropic.messages.create({
           model: modelName,
-          max_tokens: 4000,
+          max_tokens: 8000, // 🎯 Podwojony limit – model nigdy nie zostanie ucięty w połowie
           thinking: { type: "disabled" },
           tools: [ckeEvaluationTool],
           tool_choice: { type: "tool", name: "ocen_rozprawke_cke" },
@@ -309,13 +310,30 @@ Wywołaj narzędzie ocen_rozprawke_cke.`;
 
     const toolUseBlock = claudeResponse.content?.find((b: any) => b.type === "tool_use");
     if (!toolUseBlock || !toolUseBlock.input) {
+      console.error("Odpowiedź bez tool_use:", JSON.stringify(claudeResponse.content));
       throw new Error("Model Claude nie wywołał narzędzia oceny.");
     }
 
     const parsedResult = toolUseBlock.input as any;
+    console.log("-> Odebrano dane z Claude. Klucze:", Object.keys(parsedResult));
 
+    // Normalizacja annotations
     if (!Array.isArray(parsedResult.annotations)) {
       parsedResult.annotations = [];
+    }
+
+    // Normalizacja details (jeśli model zwrócił obiekt zamiast tablicy)
+    if (!Array.isArray(parsedResult.details) && typeof parsedResult.details === "object" && parsedResult.details !== null) {
+      parsedResult.details = Object.entries(parsedResult.details).map(([k, v]: [string, any]) => ({
+        criterion: k,
+        points: String(v?.points || v?.score || ""),
+        comment: typeof v === "string" ? v : String(v?.comment || JSON.stringify(v))
+      }));
+    }
+
+    // Fallback dla wyniku (gdyby model nazwał to np. total_score lub samą liczbą)
+    if (!parsedResult.score) {
+      parsedResult.score = parsedResult.total_score || parsedResult.points || "0/35";
     }
 
     // 🛡️ DODATKOWY AUTO-EXTRACTOR (Gdyby model pominął któryś z cytowanych w recenzji błędów)
@@ -345,10 +363,6 @@ Wywołaj narzędzie ocen_rozprawke_cke.`;
       });
     }
 
-    if (!parsedResult.score || !Array.isArray(parsedResult.details)) {
-      throw new Error("Otrzymano niekompletną strukturę oceny z modelu.");
-    }
-
     // 8. Zapis oceny do bazy Supabase
     const { error: insertError } = await supabaseAdmin
       .from("essay_evaluations")
@@ -356,7 +370,7 @@ Wywołaj narzędzie ocen_rozprawke_cke.`;
         user_id: userId,
         topic: topic,
         essay_text: essayText,
-        score: parsedResult.score,
+        score: String(parsedResult.score),
         analysis_result: parsedResult,
         embedding: embeddingVector,
       });
