@@ -188,6 +188,7 @@ ${similarEssaysContext}
    - 3c (Styl): 0–1 pkt.
 
 4. JW: Język i styl (0–11 pkt) – APTEKARSKI AUDYT JĘZYKOWY:
+   4. JW: Język i styl (0–11 pkt) – APTEKARSKI AUDYT JĘZYKOWY:
    - Policz absolutnie WSZYSTKIE usterki: językowe, ortograficzne i interpunkcyjne.
    - BŁĘDY ORTOGRAFICZNE (Kryterium 4b): Zalicza się tu również pisanie małą literą nazw własnych, narodowości, mieszkańców krajów/miast oraz nazw zakonów (np. "krzyżaków" zamiast "Krzyżaków", "polak", "warszawiak"). Każde takie odstępstwo to bezwzględny błąd ortograficzny!
    - BŁĘDY INTERPUNKCYJNE (Kryterium 4c): Wymóg bezwzględnego ścigania zbędnych lub brakujących przecinków. Każdy zbędny przecinek przed spójnikami porównawczymi typu "niż", "jak" łączącymi równoważniki zdań (np. "ważniejsze, niż szczęście") MUSI zostać wykryty, umieszczony w sekcji "annotations" z typem "interpunkcyjny" i odjęty w liczbie błędów! Nie pomijaj takich błędów.
@@ -199,7 +200,7 @@ ${similarEssaysContext}
 5. KRYTYCZNY WYMÓG: TABLICA "annotations" (PODŚWIETLENIA BŁĘDÓW W TEKŚCIE):
    - W tablicy "annotations" MUSISZ bezwzględnie wypisać KAŻDY błąd językowy, ortograficzny, interpunkcyjny i rzeczowy, który zauważysz w tekście ucznia!
    - Ta tablica NIE MOŻE być pusta, jeśli praca ma jakiekolwiek usterki.
-   - "original": DOKŁADNY, krótki (1–4 słowa) fragment tekstu ucznia z błędem, BEZ CUDZYSŁOWÓW (np. "kochanki Oleńki", a nie "„kochanki Oleńki”").
+   - "original": MUSI TO BYĆ BEZWZGLĘDNA KOPIA 1:1 (COPY-PASTE) fragmentu tekstu ucznia (1-4 słowa). Nie dodawaj od siebie żadnych cudzysłowów, kropek, ani nie zmieniaj spacji. Jeśli dodasz coś od siebie, podświetlanie ulegnie awarii!
    - "replacement": poprawna forma.
    - "type": dokładnie jeden z: "rzeczowy" | "językowy" | "ortograficzny" | "interpunkcyjny".
    - "explanation": zwięzłe wyjaśnienie reguły (1 zdanie).
@@ -236,7 +237,7 @@ UWAGA: Zawsze musisz zwrócić pełną strukturę JSON. Nawet jeśli praca otrzy
   "summary": "Konstruktywne podsumowanie egzaminatora z wytycznymi, co uczeń musi poprawić.",
   "annotations": [
     {
-      "original": "dokładny fragment z błędem z tekstu ucznia",
+      "original": "dokładny fragment z błędem z tekstu ucznia (tylko 1:1 copy-paste)",
       "replacement": "poprawna forma",
       "type": "rzeczowy | językowy | ortograficzny | interpunkcyjny",
       "explanation": "Zwięzłe wyjaśnienie reguły."
@@ -264,10 +265,8 @@ UWAGA: Zawsze musisz zwrócić pełną strukturę JSON. Nawet jeśli praca otrzy
     </essay>
 
     Oceń powyższą rozprawkę zgodnie z oficjalnymi kryteriami CKE Formuła 2023. 
-WAŻNE: Opieraj się WYŁĄCZNIE na podanej wyżej liczbie słów z serwera (${wordCount} słów). Ponieważ wynosi ona ${wordCount}, co ${isUnder300Words ? "jest poniżej 300 słów" : "jest POWYŻEJ 300 słów"}, ${isUnder300Words ? "wyzeruj KW i JW." : "KATEGORYCZNIE OŚWIADCZAM: praca ma ponad 300 słów, więc NIE WOLNO Ci zerować KW ani JW z powodu długości! Oceń je normalnie w pełnej skali."} 
-
-Zwróć TYLKO I WYŁĄCZNIE pełny obiekt JSON (zawierający pola score, details, summary i annotations). Zawsze wypełniaj tablicę "details" dla wszystkich 4 kryteriów, nawet jeśli praca dostaje 0 punktów!
-    `;
+WAŻNE: Opieraj się WYŁĄCZNIE na podanej wyżej liczbie słów z serwera (${wordCount} słów). Ponieważ wynosi ona ${wordCount}, co ${isUnder300Words ? "jest poniżej 300 słów" : "jest POWYŻEJ 300 słów"}, ${isUnder300Words ? "wyzeruj KW i JW." : "KATEGORYCZNIE OŚWIADCZAM: praca ma ponad 300 słów, więc NIE WOLNO Ci zerować KW ani JW z powodu długości! Oceń je normalnie w pełnej skali."} Zwróć tylko JSON.    `;
+    
 
     // 7. WYWOŁANIE CLAUDE Z WYŁĄCZONYM MYŚLENIEM (SZYBKA ODPOWIEDŹ BEZ ZAWIESZANIA I BEZ PUSTYCH BLOKÓW)
     const CLAUDE_MODELS_TO_TRY = [

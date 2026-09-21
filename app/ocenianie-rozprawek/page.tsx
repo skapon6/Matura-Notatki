@@ -68,11 +68,6 @@ const OFFICIAL_CKE_YEARS = [
   }
 ];
 
-const isSpamText = (text: string) => {
-  const words = text.split(/\s+/).filter(Boolean);
-  return words.some(word => word.length > 25);
-};
-
 const safeString = (val: any): string => {
   if (val === null || val === undefined) return "";
   if (typeof val === "string") return val;
@@ -320,10 +315,11 @@ export default function OcenianieRozprawekPage() {
     triggerAlert("Wczytano pracę z historii (0 kredytów)! 🎉", "success");
   };
 
+  // 🎯 KULOODPORNY RENDERER PODŚWIETLEŃ
   const renderHighlightedText = () => {
     try {
       if (!analysisResult) {
-        return <p className="whitespace-pre-wrap leading-relaxed">{essayText}</p>;
+        return <p className="whitespace-pre-wrap leading-relaxed font-serif text-base sm:text-lg">{essayText}</p>;
       }
 
       const rawAnnotations = Array.isArray(analysisResult.annotations)
@@ -332,28 +328,41 @@ export default function OcenianieRozprawekPage() {
         ? Object.values(analysisResult.annotations)
         : [];
 
+      // Jeśli model zgłosił błędy, ale nie zwrócił tablicy annotations (halucynacja API)
       if (rawAnnotations.length === 0) {
-        return <p className="whitespace-pre-wrap leading-relaxed">{essayText}</p>;
+        return (
+          <>
+            <div className="mb-4 p-3 bg-red-950/30 border border-red-900/50 rounded-xl text-xs text-red-400 leading-relaxed">
+              ⚠️ <strong>Informacja od systemu:</strong> Model AI przyznał punktację i zidentyfikował błędy, ale z powodu błędu formatowania odmówił wskazania ich dokładnej lokalizacji w tekście. Przeczytaj uważnie podsumowanie krytyka w prawym panelu, aby dowiedzieć się, co poszło nie tak.
+            </div>
+            <p className="whitespace-pre-wrap leading-loose text-stone-300 font-sans text-base sm:text-lg font-serif">{essayText}</p>
+          </>
+        );
       }
 
       const matches: Match[] = [];
+      let failedMatchCount = 0;
 
       rawAnnotations.forEach((anno: any) => {
         if (!anno) return;
         const origText = safeString(anno.original).trim();
         if (!origText) return;
 
-        let cleanOrig = origText.replace(/^[„"'\s«]+|[”"'\s»]+$/g, "").trim();
+        // BARDZO ELASTYCZNE CZYSZCZENIE ZNAKÓW I INTERPUNKCJI
+        let cleanOrig = origText.replace(/^[„"'\s«.,!?]+|[”"'\s».,!?]+$/g, "").trim();
         if (!cleanOrig) return;
 
         try {
+          // Elastyczny Regex: zamienia spacje na dowolny znak biały, pozwala na entery
           const escapedRegexStr = cleanOrig
             .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-            .replace(/\s+/g, "\\s+");
+            .replace(/\s+/g, "[\\s\\n\\r\\u00A0]+");
+            
           const regex = new RegExp(escapedRegexStr, "gi");
 
           let match: RegExpExecArray | null;
           let count = 0;
+          let found = false;
           while ((match = regex.exec(essayText)) !== null && count < 50) {
             matches.push({
               start: match.index,
@@ -362,6 +371,12 @@ export default function OcenianieRozprawekPage() {
             });
             if (match[0].length === 0) regex.lastIndex++;
             count++;
+            found = true;
+          }
+
+          if (!found) {
+            failedMatchCount++;
+            console.warn("Regex nie znalazł w tekście frazy:", cleanOrig);
           }
         } catch (err) {
           console.warn("Błąd parsowania adnotacji:", err);
@@ -369,7 +384,14 @@ export default function OcenianieRozprawekPage() {
       });
 
       if (matches.length === 0) {
-        return <p className="whitespace-pre-wrap leading-relaxed">{essayText}</p>;
+        return (
+          <>
+            <div className="mb-4 p-3 bg-red-950/30 border border-red-900/50 rounded-xl text-xs text-red-400 leading-relaxed">
+              ⚠️ <strong>Informacja od systemu:</strong> Zlokalizowanie błędów w tekście nie powiodło się (różnica znaków). Szczegółowy opis błędów znajdziesz w podsumowaniu prawego panelu.
+            </div>
+            <p className="whitespace-pre-wrap leading-loose text-stone-300 font-sans text-base sm:text-lg font-serif">{essayText}</p>
+          </>
+        );
       }
 
       matches.sort((a, b) => a.start - b.start || b.end - a.end);
@@ -450,14 +472,21 @@ export default function OcenianieRozprawekPage() {
       resultHtml += escapeHtml(essayText.substring(currentIdx));
 
       return (
-        <div 
-          dangerouslySetInnerHTML={{ __html: resultHtml }} 
-          className="whitespace-pre-wrap leading-loose text-stone-300 font-sans text-base sm:text-lg font-serif"
-        />
+        <>
+          {failedMatchCount > 0 && (
+            <div className="mb-4 p-3 bg-amber-950/20 border border-amber-900/50 rounded-xl text-[11px] text-amber-400/80 leading-relaxed">
+              * Wskazówka: System AI zlokalizował większość błędów, ale {failedMatchCount} z nich nie udało się idealnie podświetlić w tekście. Pełny opis wszystkich potknięć znajdziesz w podsumowaniu.
+            </div>
+          )}
+          <div 
+            dangerouslySetInnerHTML={{ __html: resultHtml }} 
+            className="whitespace-pre-wrap leading-loose text-stone-300 font-sans text-base sm:text-lg font-serif"
+          />
+        </>
       );
     } catch (err) {
       console.error("Awaryjny fallback podświetlania:", err);
-      return <p className="whitespace-pre-wrap leading-relaxed text-stone-300 font-sans text-sm sm:text-base">{essayText}</p>;
+      return <p className="whitespace-pre-wrap leading-relaxed text-stone-300 font-sans text-base sm:text-lg font-serif">{essayText}</p>;
     }
   };
 
@@ -707,7 +736,7 @@ export default function OcenianieRozprawekPage() {
           </div>
         )}
 
-        {/* 🌟 GŁÓWNA KARTA – POSZERZONA DO MAX-W-[1200PX] */}
+        {/* 🌟 KARTA GŁÓWNA - MAX-W-6XL */}
         <div className={`max-w-[1200px] w-full ${currentTheme.cardBg} border ${currentTheme.cardBorder} rounded-3xl p-6 sm:p-10 shadow-2xl mt-8 mb-12 flex flex-col gap-6 transition-colors duration-500`}>
           
           <div className="p-4 rounded-2xl bg-stone-950/40 border border-stone-800/60 flex items-center justify-between">
