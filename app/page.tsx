@@ -61,21 +61,34 @@ export default function Home() {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [activePaymentTier, setActivePaymentTier] = useState<string | null>(null);
 
-  // Stan banneru regulaminu
-  const [showTosBanner, setShowTosBanner] = useState(false);
+// 🌟 WERSJONOWANIE DOKUMENTÓW PRAWNYCH (Zmień na v3, v4 przy kolejnych aktualizacjach)
+  const CURRENT_TOS_VERSION = "tos_accepted_v2";
+  const CURRENT_PRIVACY_VERSION = "privacy_accepted_v2";
+
+  const [legalBannerState, setLegalBannerState] = useState<{
+    show: boolean;
+    type: "both" | "tos" | "privacy";
+  }>({ show: false, type: "both" });
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const hasAccepted = localStorage.getItem("tos_accepted_v1");
-      if (!hasAccepted) {
-        setShowTosBanner(true);
+      const acceptedTos = localStorage.getItem(CURRENT_TOS_VERSION);
+      const acceptedPrivacy = localStorage.getItem(CURRENT_PRIVACY_VERSION);
+
+      if (!acceptedTos && !acceptedPrivacy) {
+        setLegalBannerState({ show: true, type: "both" });
+      } else if (!acceptedPrivacy) {
+        setLegalBannerState({ show: true, type: "privacy" });
+      } else if (!acceptedTos) {
+        setLegalBannerState({ show: true, type: "tos" });
       }
     }
   }, []);
 
-  const acceptTos = () => {
-    localStorage.setItem("tos_accepted_v1", "true");
-    setShowTosBanner(false);
+  const acceptLegal = () => {
+    localStorage.setItem(CURRENT_TOS_VERSION, "true");
+    localStorage.setItem(CURRENT_PRIVACY_VERSION, "true");
+    setLegalBannerState({ show: false, type: "both" });
     playSound("success");
   };
 
@@ -347,20 +360,47 @@ export default function Home() {
         </div>
       )}
 
-      {/* BANNER REGULAMINU DLA ZALOGOWANYCH */}
-      {user && showTosBanner && (
-        <div className="w-full bg-amber-500/10 border-b border-amber-500/30 px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-4 animate-slide-in relative z-30">
-          <div className="flex items-center gap-3">
-            <span className="text-xl">📜</span>
-            <p className="text-xs text-stone-300 font-sans">
-              Zaktualizowaliśmy <Link href="/regulamin" className="text-amber-500 hover:text-amber-400 font-semibold underline underline-offset-2">Regulamin Serwisu</Link> oraz Politykę Prywatności.
+      {/* 🌟 DYNAMICZNY BANER AKTUALIZACJI REGULAMINU / POLITYKI PRYWATNOŚCI */}
+      {user && legalBannerState.show && (
+        <div className="w-full bg-amber-500/10 border-b border-amber-500/30 px-4 sm:px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 animate-slide-in relative z-30 shadow-sm backdrop-blur-md">
+          <div className="flex items-center gap-3 text-center sm:text-left">
+            <span className="text-xl shrink-0">📜</span>
+            <p className="text-xs text-stone-300 font-sans leading-relaxed">
+              {legalBannerState.type === "both" && (
+                <>
+                  Zaktualizowaliśmy nasz{" "}
+                  <Link href="/regulamin" className="text-amber-400 hover:text-amber-300 font-semibold underline underline-offset-2">
+                    Regulamin Serwisu
+                  </Link>{" "}
+                  oraz{" "}
+                  <Link href="/prywatnosc" className="text-amber-400 hover:text-amber-300 font-semibold underline underline-offset-2">
+                    Politykę Prywatności
+                  </Link>.
+                </>
+              )}
+              {legalBannerState.type === "privacy" && (
+                <>
+                  Zaktualizowaliśmy naszą{" "}
+                  <Link href="/prywatnosc" className="text-amber-400 hover:text-amber-300 font-semibold underline underline-offset-2">
+                    Politykę Prywatności
+                  </Link>. Sprawdź nowe zasady ochrony Twoich danych.
+                </>
+              )}
+              {legalBannerState.type === "tos" && (
+                <>
+                  Zaktualizowaliśmy nasz{" "}
+                  <Link href="/regulamin" className="text-amber-400 hover:text-amber-300 font-semibold underline underline-offset-2">
+                    Regulamin Serwisu
+                  </Link>. Zapoznaj się ze zmianami.
+                </>
+              )}
             </p>
           </div>
           <button
-            onClick={acceptTos}
+            onClick={acceptLegal}
             className="shrink-0 px-4 py-1.5 rounded-xl bg-amber-500 text-stone-950 font-bold text-xs hover:bg-amber-400 transition-all shadow-md active:scale-95 cursor-pointer"
           >
-            Rozumiem
+            Rozumiem i akceptuję
           </button>
         </div>
       )}

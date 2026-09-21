@@ -29,7 +29,7 @@ export default function PolitykaPrywatnosciPage() {
         {/* Content */}
         <div className="text-xs sm:text-sm text-stone-300 space-y-6 leading-relaxed text-left font-sans">
           <p className="italic text-stone-400">
-            Ostatnia aktualizacja: 31 sierpnia 2026 r. Dbamy o Twoją prywatność. Poniższy dokument wyjaśnia, jak zbieramy, przetwarzamy i chronimy Twoje dane osobowe w ramach naszej platformy edukacyjnej, zgodnie z Rozporządzeniem Parlamentu Europejskiego i Rady (UE) 2016/679 z dnia 27 kwietnia 2016 r. (RODO).
+            Ostatnia aktualizacja: 21 września 2026 r. Dbamy o Twoją prywatność. Poniższy dokument wyjaśnia, jak zbieramy, przetwarzamy i chronimy Twoje dane osobowe w ramach naszej platformy edukacyjnej, zgodnie z Rozporządzeniem Parlamentu Europejskiego i Rady (UE) 2016/679 z dnia 27 kwietnia 2016 r. (RODO).
           </p>
 
           {/* 1 */}

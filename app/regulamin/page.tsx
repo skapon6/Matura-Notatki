@@ -29,7 +29,7 @@ export default function RegulaminPage() {
         {/* Content */}
         <div className="text-xs sm:text-sm text-stone-300 space-y-6 leading-relaxed text-left font-sans">
           <p className="italic text-stone-400">
-            Ostatnia aktualizacja: 2 września 2026 r. Niniejszy regulamin określa zasady korzystania z platformy internetowej oferującej asystenta pisania rozprawek, bazę notatek oraz symulator matury ustnej z języka polskiego.
+            Ostatnia aktualizacja: 21 września 2026 r. Niniejszy regulamin określa zasady korzystania z platformy internetowej oferującej asystenta pisania rozprawek, bazę notatek oraz symulator matury ustnej z języka polskiego.
           </p>
 
           {/* 1 */}
