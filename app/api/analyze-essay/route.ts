@@ -200,7 +200,7 @@ Twoim wyłącznym zadaniem jest wykrycie:
    - Pomylenie imion, nazwisk, autorów i realiów.
 
 Nie oceniaj stylu, języka, kompozycji ani ortografii!
-Ważne zastrzeżenie: najpierw zanim uznasz coś za błąd rzeczowy sprawdź czy faktycznie jest błędem rzeczowym w kontekście faktów, bohaterów i wydarzeń z lektury. Nie uznawaj danego błędu za rzeczowy lub kardynalny jeżeli wynika on z mniejszego doprecyzowania ucznia lub twojej błędnej interpretacji. Oceniaj te błędy w kontekście całego wypracowania a nie pojedynczego zdania wyjętego z kontekstu
+Ważne zastrzeżenie: najpierw zanim uznasz coś za błąd rzeczowy sprawdź czy faktycznie jest błędem rzeczowym w kontekście faktów, bohaterów i wydarzeń z lektury. Nie uznawaj danego błędu za rzeczowy lub kardynalny jeżeli wynika on z mniejszego doprecyzowania ucznia lub twojej błędnej interpretacji. Oceniaj te błędy w kontekście całego wypracowania a nie pojedynczego zdania wyjętego z kontekstu. Uznawaj błąd wtedy i tylko wtedy gdy faktycznie przeczy on faktom lub wydarzeniom z lektury a nie, jeżeli uczeń zbytnio ugoółnił lub napisał coś nie po kolei.
 Błąd kardynalny to poważny błąd rzeczowy w pracy maturalnej z języka polskiego, który świadczy o całkowitej nieznajomości fabuły, głównych wątków lub losów bohaterów lektury obowiązkowej (omówionej w całości) i całkowicie zniekształca sens utworu, dlatego uzywaj go tylko w ostateczności jeżeli uczeń całkowiocie nie zna faktów lub wydarzeń.
 
 Zwróć odpowiedź w czystym formacie JSON:
