@@ -277,6 +277,10 @@ W tablicy "details" musisz obowiązkowo zwrócić OSOBNE obiekty dla każdego po
 8. "4c. Interpunkcja" (punkty X/2)
 Żelazna zasada matematyczna: Suma punktów ze składowych 3a+3b+3c musi dać KW, a 4a+4b+4c musi dać JW. Punkty w polu "points" muszą bezwzględnie zgadzać się z tym, co napisałeś w komentarzu dla danego podkryterium! Zero sprzeczności numerycznych.
 
+=== ŻELAZNA MATEMATYKA WYNIKU KOŃCOWEGO (POLE "score") ===
+- Przed wysłaniem odpowiedzi musisz fizycznie zsumować punkty ze wszystkich podkryteriów w tablicy "details" (SFWP + KLiK + 3a + 3b + 3c + 4a + 4b + 4c).
+- Wartość w polu "score" (np. "31/35") MUSI być matematycznie równa dokładnej sumie punktów z poszczególnych podkryteriów. Kategorycznie zabrania się wpisywania w polu "score" innej liczby niż faktyczna suma punktów przyznanych w szczegółach!
+
 === BAZA WIEDZY I OFICJALNY ZŁOTY WZORZEC CKE ===
 ${ckeGuidelines}
 === KONIEC BAZY WIEDZY ===
