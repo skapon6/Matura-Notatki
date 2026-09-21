@@ -93,6 +93,10 @@ const escapeHtml = (val: any): string => {
     .replace(/'/g, "&#039;");
 };
 
+const escapeRegex = (string: string) => {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+};
+
 export default function OcenianieRozprawekPage() {
   const router = useRouter();
   const [currentTheme, setCurrentTheme] = useState<any>(getThemeClasses("library"));
@@ -315,7 +319,7 @@ export default function OcenianieRozprawekPage() {
     triggerAlert("Wczytano pracę z historii (0 kredytów)! 🎉", "success");
   };
 
-  // 🎯 KULOODPORNY RENDERER PODŚWIETLEŃ
+  // 🎯 KULOODPORNY RENDERER PODŚWIETLEŃ Z 2-STOPNIOWYM DOPASOWYWANIEM
   const renderHighlightedText = () => {
     try {
       if (!analysisResult) {
@@ -328,12 +332,11 @@ export default function OcenianieRozprawekPage() {
         ? Object.values(analysisResult.annotations)
         : [];
 
-      // Jeśli model zgłosił błędy, ale nie zwrócił tablicy annotations (halucynacja API)
       if (rawAnnotations.length === 0) {
         return (
           <>
             <div className="mb-4 p-3 bg-red-950/30 border border-red-900/50 rounded-xl text-xs text-red-400 leading-relaxed">
-              ⚠️ <strong>Informacja od systemu:</strong> Model AI przyznał punktację i zidentyfikował błędy, ale z powodu błędu formatowania odmówił wskazania ich dokładnej lokalizacji w tekście. Przeczytaj uważnie podsumowanie krytyka w prawym panelu, aby dowiedzieć się, co poszło nie tak.
+              ⚠️ <strong>Informacja od systemu:</strong> Model AI przyznał punktację i zidentyfikował błędy, ale z powodu błędu formatowania pominął ich dokładną lokalizację w tekście. Przeczytaj uważnie podsumowanie krytyka w prawym panelu.
             </div>
             <p className="whitespace-pre-wrap leading-loose text-stone-300 font-sans text-base sm:text-lg font-serif">{essayText}</p>
           </>
@@ -341,45 +344,68 @@ export default function OcenianieRozprawekPage() {
       }
 
       const matches: Match[] = [];
-      let failedMatchCount = 0;
 
       rawAnnotations.forEach((anno: any) => {
         if (!anno) return;
         const origText = safeString(anno.original).trim();
         if (!origText) return;
 
-        // BARDZO ELASTYCZNE CZYSZCZENIE ZNAKÓW I INTERPUNKCJI
-        let cleanOrig = origText.replace(/^[„"'\s«.,!?]+|[”"'\s».,!?]+$/g, "").trim();
+        // Oczyszczenie z zewnętrznych cudzysłowów i nawiasów
+        let cleanOrig = origText
+          .replace(/^[„"'\s«.,!?…()[\]{}]+|[”"'\s».,!?…()[\]{}]+$/g, "")
+          .trim();
         if (!cleanOrig) return;
 
-        try {
-          // Elastyczny Regex: zamienia spacje na dowolny znak biały, pozwala na entery
-          const escapedRegexStr = cleanOrig
-            .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-            .replace(/\s+/g, "[\\s\\n\\r\\u00A0]+");
-            
-          const regex = new RegExp(escapedRegexStr, "gi");
+        let found = false;
 
+        // KROK 1: Próba dopasowania bezpośredniego z elastycznymi spacjami i myślnikami
+        try {
+          const escapedDirect = escapeRegex(cleanOrig)
+            .replace(/[-–—]/g, "[-–—]")
+            .replace(/\s+/g, "[\\s\\n\\r\\u00A0\t]+");
+
+          const directRegex = new RegExp(escapedDirect, "gi");
           let match: RegExpExecArray | null;
           let count = 0;
-          let found = false;
-          while ((match = regex.exec(essayText)) !== null && count < 50) {
+
+          while ((match = directRegex.exec(essayText)) !== null && count < 50) {
             matches.push({
               start: match.index,
               end: match.index + match[0].length,
               annotation: anno
             });
-            if (match[0].length === 0) regex.lastIndex++;
+            if (match[0].length === 0) directRegex.lastIndex++;
             count++;
             found = true;
           }
+        } catch {
+          // Ignorujemy błąd, przechodzimy do KROKU 2
+        }
 
-          if (!found) {
-            failedMatchCount++;
-            console.warn("Regex nie znalazł w tekście frazy:", cleanOrig);
+        // KROK 2: Dopasowanie elastyczne słów (gdy w 'original' są zbędne przecinki, brakujące przecinki lub inne znaki interpunkcyjne)
+        if (!found) {
+          try {
+            const words = cleanOrig.split(/[\s\W]+/).filter(w => w.length > 1);
+            if (words.length > 0) {
+              const wordsRegexStr = words.map(w => escapeRegex(w)).join("[\\s\\W]{1,15}");
+              const relaxedRegex = new RegExp(wordsRegexStr, "gi");
+
+              let match: RegExpExecArray | null;
+              let count = 0;
+              while ((match = relaxedRegex.exec(essayText)) !== null && count < 30) {
+                matches.push({
+                  start: match.index,
+                  end: match.index + match[0].length,
+                  annotation: anno
+                });
+                if (match[0].length === 0) relaxedRegex.lastIndex++;
+                count++;
+                found = true;
+              }
+            }
+          } catch (e) {
+            console.warn("Błąd elastycznego dopasowania adnotacji:", e);
           }
-        } catch (err) {
-          console.warn("Błąd parsowania adnotacji:", err);
         }
       });
 
@@ -387,7 +413,7 @@ export default function OcenianieRozprawekPage() {
         return (
           <>
             <div className="mb-4 p-3 bg-red-950/30 border border-red-900/50 rounded-xl text-xs text-red-400 leading-relaxed">
-              ⚠️ <strong>Informacja od systemu:</strong> Zlokalizowanie błędów w tekście nie powiodło się (różnica znaków). Szczegółowy opis błędów znajdziesz w podsumowaniu prawego panelu.
+              ⚠️ <strong>Informacja od systemu:</strong> Zlokalizowanie błędów w tekście nie powiodło się. Szczegółowy opis błędów znajdziesz w podsumowaniu prawego panelu.
             </div>
             <p className="whitespace-pre-wrap leading-loose text-stone-300 font-sans text-base sm:text-lg font-serif">{essayText}</p>
           </>
@@ -472,17 +498,10 @@ export default function OcenianieRozprawekPage() {
       resultHtml += escapeHtml(essayText.substring(currentIdx));
 
       return (
-        <>
-          {failedMatchCount > 0 && (
-            <div className="mb-4 p-3 bg-amber-950/20 border border-amber-900/50 rounded-xl text-[11px] text-amber-400/80 leading-relaxed">
-              * Wskazówka: System AI zlokalizował większość błędów, ale {failedMatchCount} z nich nie udało się idealnie podświetlić w tekście. Pełny opis wszystkich potknięć znajdziesz w podsumowaniu.
-            </div>
-          )}
-          <div 
-            dangerouslySetInnerHTML={{ __html: resultHtml }} 
-            className="whitespace-pre-wrap leading-loose text-stone-300 font-sans text-base sm:text-lg font-serif"
-          />
-        </>
+        <div 
+          dangerouslySetInnerHTML={{ __html: resultHtml }} 
+          className="whitespace-pre-wrap leading-loose text-stone-300 font-sans text-base sm:text-lg font-serif"
+        />
       );
     } catch (err) {
       console.error("Awaryjny fallback podświetlania:", err);
@@ -773,7 +792,6 @@ export default function OcenianieRozprawekPage() {
                   </button>
                 </div>
 
-                {/* 🌟 POWIĘKSZONY, MASYWNY TEMAT */}
                 <textarea 
                   rows={2}
                   placeholder="Wpisz temat rozprawki lub wybierz z bazy CKE..."
@@ -903,13 +921,58 @@ export default function OcenianieRozprawekPage() {
                   {isAnalyzing ? "🤖 Asystent Rozprawek AI analizuje..." : "Przeanalizuj rozprawkę (1 kredyt)"}
                 </button>
               )}
+
+              {/* 🌟 PULSUJĄCY BLOCZEK BEZPIECZEŃSTWA W TRAKCIE OCENY / GENEROWANIA */}
+              {(isAnalyzing || isGenerating) && (
+                <div className="mt-3 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-950/40 via-[#221811]/70 to-amber-950/40 border border-amber-500/40 shadow-xl backdrop-blur-md animate-pulse transition-all">
+                  <div className="flex items-start gap-3.5">
+                    <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 shrink-0 text-xl select-none">
+                      ⏳
+                    </div>
+
+                    <div className="flex flex-col gap-1.5 text-left">
+                      <div className="flex items-center gap-2">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                        </span>
+                        <h4 className="text-xs font-bold text-amber-300 uppercase tracking-wider font-sans">
+                          {isAnalyzing ? "Trwa weryfikacja egzaminacyjna CKE..." : "Trwa tworzenie rozprawki wzorcowej..."}
+                        </h4>
+                      </div>
+
+                      <p className="text-[12px] sm:text-[12.5px] text-stone-200 leading-relaxed font-sans">
+                        Dokładny audyt merytoryczny i językowy wymaga czasu (często od 30 do 60 sekund). 
+                        <strong className="text-amber-200 ml-1">Nie odświeżaj strony ani nie zamykaj karty przeglądarki</strong>, nawet jeśli analiza trwa dłuższą chwilę.
+                      </p>
+
+                      <div className="mt-1 pt-2 border-t border-amber-900/40 flex items-center gap-2 text-[11px] text-emerald-400 font-medium">
+                        <span className="text-sm">🛡️</span>
+                        <span>
+                          <strong>Gwarancja bezpieczeństwa:</strong> W razie problemów technicznych lub przerwania połączenia <u>Twój kredyt zostanie automatycznie i natychmiast zwrócony</u>.
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* PRAWA KOLUMNA: RAPORT AI (4 KOLUMNY Z 12) */}
             <div className="lg:col-span-4 flex flex-col gap-5">
               {isAnalyzing || isGenerating ? (
-                <div className="rounded-2xl border border-amber-950/40 bg-stone-950/20 p-5 flex flex-col justify-center items-center text-center min-h-[400px]">
-                  <AtmosphericEssayLoader />
+                <div className="flex flex-col gap-4 animate-fade-in">
+                  <div className="rounded-2xl border border-amber-950/40 bg-stone-950/20 p-5 flex flex-col justify-center items-center text-center min-h-[380px]">
+                    <AtmosphericEssayLoader />
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-amber-950/25 border border-amber-500/30 text-left animate-pulse flex items-start gap-3 shadow-md">
+                    <span className="text-xl">🛡️</span>
+                    <div className="text-[11.5px] text-stone-300 leading-relaxed">
+                      <strong className="text-amber-300 block mb-0.5">Ochrona tokenów:</strong>
+                      Nie zamykaj karty. W przypadku błędu sieci lub timeoutu token natychmiast powróci do Twojego konta.
+                    </div>
+                  </div>
                 </div>
               ) : analysisResult ? (
                 <div className="rounded-2xl border border-stone-800 bg-stone-900/60 p-6 flex flex-col gap-4 animate-fade-in sticky top-24 max-h-[85vh] overflow-y-auto scrollbar-thin scrollbar-thumb-stone-800">
