@@ -184,7 +184,53 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 6. TWÓJ ORYGINALNY PROMPT SYSTEMOWY Z ZASADĄ PEŁNEGO WYPISYWANIA BŁĘDÓW
+    // 🌟 KROK 5B: SZYBKI AUDYT FAKTÓW FABULARNYCH PRZEZ GEMINI FLASH (~1s)
+    let factCheckContext = "";
+    try {
+      const factModel = genAI.getGenerativeModel({ model: "gemini-3.5-flash" });
+      const factPrompt = `Jesteś bezwzględnym weryfikatorem faktów literackich (CKE Matura z języka polskiego).
+      Przeanalizuj poniższe wypracowanie i wskaż WYŁĄCZNIE obiektywne błędy rzeczowe/fabularne:
+      - Czy bohaterowie nie zostali zamienieni? (np. kto z kim rozmawiał, kto co komu wręczył, kto kogo zabił)
+      - Czy wydarzenia, miejsca akcji i motywy są w 100% zgodne z fabułą lektur?
+      Nie oceniaj języka, stylu ani kompozycji. 
+
+Zwróć odpowiedź w poprawnym formacie JSON:
+{
+  "has_factual_errors": boolean,
+  "errors": [
+    {
+      "original": "dokładny krótki cytat 1-4 słowa z tekstu ucznia",
+      "explanation": "zwięzłe wyjaśnienie błędu rzeczowego",
+      "replacement": "poprawny fakt"
+    }
+  ]
+}
+Jeśli w wypracowaniu nie ma żadnych błędów rzeczowych, zwróć: {"has_factual_errors": false, "errors": []}
+
+TEMAT ROZPRAWKI:
+${topic}
+
+TEKST WYPRACOWANIA:
+${essayText}`;
+
+      const factRes = await factModel.generateContent({
+        contents: [{ role: "user", parts: [{ text: factPrompt }] }],
+        generationConfig: { responseMimeType: "application/json" }
+      });
+
+      const factJson = JSON.parse(factRes.response.text());
+      if (factJson.has_factual_errors && Array.isArray(factJson.errors) && factJson.errors.length > 0) {
+        factCheckContext = `\n\n=== AUDYT FAKTÓW FABULARNYCH DLA LEKTUR (GEMINI FACT-CHECK) ===\n` +
+          factJson.errors.map((err: any, i: number) => 
+            `${i + 1}. Fragment z błędem: "${err.original}" | Błąd: ${err.explanation} | Sprostowanie: ${err.replacement}`
+          ).join("\n") +
+          `\nZALECENIE: Powyższe błędy fabularne zostały zweryfikowane encyklopedycznie. Uwzględnij je przy punktacji KLiK (odejmij odpowiednio punkty) i dodaj do tablicy "annotations" jako type: "rzeczowy". Uważaj, aby nie powielać tego samego błędu wielokrotnie!`;
+      }
+    } catch (e) {
+      console.warn("Błąd audytu faktów Gemini Flash (kontynuujemy bez asysty):", e);
+    }
+
+    // 6. TWÓJ ORYGINALNY PROMPT SYSTEMOWY (NIETKNIĘTY)
     const systemPrompt = `Jesteś oficjalnym, doświadczonym i skrupulatnym egzaminatorem CKE oceniającym wypracowania maturalne z języka polskiego (poziom podstawowy, Formuła 2023, skala 35 punktów). 
 
 Twoim zadaniem jest dokładna, sprawiedliwa ocena pracy zgodnie z oficjalnym kluczem CKE. 
@@ -257,6 +303,7 @@ Zwróć pełną ocenę za pomocą dedykowanego narzędzia ocen_rozprawke_cke.`;
     <essay>
     ${safeEssayText}
     </essay>
+    ${factCheckContext}
 
     Oceń powyższą rozprawkę zgodnie z oficjalnymi kryteriami CKE Formuła 2023. 
 WAŻNE DLA INTERFEJSU:
@@ -264,8 +311,7 @@ WAŻNE DLA INTERFEJSU:
 2. Nie ograniczaj się do 2-3 przykładów! Liczba wpisów w "annotations" ma odpowiadać liczbie błędów podanych w kryterium JW i KLiK, aby uczeń widział każde podświetlenie w tekście.
 Wywołaj narzędzie ocen_rozprawke_cke.`;
 
-
-// 7. WYWOŁANIE CLAUDE Z ZWIĘKSZONYM BUFOREM TOKENÓW (8000 ZAMIAST 4000)
+    // 7. WYWOŁANIE CLAUDE Z ZWIĘKSZONYM BUFOREM TOKENÓW (8000 ZAMIAST 4000)
     const CLAUDE_MODELS_TO_TRY = [
       "claude-sonnet-5",
       "claude-sonnet-4-6",
@@ -281,7 +327,7 @@ Wywołaj narzędzie ocen_rozprawke_cke.`;
         console.log(`-> Wywołanie Claude (${modelName}) z Tool Calling...`);
         claudeResponse = await anthropic.messages.create({
           model: modelName,
-          max_tokens: 8000, // 🎯 Podwojony limit – model nigdy nie zostanie ucięty w połowie
+          max_tokens: 8000,
           thinking: { type: "disabled" },
           tools: [ckeEvaluationTool],
           tool_choice: { type: "tool", name: "ocen_rozprawke_cke" },
@@ -328,6 +374,26 @@ Wywołaj narzędzie ocen_rozprawke_cke.`;
       parsedResult.annotations = [];
     }
 
+    // 🛡️ ANTY-DUPLIKACJA I OCHRONA PRZED NAKŁADANIEM SIĘ BŁĘDÓW (GEMINI + CLAUDE)
+    const dedupedAnnotations: any[] = [];
+    for (const anno of parsedResult.annotations) {
+      const cleanOrig = String(anno.original || "").trim().toLowerCase();
+      if (!cleanOrig) continue;
+
+      // Sprawdzamy czy w deduped nie ma już błędu o identycznym lub nakładającym się fragmencie
+      const isDuplicate = dedupedAnnotations.some((existing) => {
+        const existOrig = String(existing.original || "").trim().toLowerCase();
+        const isSameOrContained = existOrig === cleanOrig || existOrig.includes(cleanOrig) || cleanOrig.includes(existOrig);
+        // Jeśli ten sam fragment ma błąd tego samego typu lub rzeczowy, nie dublujemy
+        return isSameOrContained && (existing.type === anno.type || existing.type === "rzeczowy" || anno.type === "rzeczowy");
+      });
+
+      if (!isDuplicate) {
+        dedupedAnnotations.push(anno);
+      }
+    }
+    parsedResult.annotations = dedupedAnnotations;
+
     // Normalizacja details (jeśli model zwrócił obiekt zamiast tablicy)
     if (!Array.isArray(parsedResult.details) && typeof parsedResult.details === "object" && parsedResult.details !== null) {
       parsedResult.details = Object.entries(parsedResult.details).map(([k, v]: [string, any]) => ({
@@ -369,14 +435,14 @@ Wywołaj narzędzie ocen_rozprawke_cke.`;
       });
     }
 
-    // 8. Zapis oceny do bazy Supabase
+    // 8. Zapis oceny do bazy Supabase (z bezpiecznym fallbackiem)
     const { error: insertError } = await supabaseAdmin
       .from("essay_evaluations")
       .insert({
         user_id: userId,
         topic: topic,
         essay_text: essayText,
-        score: String(parsedResult.score),
+        score: String(parsedResult.score || "0/35"),
         analysis_result: parsedResult,
         embedding: embeddingVector,
       });
