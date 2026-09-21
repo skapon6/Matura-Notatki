@@ -69,7 +69,7 @@ export default function RegulaminPage() {
               Jedno konto może być użytkowane wyłącznie przez jedną osobę. Ze względów bezpieczeństwa oraz ochrony przed nieautoryzowanym współdzieleniem dostępu, <strong>Użytkownik może być zalogowany w danym momencie tylko na jednym urządzeniu</strong>. Zalogowanie się na nowe urządzenie (np. komputer PC) skutkuje automatycznym zakończeniem aktywnej sesji na urządzeniu poprzednim (np. telefonie lub laptopie).
             </p>
             <p>
-              Do prawidłowego działania platformy wymagane jest urządzenie z dostępem do Internetu, aktualna przeglądarka internetowa oraz włączona obsługa plików cookie i skryptów JavaScript. Dla modułu symulatora matury ustnej wymagane jest posiadanie sprawnego mikrofonu.
+              Do prawidłowego działania platformy wymagane jest urządzenie z dostępem do Internetu, aktualna przeglądarka internetowa oraz włączona obsługa plików cookie i skryptów JavaScript. Dla modułu symulatora matury ustnej zalecane jest posiadanie sprawnego mikrofonu.
             </p>
           </section>
 
