@@ -8,12 +8,10 @@ import { ckeGuidelines } from "../../lib/ckeGuidelines";
 
 export const dynamic = "force-dynamic";
 
-// Klient Claude (Anthropic) do weryfikacji merytorycznej i językowej
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || "",
 });
 
-// Klient Gemini wykorzystywany WYŁĄCZNIE do darmowych wektorów embedding dla bazy RAG
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 const supabaseAdmin = createClient(
@@ -21,7 +19,7 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// 🎯 SCHEMAT NARZĘDZIA DLA CLAUDE (GWARANTUJE POPRAWNOŚĆ STRUKTURY I CHRONI PRZED SYNTAX ERROR)
+// 🎯 SCHEMAT NARZĘDZIA DLA CLAUDE: "annotations" NA SAMYM POCZĄTKU
 const ckeEvaluationTool: Anthropic.Tool = {
   name: "ocen_rozprawke_cke",
   description: "Zapisz oficjalny protokół oceny wypracowania maturalnego CKE z języka polskiego.",
@@ -32,45 +30,19 @@ const ckeEvaluationTool: Anthropic.Tool = {
         type: "string",
         description: "Łączny wynik punktowy w formacie X/35, np. '24/35'."
       },
-      details: {
-        type: "array",
-        description: "Szczegółowa ocena 4 głównych kryteriów CKE (Spełnienie formalnych warunków, KLiK, KW, JW)",
-        items: {
-          type: "object",
-          properties: {
-            criterion: {
-              type: "string",
-              description: "Dokładna nazwa kryterium CKE"
-            },
-            points: {
-              type: "string",
-              description: "Punkty za dane kryterium, np. '1/1', '13/16', '5/7', '5/11'"
-            },
-            comment: {
-              type: "string",
-              description: "Szczegółowe merytoryczne uzasadnienie punktacji."
-            }
-          },
-          required: ["criterion", "points", "comment"]
-        }
-      },
-      summary: {
-        type: "string",
-        description: "Konstruktywne podsumowanie krytyka z wytycznymi, co uczeń musi poprawić."
-      },
       annotations: {
         type: "array",
-        description: "Lista wszystkich wykrytych usterek w tekście wypracowania ucznia",
+        description: "BEZWZGLĘDNIE WYMAGANA LISTA PODŚWIETLEŃ W TEKŚCIE. Każdy błąd językowy, ortograficzny, interpunkcyjny i rzeczowy, za który obniżasz punkty, MUSI znaleźć się w tej tablicy. Nigdy nie zostawiaj jej pustej, jeśli praca ma jakiekolwiek usterki!",
         items: {
           type: "object",
           properties: {
             original: {
               type: "string",
-              description: "Dokładny fragment (1-4 słowa) z tekstu ucznia, w którym występuje błąd (copy-paste 1:1)."
+              description: "DOKŁADNY fragment z tekstu ucznia (1-4 słowa, czysty copy-paste 1:1), w którym występuje usterka."
             },
             replacement: {
               type: "string",
-              description: "Poprawna forma lub wskazówka poprawy."
+              description: "Poprawna forma lub wskazówka."
             },
             type: {
               type: "string",
@@ -79,14 +51,40 @@ const ckeEvaluationTool: Anthropic.Tool = {
             },
             explanation: {
               type: "string",
-              description: "Zwięzłe wyjaśnienie reguły."
+              description: "Krótkie wyjaśnienie reguły (1 zdanie)."
             }
           },
           required: ["original", "replacement", "type", "explanation"]
         }
+      },
+      details: {
+        type: "array",
+        description: "Szczegółowa ocena 4 kryteriów CKE (Spełnienie formalnych warunków, KLiK, KW, JW)",
+        items: {
+          type: "object",
+          properties: {
+            criterion: {
+              type: "string",
+              description: "Nazwa kryterium CKE"
+            },
+            points: {
+              type: "string",
+              description: "Punkty, np. '13/16' lub '1/1'"
+            },
+            comment: {
+              type: "string",
+              description: "Merytoryczne uzasadnienie oceny kryterium."
+            }
+          },
+          required: ["criterion", "points", "comment"]
+        }
+      },
+      summary: {
+        type: "string",
+        description: "Konstruktywne podsumowanie krytyka z wytycznymi dla ucznia."
       }
     },
-    required: ["score", "details", "summary", "annotations"]
+    required: ["score", "annotations", "details", "summary"]
   }
 };
 
@@ -96,7 +94,7 @@ export async function POST(req: NextRequest) {
   let userId = "";
 
   try {
-    // 1. Bezpieczna autoryzacja za pomocą getUser()
+    // 1. Autoryzacja
     const supabase = await getSupabaseServer();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
@@ -104,13 +102,12 @@ export async function POST(req: NextRequest) {
     }
     userId = user.id;
 
-    // 2. Dane wejściowe
+    // 2. Walidacja wejścia
     const { topic, essayText } = await req.json();
     if (!topic || !essayText) {
       return NextResponse.json({ error: "Brak tematu lub treści wypracowania." }, { status: 400 });
     }
 
-    // A. SZTYWNE LIMITY ZNAKOWE
     if (essayText.length > 10000) {
       return NextResponse.json({ error: "Tekst wypracowania jest zbyt długi (maksymalnie 10 000 znaków)." }, { status: 400 });
     }
@@ -121,21 +118,11 @@ export async function POST(req: NextRequest) {
     const topicWords = topic.split(/\s+/).filter(Boolean);
     const essayWords = essayText.split(/\s+/).filter(Boolean);
 
-    // B. BLOKADA SPAMU / CIĄGÓW BEZ SPACJI (MAKSYMALNIE 25 ZNAKÓW NA SŁOWO)
-    const hasInvalidTopicWord = topicWords.some((word: string) => word.length > 25);
-    const hasInvalidEssayWord = essayWords.some((word: string) => word.length > 25);
-
-    if (hasInvalidTopicWord || hasInvalidEssayWord) {
+    if (topicWords.some((w: string) => w.length > 25) || essayWords.some((w: string) => w.length > 25)) {
       return NextResponse.json(
-        { error: "Tekst zawiera nieprawidłowe, sztucznie wydłużone słowa (maksymalna długość słowa to 25 znaków)." },
+        { error: "Tekst zawiera nieprawidłowe słowa (maksymalna długość słowa to 25 znaków)." },
         { status: 400 }
       );
-    }
-
-    // C. WALIDACJA LIMITÓW SŁÓW
-    const topicWordCount = topicWords.length;
-    if (topicWordCount > 200) {
-      return NextResponse.json({ error: "Temat rozprawki przekracza maksymalny limit 200 słów." }, { status: 400 });
     }
 
     const wordCount = essayWords.length;
@@ -146,7 +133,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Tekst przekracza maksymalny limit 1500 słów." }, { status: 400 });
     }
 
-    // 3. Atomowe pobranie kredytu z bazy
+    // 3. Pobranie kredytu
     const { data: deductedCredits, error: rpcError } = await supabaseAdmin
       .rpc('deduct_credit', { user_id_param: userId });
 
@@ -160,7 +147,7 @@ export async function POST(req: NextRequest) {
     newCredits = deductedCredits;
     creditDeducted = true;
 
-    // 4. KROK RAG: Generowanie wektora embedding przez Gemini
+    // 4. KROK RAG: Embedding Gemini
     let embeddingVector: number[] | null = null;
     try {
       const embeddingModel = genAI.getGenerativeModel({ model: "models/gemini-embedding-001" });
@@ -173,10 +160,10 @@ export async function POST(req: NextRequest) {
         embeddingVector = embeddingResult.embedding.values;
       }
     } catch (embedError) {
-      console.warn("Błąd generowania embeddingu (kontynuujemy bez bazy RAG):", embedError);
+      console.warn("Błąd embeddingu:", embedError);
     }
 
-    // 5. KROK RAG: Odpytanie bazy Supabase o wzorce
+    // 5. Kontekst RAG
     let similarEssaysContext = "";
     if (embeddingVector) {
       try {
@@ -197,7 +184,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 6. DYNAMICZNY PROMPT SYSTEMOWY DLA CLAUDE (TWÓJ ORYGINALNY PROMPT W 100%)
+    // 6. TWÓJ ORYGINALNY PROMPT SYSTEMOWY
     const systemPrompt = `Jesteś oficjalnym, doświadczonym i skrupulatnym egzaminatorem CKE oceniającym wypracowania maturalne z języka polskiego (poziom podstawowy, Formuła 2023, skala 35 punktów). 
 
 Twoim zadaniem jest dokładna, sprawiedliwa ocena pracy zgodnie z oficjalnym kluczem CKE. 
@@ -235,12 +222,12 @@ ${similarEssaysContext}
    - Jeśli błędów językowych jest >= 18: przyznaj za 4a BEZWZGLĘDNIE 0/7 PKT!
    - 4b (Ortografia): 0–2 pkt (0-1 błąd = 2 pkt, 2-3 błędy = 1 pkt, 4+ = 0 pkt).
    - 4c (Interpunkcja): 0–2 pkt (0-4 błędy = 2 pkt, 5-14 błędów = 1 pkt, 15+ = 0-1 pkt).
-   - APTEKARSKA SKRUPULATNOŚĆ JĘZYKOWA: Nie pomijaj błędów interpunkcyjnych (w tym zbędnych przecinków przed "niż", "jak") oraz drobnych potknięć słownikowych. Analizuj tekst z bezwzględnym rygorem egzaminatora państwowego.
+   - APTEKARSKA SKRUPULATNOŚĆ JĘZYKOWA: Nie pomijaj błędów interpunkcyjnych oraz drobnych potknięć słownikowych. Analizuj tekst z bezwzględnym rygorem egzaminatora państwowego.
 
-5. KRYTYCZNY WYMÓG: TABLICA "annotations" (PODŚWIETLENIA BŁĘDÓW W TEKŚCIE):
-   - W tablicy "annotations" MUSISZ bezwzględnie wypisać KAŻDY błąd językowy, ortograficzny, interpunkcyjny i rzeczowy, który zauważysz w tekście ucznia!
-   - Ta tablica NIE MOŻE być pusta, jeśli praca ma jakiekolwiek usterki.
-   - "original": MUSI TO BYĆ BEZWZGLĘDNA KOPIA 1:1 (COPY-PASTE) fragmentu tekstu ucznia (1-4 słowa). Nie dodawaj od siebie żadnych cudzysłowów, kropek, ani nie zmieniaj spacji.
+5. KRYTYCZNY WYMÓG: TABLICA "annotations" (PODŚWIETLENIA BŁĘDÓW W INTERFEJSIE):
+   - W tablicy "annotations" MUSISZ bezwzględnie wypisać KAŻDY błąd językowy, ortograficzny, interpunkcyjny i rzeczowy.
+   - KATEGORYCZNY ZAKAZ wymieniania błędów wyłącznie w tekście komentarza! Jeśli widzisz błąd (np. "Chcę pochować brata", "na która", "rządze dusz"), Twoim pierwszym obowiązkiem jest dodać go do tablicy "annotations"!
+   - "original": MUSI TO BYĆ BEZWZGLĘDNA KOPIA 1:1 (COPY-PASTE) fragmentu tekstu ucznia (1-4 słowa).
    - "replacement": poprawna forma.
    - "type": dokładnie jeden z: "rzeczowy" | "językowy" | "ortograficzny" | "interpunkcyjny".
    - "explanation": zwięzłe wyjaśnienie reguły (1 zdanie).
@@ -265,9 +252,12 @@ Zwróć pełną ocenę za pomocą dedykowanego narzędzia ocen_rozprawke_cke.`;
     </essay>
 
     Oceń powyższą rozprawkę zgodnie z oficjalnymi kryteriami CKE Formuła 2023. 
-WAŻNE: Opieraj się WYŁĄCZNIE na podanej wyżej liczbie słów z serwera (${wordCount} słów). Ponieważ wynosi ona ${wordCount}, co ${isUnder300Words ? "jest poniżej 300 słów" : "jest POWYŻEJ 300 słów"}, ${isUnder300Words ? "wyzeruj KW i JW." : "KATEGORYCZNIE OŚWIADCZAM: praca ma ponad 300 słów, więc NIE WOLNO Ci zerować KW ani JW z powodu długości! Oceń je normalnie w pełnej skali."} Wywołaj narzędzie ocen_rozprawke_cke z pełnym protokołem.`;
+WAŻNE: 
+1. Opieraj się WYŁĄCZNIE na podanej wyżej liczbie słów z serwera (${wordCount} słów).
+2. KRYTYCZNE DLA INTERFEJSU: Wypełnij tablicę "annotations" wszystkimi wykrytymi błędami. Bez tego uczeń nie zobaczy kolorowych podświetleń w edytorze! Nie ograniczaj się tylko do wypisania ich w komentarzu.
+Wywołaj narzędzie ocen_rozprawke_cke.`;
 
-    // 7. WYWOŁANIE CLAUDE Z WYMUSZONYM TOOL CALLING (ZERO SYNTAX ERRORÓW)
+    // 7. WYWOŁANIE CLAUDE
     const CLAUDE_MODELS_TO_TRY = [
       "claude-sonnet-5",
       "claude-sonnet-4-6",
@@ -316,20 +306,53 @@ WAŻNE: Opieraj się WYŁĄCZNIE na podanej wyżej liczbie słów z serwera (${w
       throw new Error("CLAUDE_API_ERROR");
     }
 
-    // 🎯 ODBIÓR ZTOOL USE: DANE PRZYCHODZĄ JUŻ JAKO GOTOWY OBIEKT JAVASCRIPT!
     const toolUseBlock = claudeResponse.content?.find((b: any) => b.type === "tool_use");
     if (!toolUseBlock || !toolUseBlock.input) {
-      console.error("Brak bloku tool_use w odpowiedzi:", JSON.stringify(claudeResponse.content));
-      throw new Error("Model Claude nie zwrócił danych w oczekiwanym formacie narzędzia.");
+      throw new Error("Model Claude nie wywołał narzędzia oceny.");
     }
 
     const parsedResult = toolUseBlock.input as any;
+
+    // 🛡️ PANZERNY FALLBACK: Jeśli Claude wypisał błędy w komentarzu zamiast w annotations, wyciągamy je automatycznie!
+    if (!Array.isArray(parsedResult.annotations)) {
+      parsedResult.annotations = [];
+    }
+
+    if (parsedResult.annotations.length === 0 && Array.isArray(parsedResult.details)) {
+      console.warn("-> Claude zwrócił pustą tablicę annotations. Uruchamiam Auto-Extractor z komentarzy...");
+      
+      parsedResult.details.forEach((d: any) => {
+        const commentText = String(d?.comment || "");
+        // Wyłapuje konstrukcje typu: 'błąd' zamiast 'poprawnie' lub „błąd” zamiast „poprawnie”
+        const regexPair = /['„"]([^'”"]+)['”"]\s+zamiast\s+['„"]([^'”"]+)['”"]/gi;
+        let match: RegExpExecArray | null;
+
+        while ((match = regexPair.exec(commentText)) !== null) {
+          const originalCandidate = match[1].trim();
+          const replacementCandidate = match[2].trim();
+
+          // Sprawdzamy, czy ten fragment rzeczywiście istnieje w tekście wypracowania
+          if (essayText.toLowerCase().includes(originalCandidate.toLowerCase())) {
+            parsedResult.annotations.push({
+              original: originalCandidate,
+              replacement: replacementCandidate,
+              type: String(d.criterion).toLowerCase().includes("język") ? "językowy" : "rzeczowy",
+              explanation: `Błąd wskazany przez egzaminatora: powinno być „${replacementCandidate}”.`
+            });
+          }
+        }
+      });
+
+      if (parsedResult.annotations.length > 0) {
+        console.log(`-> Auto-Extractor pomyślnie odzyskał ${parsedResult.annotations.length} podświetleń!`);
+      }
+    }
 
     if (!parsedResult.score || !Array.isArray(parsedResult.details)) {
       throw new Error("Otrzymano niekompletną strukturę oceny z modelu.");
     }
 
-    // 8. Zapis oceny do bazy Supabase z pełną walidacją
+    // 8. Zapis oceny do bazy Supabase
     const { error: insertError } = await supabaseAdmin
       .from("essay_evaluations")
       .insert({
@@ -355,7 +378,6 @@ WAŻNE: Opieraj się WYŁĄCZNIE na podanej wyżej liczbie słów z serwera (${w
   } catch (error: any) {
     console.error("Błąd analizy Claude:", error);
 
-    // Atomowy rollback tokena w razie jakiegokolwiek błędu
     if (creditDeducted && userId) {
       try {
         await supabaseAdmin.rpc('increment_credit', { user_id_param: userId });
