@@ -301,13 +301,27 @@ export default function NotesClientView({ initialNotes }: { initialNotes: any[] 
             </div>
           </div>
 
-          {/* 🎯 3. FILTR EPOK */}
-          <div className="flex flex-wrap gap-2 pt-0.5">
-            {eras.map((era) => (
-              <button key={era} onClick={() => { playSound("click"); setSelectedEra(era); }} className={`text-xs px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${selectedEra === era ? "bg-amber-500/20 text-amber-400 border-amber-500/40 font-bold" : `border ${currentTheme.btnBorder} ${currentTheme.cardBg} ${currentTheme.subText} hover:text-stone-200`}`}>{era}</button>
-            ))}
+         {/* 🎯 3. FILTR EPOK (KATEGORIA) */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 pt-0.5">
+            <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider pl-1 shrink-0">
+              Kategoria:
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {eras.map((era) => (
+                <button 
+                  key={era} 
+                  onClick={() => { playSound("click"); setSelectedEra(era); }} 
+                  className={`text-xs px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${
+                    selectedEra === era 
+                      ? "bg-amber-500/20 text-amber-400 border-amber-500/40 font-bold" 
+                      : `border ${currentTheme.btnBorder} ${currentTheme.cardBg} ${currentTheme.subText} hover:text-stone-200`
+                  }`}
+                >
+                  {era}
+                </button>
+              ))}
+            </div>
           </div>
-          
           {/* WYSZUKIWARKA */}
           <input 
             type="text" 
