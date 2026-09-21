@@ -21,55 +21,73 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// 🎯 KULOODPORNY EKSTRAKTOR I WALIDATOR STRUKTURY JSON
-const extractAndParseJSON = (rawText: string) => {
-  if (!rawText) {
-    throw new Error("Otrzymano pustą odpowiedź od AI.");
-  }
-
-  // 1. Usunięcie znaczników markdown ```json ... ```
-  let text = rawText
-    .replace(/^```json\s*/i, "")
-    .replace(/^```\s*/i, "")
-    .replace(/```\s*$/i, "")
-    .trim();
-
-  // 2. Znalezienie skrajnych nawiasów głównego obiektu
-  const firstBrace = text.indexOf('{');
-  const lastBrace = text.lastIndexOf('}');
-
-  if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
-    throw new Error("Materiały wyjściowe AI nie zawierają obiektu JSON.");
-  }
-
-  const jsonCandidate = text.substring(firstBrace, lastBrace + 1);
-
-  // 3. Pierwsza próba: bezpośredni parse całego obiektu
-  try {
-    const parsed = JSON.parse(jsonCandidate);
-    if (parsed && typeof parsed === "object" && parsed.score && Array.isArray(parsed.details)) {
-      return parsed;
-    }
-  } catch (err) {
-    // 4. Druga próba: naprawa surowych znaków kontrolnych i niedozwolonych enterów w stringach
-    try {
-      const sanitized = jsonCandidate.replace(/[\u0000-\u001F]+/g, (match) => {
-        if (match === "\n") return "\\n";
-        if (match === "\r") return "\\r";
-        if (match === "\t") return "\\t";
-        return "";
-      });
-
-      const parsedSanitized = JSON.parse(sanitized);
-      if (parsedSanitized && typeof parsedSanitized === "object" && parsedSanitized.score && Array.isArray(parsedSanitized.details)) {
-        return parsedSanitized;
+// 🎯 SCHEMAT NARZĘDZIA DLA CLAUDE (GWARANTUJE POPRAWNOŚĆ STRUKTURY I CHRONI PRZED SYNTAX ERROR)
+const ckeEvaluationTool: Anthropic.Tool = {
+  name: "ocen_rozprawke_cke",
+  description: "Zapisz oficjalny protokół oceny wypracowania maturalnego CKE z języka polskiego.",
+  input_schema: {
+    type: "object",
+    properties: {
+      score: {
+        type: "string",
+        description: "Łączny wynik punktowy w formacie X/35, np. '24/35'."
+      },
+      details: {
+        type: "array",
+        description: "Szczegółowa ocena 4 głównych kryteriów CKE (Spełnienie formalnych warunków, KLiK, KW, JW)",
+        items: {
+          type: "object",
+          properties: {
+            criterion: {
+              type: "string",
+              description: "Dokładna nazwa kryterium CKE"
+            },
+            points: {
+              type: "string",
+              description: "Punkty za dane kryterium, np. '1/1', '13/16', '5/7', '5/11'"
+            },
+            comment: {
+              type: "string",
+              description: "Szczegółowe merytoryczne uzasadnienie punktacji."
+            }
+          },
+          required: ["criterion", "points", "comment"]
+        }
+      },
+      summary: {
+        type: "string",
+        description: "Konstruktywne podsumowanie krytyka z wytycznymi, co uczeń musi poprawić."
+      },
+      annotations: {
+        type: "array",
+        description: "Lista wszystkich wykrytych usterek w tekście wypracowania ucznia",
+        items: {
+          type: "object",
+          properties: {
+            original: {
+              type: "string",
+              description: "Dokładny fragment (1-4 słowa) z tekstu ucznia, w którym występuje błąd (copy-paste 1:1)."
+            },
+            replacement: {
+              type: "string",
+              description: "Poprawna forma lub wskazówka poprawy."
+            },
+            type: {
+              type: "string",
+              enum: ["rzeczowy", "językowy", "ortograficzny", "interpunkcyjny"],
+              description: "Kategoria błędu"
+            },
+            explanation: {
+              type: "string",
+              description: "Zwięzłe wyjaśnienie reguły."
+            }
+          },
+          required: ["original", "replacement", "type", "explanation"]
+        }
       }
-    } catch (innerErr) {
-      console.error("Błąd parsowania po sanityzacji:", innerErr);
-    }
+    },
+    required: ["score", "details", "summary", "annotations"]
   }
-
-  throw new Error("AI zwróciło uszkodzoną lub niekompletną strukturę raportu CKE (brak score lub details).");
 };
 
 export async function POST(req: NextRequest) {
@@ -103,7 +121,7 @@ export async function POST(req: NextRequest) {
     const topicWords = topic.split(/\s+/).filter(Boolean);
     const essayWords = essayText.split(/\s+/).filter(Boolean);
 
-    // B. BLOKADA SPAMU / CIĄGÓW BEZ SPACJI
+    // B. BLOKADA SPAMU / CIĄGÓW BEZ SPACJI (MAKSYMALNIE 25 ZNAKÓW NA SŁOWO)
     const hasInvalidTopicWord = topicWords.some((word: string) => word.length > 25);
     const hasInvalidEssayWord = essayWords.some((word: string) => word.length > 25);
 
@@ -179,7 +197,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 6. PROMPT SYSTEMOWY DLA CLAUDE
+    // 6. DYNAMICZNY PROMPT SYSTEMOWY DLA CLAUDE (TWÓJ ORYGINALNY PROMPT W 100%)
     const systemPrompt = `Jesteś oficjalnym, doświadczonym i skrupulatnym egzaminatorem CKE oceniającym wypracowania maturalne z języka polskiego (poziom podstawowy, Formuła 2023, skala 35 punktów). 
 
 Twoim zadaniem jest dokładna, sprawiedliwa ocena pracy zgodnie z oficjalnym kluczem CKE. 
@@ -198,8 +216,8 @@ ${similarEssaysContext}
    - Jeśli słów >= 300: oceń pełne 4 kryteria.
 
 2. KLiK (0–16 pkt) & BŁĘDY RZECZOWE:
-   - Przeprowadź bezwzględnie wnikliwą i surową analizę treści pod kątem błędów rzeczowych, przeinaczeń fabularnych oraz błędów kardynalnych.
-   - Za każdy unikalny błąd rzeczowy odetnij 1 punkt z kryterium KLiK.
+   - Przeprowadź bezwzględnie wnikliwą i surową analizę treści pod kątem wszelkiego rodzaju błędów rzeczowych, przeinaczeń fabularnych, fałszu merytorycznego, anachronizmów oraz błędów kardynalnych.
+   - Za każdy unikalny błąd rzeczowy odetnij 1 punkt z kryterium KLiK (pamiętaj o zasadzie: błąd kardynalny lub zbyt wiele błędów rzeczowych może zniszczyć całą punktację).
    - 13–16 pkt: Pogłębiona argumentacja, oba utwory w pełni funkcjonalne pod tezę, brak błędów rzeczowych.
    - 9–12 pkt: Zadowalająca argumentacja, poprawna analiza lektur.
    - 8 pkt: Jedna lektura funkcjonalna, druga częściowo funkcjonalna, powierzchowna argumentacja.
@@ -207,62 +225,27 @@ ${similarEssaysContext}
 
 3. KW: Kompozycja (0–7 pkt):
    - 3a (Struktura): 0–3 pkt.
-   - 3b (Spójność): 0–3 pkt.
+   - 3b (Spójność): 0–3 pkt (zlicz zaburzenia logiczne i przeskoki).
    - 3c (Styl): 0–1 pkt.
 
 4. JW: Język i styl (0–11 pkt) – APTEKARSKI AUDYT JĘZYKOWY:
-   - Policz WSZYSTKIE usterki: językowe, ortograficzne i interpunkcyjne.
-   - BŁĘDY ORTOGRAFICZNE (4b): Zalicza się tu również pisanie małą literą nazw własnych, narodowości, mieszkańców miast oraz nazw zakonów.
-   - BŁĘDY INTERPUNKCYJNE (4c): Ścigaj brakujące i zbędne przecinki.
+   - Policz absolutnie WSZYSTKIE usterki: językowe, ortograficzne i interpunkcyjne.
+   - BŁĘDY ORTOGRAFICZNE (Kryterium 4b): Zalicza się tu również pisanie małą literą nazw własnych, narodowości, mieszkańców krajów/miast oraz nazw zakonów (np. "krzyżaków" zamiast "Krzyżaków", "polak", "warszawiak"). Każde takie odstępstwo to bezwzględny błąd ortograficzny!
+   - BŁĘDY INTERPUNKCYJNE (Kryterium 4c): Wymóg bezwzględnego ścigania zbędnych lub brakujących przecinków. Każdy zbędny przecinek przed spójnikami porównawczymi typu "niż", "jak" łączącymi równoważniki zdań (np. "ważniejsze, niż szczęście") MUSI zostać wykryty, umieszczony w sekcji "annotations" z typem "interpunkcyjny" i odjęty w liczbie błędów! Nie pomijaj takich błędów.
    - Jeśli błędów językowych jest >= 18: przyznaj za 4a BEZWZGLĘDNIE 0/7 PKT!
    - 4b (Ortografia): 0–2 pkt (0-1 błąd = 2 pkt, 2-3 błędy = 1 pkt, 4+ = 0 pkt).
    - 4c (Interpunkcja): 0–2 pkt (0-4 błędy = 2 pkt, 5-14 błędów = 1 pkt, 15+ = 0-1 pkt).
+   - APTEKARSKA SKRUPULATNOŚĆ JĘZYKOWA: Nie pomijaj błędów interpunkcyjnych (w tym zbędnych przecinków przed "niż", "jak") oraz drobnych potknięć słownikowych. Analizuj tekst z bezwzględnym rygorem egzaminatora państwowego.
 
 5. KRYTYCZNY WYMÓG: TABLICA "annotations" (PODŚWIETLENIA BŁĘDÓW W TEKŚCIE):
-   - W tablicy "annotations" MUSISZ wypisać KAŻDY błąd językowy, ortograficzny, interpunkcyjny i rzeczowy.
-   - "original": MUSI TO BYĆ KOPIA 1:1 (COPY-PASTE) fragmentu tekstu ucznia (1-4 słowa). WAŻNE DLA JSON: Jeśli w cytowanym fragmencie występuje cudzysłów (np. "), MUSISZ go bezwzględnie wyescape'ować (\\").
+   - W tablicy "annotations" MUSISZ bezwzględnie wypisać KAŻDY błąd językowy, ortograficzny, interpunkcyjny i rzeczowy, który zauważysz w tekście ucznia!
+   - Ta tablica NIE MOŻE być pusta, jeśli praca ma jakiekolwiek usterki.
+   - "original": MUSI TO BYĆ BEZWZGLĘDNA KOPIA 1:1 (COPY-PASTE) fragmentu tekstu ucznia (1-4 słowa). Nie dodawaj od siebie żadnych cudzysłowów, kropek, ani nie zmieniaj spacji.
    - "replacement": poprawna forma.
    - "type": dokładnie jeden z: "rzeczowy" | "językowy" | "ortograficzny" | "interpunkcyjny".
    - "explanation": zwięzłe wyjaśnienie reguły (1 zdanie).
 
-=== FORMAT ODPOWIEDZI ===
-Zwróć WYŁĄCZNIE poprawny, kompletny obiekt JSON bez znaczników markdown:
-
-{
-  "_scoring_log": "Brudnopis oceniania...",
-  "score": "X/35",
-  "details": [
-    {
-      "criterion": "Spełnienie formalnych warunków polecenia",
-      "points": "X/1",
-      "comment": "Zwięzłe uzasadnienie."
-    },
-    {
-      "criterion": "Kompetencje literackie i kulturowe",
-      "points": "X/16",
-      "comment": "Rzetelna ocena funkcjonalności utworów i argumentacji w oparciu o tabelę CKE."
-    },
-    {
-      "criterion": "Kompozycja wypowiedzi",
-      "points": "X/7",
-      "comment": "Ocena układu trójdzielnego, akapitów i spójności wywodu."
-    },
-    {
-      "criterion": "Język wypowiedzi",
-      "points": "X/11",
-      "comment": "Ocena zakresu oraz zliczonych błędów językowych, ortograficznych i interpunkcyjnych."
-    }
-  ],
-  "summary": "Konstruktywne podsumowanie egzaminatora z wytycznymi.",
-  "annotations": [
-    {
-      "original": "dokładny fragment z błędem z tekstu ucznia",
-      "replacement": "poprawna forma",
-      "type": "rzeczowy | językowy | ortograficzny | interpunkcyjny",
-      "explanation": "Zwięzłe wyjaśnienie reguły."
-    }
-  ]
-}`;
+Zwróć pełną ocenę za pomocą dedykowanego narzędzia ocen_rozprawke_cke.`;
 
     const safeEssayText = essayText.replace(/<essay>/g, "").replace(/<\/essay>/g, "");
     const safeTopic = topic.replace(/<topic>/g, "").replace(/<\/topic>/g, "");
@@ -282,8 +265,9 @@ Zwróć WYŁĄCZNIE poprawny, kompletny obiekt JSON bez znaczników markdown:
     </essay>
 
     Oceń powyższą rozprawkę zgodnie z oficjalnymi kryteriami CKE Formuła 2023. 
-WAŻNE: Opieraj się WYŁĄCZNIE na podanej liczbie słów (${wordCount} słów). Zwróć tylko czysty JSON z polami: score, details, summary, annotations.`;
+WAŻNE: Opieraj się WYŁĄCZNIE na podanej wyżej liczbie słów z serwera (${wordCount} słów). Ponieważ wynosi ona ${wordCount}, co ${isUnder300Words ? "jest poniżej 300 słów" : "jest POWYŻEJ 300 słów"}, ${isUnder300Words ? "wyzeruj KW i JW." : "KATEGORYCZNIE OŚWIADCZAM: praca ma ponad 300 słów, więc NIE WOLNO Ci zerować KW ani JW z powodu długości! Oceń je normalnie w pełnej skali."} Wywołaj narzędzie ocen_rozprawke_cke z pełnym protokołem.`;
 
+    // 7. WYWOŁANIE CLAUDE Z WYMUSZONYM TOOL CALLING (ZERO SYNTAX ERRORÓW)
     const CLAUDE_MODELS_TO_TRY = [
       "claude-sonnet-5",
       "claude-sonnet-4-6",
@@ -296,11 +280,13 @@ WAŻNE: Opieraj się WYŁĄCZNIE na podanej liczbie słów (${wordCount} słów)
 
     for (const modelName of CLAUDE_MODELS_TO_TRY) {
       try {
-        console.log(`-> Wywołanie Claude (${modelName})...`);
+        console.log(`-> Wywołanie Claude (${modelName}) z Tool Calling...`);
         claudeResponse = await anthropic.messages.create({
           model: modelName,
           max_tokens: 4000,
           thinking: { type: "disabled" },
+          tools: [ckeEvaluationTool],
+          tool_choice: { type: "tool", name: "ocen_rozprawke_cke" },
           system: [
             {
               type: "text",
@@ -330,32 +316,20 @@ WAŻNE: Opieraj się WYŁĄCZNIE na podanej liczbie słów (${wordCount} słów)
       throw new Error("CLAUDE_API_ERROR");
     }
 
-    let responseText = "";
-    if (Array.isArray(claudeResponse.content)) {
-      for (const block of claudeResponse.content) {
-        if (block.type === "text" && block.text) {
-          responseText += block.text;
-        }
-      }
+    // 🎯 ODBIÓR ZTOOL USE: DANE PRZYCHODZĄ JUŻ JAKO GOTOWY OBIEKT JAVASCRIPT!
+    const toolUseBlock = claudeResponse.content?.find((b: any) => b.type === "tool_use");
+    if (!toolUseBlock || !toolUseBlock.input) {
+      console.error("Brak bloku tool_use w odpowiedzi:", JSON.stringify(claudeResponse.content));
+      throw new Error("Model Claude nie zwrócił danych w oczekiwanym formacie narzędzia.");
     }
 
-    if (!responseText.trim()) {
-      for (const block of claudeResponse.content) {
-        if (block.text) responseText += block.text;
-      }
+    const parsedResult = toolUseBlock.input as any;
+
+    if (!parsedResult.score || !Array.isArray(parsedResult.details)) {
+      throw new Error("Otrzymano niekompletną strukturę oceny z modelu.");
     }
 
-    if (!responseText.trim()) {
-      throw new Error("Otrzymano pustą odpowiedź od AI.");
-    }
-
-    // Bezpieczne parsowanie z gwarancją kompletności
-    const parsedResult = extractAndParseJSON(responseText);
-
-    const clientResult = { ...parsedResult };
-    delete clientResult._scoring_log;
-
-    // 8. Zapis oceny do bazy Supabase z twardą kontrolą błędów
+    // 8. Zapis oceny do bazy Supabase z pełną walidacją
     const { error: insertError } = await supabaseAdmin
       .from("essay_evaluations")
       .insert({
@@ -369,19 +343,19 @@ WAŻNE: Opieraj się WYŁĄCZNIE na podanej liczbie słów (${wordCount} słów)
 
     if (insertError) {
       console.error("Błąd zapisu do bazy:", insertError);
-      throw new Error("Błąd podczas zapisywania oceny w bazie danych.");
+      throw new Error("Nie udało się zapisać wyniku analizy w bazie.");
     }
 
     return NextResponse.json({
       success: true,
       newCredits,
-      analysisResult: clientResult,
+      analysisResult: parsedResult,
     });
 
   } catch (error: any) {
     console.error("Błąd analizy Claude:", error);
 
-    // Atomowy rollback tokena przy jakimkolwiek błędzie
+    // Atomowy rollback tokena w razie jakiegokolwiek błędu
     if (creditDeducted && userId) {
       try {
         await supabaseAdmin.rpc('increment_credit', { user_id_param: userId });
