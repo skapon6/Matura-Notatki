@@ -22,31 +22,52 @@ const supabaseAdmin = createClient(
 );
 
 // Pancerny ekstraktor JSON izolujący poprawny obiekt { ... } z dowolnego tekstu AI
-const extractAndParseJSON = (text: string) => {
-  if (!text) {
-    throw new Error("Otrzymano pustą odpowiedź od AI.");
+const extractAndParseJSON = (rawText: string) => {
+  if (!rawText) throw new Error("Otrzymano pustą odpowiedź od AI.");
+
+  // 1. Usunięcie znaczników markdown ```json oraz ```
+  let text = rawText
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/```\s*$/i, "")
+    .trim();
+
+  // 2. Znalezienie głównego obiektu { ... }
+  const firstBrace = text.indexOf("{");
+  const lastBrace = text.lastIndexOf("}");
+
+  if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+    throw new Error("Odpowiedź AI nie zawiera obiektu JSON.");
   }
 
-  let firstBrace = text.indexOf('{');
-  if (firstBrace === -1) {
-    throw new Error("Materiały wyjściowe AI nie zawierają prawidłowego obiektu JSON.");
-  }
+  const jsonCandidate = text.substring(firstBrace, lastBrace + 1);
 
-  while (firstBrace !== -1) {
-    let lastBrace = text.lastIndexOf('}');
-    
-    while (lastBrace > firstBrace) {
-      const jsonString = text.substring(firstBrace, lastBrace + 1);
-      try {
-        return JSON.parse(jsonString);
-      } catch (err) {
-        lastBrace = text.lastIndexOf('}', lastBrace - 1);
-      }
+  try {
+    const parsed = JSON.parse(jsonCandidate);
+    // Walidacja czy to rzeczywiście pełny raport egzaminatora:
+    if (parsed && typeof parsed === "object" && parsed.score && Array.isArray(parsed.details)) {
+      return parsed;
     }
-    firstBrace = text.indexOf('{', firstBrace + 1);
+  } catch (e) {
+    // Jeśli bezpośredni parse nie zadziałał (np. przez unescaped znaki w cytatach):
+    try {
+      // Zamiana niedozwolonych surowych znaków kontrolnych wewnątrz stringów
+      const sanitized = jsonCandidate.replace(/[\u0000-\u001F]+/g, (match) => {
+        if (match === "\n") return "\\n";
+        if (match === "\r") return "\\r";
+        if (match === "\t") return "\\t";
+        return "";
+      });
+      const parsed = JSON.parse(sanitized);
+      if (parsed && typeof parsed === "object" && parsed.score && Array.isArray(parsed.details)) {
+        return parsed;
+      }
+    } catch (innerErr) {
+      console.error("Błąd parsowania oczyszczonego JSON:", innerErr);
+    }
   }
 
-  throw new Error("Nie udało się wyodrębnić i sparsować poprawnej struktury JSON z odpowiedzi AI.");
+  throw new Error("AI zwróciło niepełną lub uszkodzoną strukturę danych JSON.");
 };
 
 export async function POST(req: NextRequest) {
@@ -204,6 +225,7 @@ ${similarEssaysContext}
    - "replacement": poprawna forma.
    - "type": dokładnie jeden z: "rzeczowy" | "językowy" | "ortograficzny" | "interpunkcyjny".
    - "explanation": zwięzłe wyjaśnienie reguły (1 zdanie).
+   - WAŻNE DLA JSON: Jeśli fragment w "original" lub "replacement" zawiera cudzysłowy (np. cudzysłów prosty "), MUSISZ go wyescape'ować jako \" (np. \"1984\"). Całość MUSI być w 100% poprawnym syntaktycznie obiektem JSON.
 
 === FORMAT ODPOWIEDZI ===
 Zwróć WYŁĄCZNIE poprawny obiekt JSON bez jakichkolwiek znaczników markdown (np. bez \`\`\`json).
