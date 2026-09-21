@@ -187,7 +187,7 @@ export async function POST(req: NextRequest) {
     // 🌟 KROK 5B: SZYBKI I PRECYZYJNY AUDYT FAKTÓW ORAZ BŁĘDÓW KARDYNALNYCH PRZEZ GEMINI FLASH
     let geminiFactAudit = "";
     try {
-      const factModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const factModel = genAI.getGenerativeModel({ model: "gemini-3.5-flash" });
       const factPrompt = `Jesteś bezwzględnym, encyklopedycznym weryfikatorem faktów literackich i historycznych do egzaminu maturalnego CKE z języka polskiego.
 
 Twoim wyłącznym zadaniem jest wykrycie:
@@ -200,6 +200,8 @@ Twoim wyłącznym zadaniem jest wykrycie:
    - Pomylenie imion, nazwisk, autorów i realiów.
 
 Nie oceniaj stylu, języka, kompozycji ani ortografii!
+Ważne zastrzeżenie: najpierw zanim uznasz coś za błąd rzeczowy sprawdź czy faktycznie jest błędem rzeczowym w kontekście faktów, bohaterów i wydarzeń z lektury. Nie uznawaj danego błędu za rzeczowy lub kardynalny jeżeli wynika on z mniejszego doprecyzowania ucznia lub twojej błędnej interpretacji.
+Błąd kardynalny to poważny błąd rzeczowy w pracy maturalnej z języka polskiego, który świadczy o całkowitej nieznajomości fabuły, głównych wątków lub losów bohaterów lektury obowiązkowej (omówionej w całości) i całkowicie zniekształca sens utworu, dlatego uzywaj go tylko w ostateczności jeżeli uczeń całkowiocie nie zna faktów lub wydarzeń.
 
 Zwróć odpowiedź w czystym formacie JSON:
 {
