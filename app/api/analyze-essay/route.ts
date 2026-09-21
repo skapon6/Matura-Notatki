@@ -19,7 +19,7 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// 🎯 SCHEMAT NARZĘDZIA DLA CLAUDE: "annotations" NA SAMYM POCZĄTKU
+// 🎯 SCHEMAT NARZĘDZIA Z WYMUSZONĄ PEŁNĄ LISTĄ BŁĘDÓW
 const ckeEvaluationTool: Anthropic.Tool = {
   name: "ocen_rozprawke_cke",
   description: "Zapisz oficjalny protokół oceny wypracowania maturalnego CKE z języka polskiego.",
@@ -32,17 +32,17 @@ const ckeEvaluationTool: Anthropic.Tool = {
       },
       annotations: {
         type: "array",
-        description: "BEZWZGLĘDNIE WYMAGANA LISTA PODŚWIETLEŃ W TEKŚCIE. Każdy błąd językowy, ortograficzny, interpunkcyjny i rzeczowy, za który obniżasz punkty, MUSI znaleźć się w tej tablicy. Nigdy nie zostawiaj jej pustej, jeśli praca ma jakiekolwiek usterki!",
+        description: "KOMPLETNA I WYCZERPUJĄCA LISTA WSZYSTKICH BŁĘDÓW W TEKŚCIE. Zakaz podawania jedynie kilku próbek! Każda pojedyncza usterka (językowa, ortograficzna, każdy brakujący przecinek, błąd spacji czy błąd rzeczowy), którą odliczasz w punktacji, MUSI mieć tutaj swój osobny obiekt.",
         items: {
           type: "object",
           properties: {
             original: {
               type: "string",
-              description: "DOKŁADNY fragment z tekstu ucznia (1-4 słowa, czysty copy-paste 1:1), w którym występuje usterka."
+              description: "Dokładny fragment (1-4 słowa) z tekstu ucznia (copy-paste 1:1)."
             },
             replacement: {
               type: "string",
-              description: "Poprawna forma lub wskazówka."
+              description: "Poprawna forma (np. wstawiony przecinek, poprawna litera, lepsze słowo)."
             },
             type: {
               type: "string",
@@ -51,7 +51,7 @@ const ckeEvaluationTool: Anthropic.Tool = {
             },
             explanation: {
               type: "string",
-              description: "Krótkie wyjaśnienie reguły (1 zdanie)."
+              description: "Krótkie wyjaśnienie reguły."
             }
           },
           required: ["original", "replacement", "type", "explanation"]
@@ -184,7 +184,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 6. TWÓJ ORYGINALNY PROMPT SYSTEMOWY
+    // 6. TWÓJ ORYGINALNY PROMPT SYSTEMOWY Z ZASADĄ PEŁNEGO WYPISYWANIA BŁĘDÓW
     const systemPrompt = `Jesteś oficjalnym, doświadczonym i skrupulatnym egzaminatorem CKE oceniającym wypracowania maturalne z języka polskiego (poziom podstawowy, Formuła 2023, skala 35 punktów). 
 
 Twoim zadaniem jest dokładna, sprawiedliwa ocena pracy zgodnie z oficjalnym kluczem CKE. 
@@ -218,15 +218,16 @@ ${similarEssaysContext}
 4. JW: Język i styl (0–11 pkt) – APTEKARSKI AUDYT JĘZYKOWY:
    - Policz absolutnie WSZYSTKIE usterki: językowe, ortograficzne i interpunkcyjne.
    - BŁĘDY ORTOGRAFICZNE (Kryterium 4b): Zalicza się tu również pisanie małą literą nazw własnych, narodowości, mieszkańców krajów/miast oraz nazw zakonów (np. "krzyżaków" zamiast "Krzyżaków", "polak", "warszawiak"). Każde takie odstępstwo to bezwzględny błąd ortograficzny!
-   - BŁĘDY INTERPUNKCYJNE (Kryterium 4c): Wymóg bezwzględnego ścigania zbędnych lub brakujących przecinków. Każdy zbędny przecinek przed spójnikami porównawczymi typu "niż", "jak" łączącymi równoważniki zdań (np. "ważniejsze, niż szczęście") MUSI zostać wykryty, umieszczony w sekcji "annotations" z typem "interpunkcyjny" i odjęty w liczbie błędów! Nie pomijaj takich błędów.
+   - BŁĘDY INTERPUNKCYJNE (Kryterium 4c): Wymóg bezwzględnego ścigania zbędnych lub brakujących przecinków. Każdy zbędny przecinek przed spójnikami porównawczymi typu "niż", "jak" łączącymi równoważniki zdań MUSI zostać wykryty i odjęty w liczbie błędów!
    - Jeśli błędów językowych jest >= 18: przyznaj za 4a BEZWZGLĘDNIE 0/7 PKT!
    - 4b (Ortografia): 0–2 pkt (0-1 błąd = 2 pkt, 2-3 błędy = 1 pkt, 4+ = 0 pkt).
    - 4c (Interpunkcja): 0–2 pkt (0-4 błędy = 2 pkt, 5-14 błędów = 1 pkt, 15+ = 0-1 pkt).
    - APTEKARSKA SKRUPULATNOŚĆ JĘZYKOWA: Nie pomijaj błędów interpunkcyjnych oraz drobnych potknięć słownikowych. Analizuj tekst z bezwzględnym rygorem egzaminatora państwowego.
 
 5. KRYTYCZNY WYMÓG: TABLICA "annotations" (PODŚWIETLENIA BŁĘDÓW W INTERFEJSIE):
-   - W tablicy "annotations" MUSISZ bezwzględnie wypisać KAŻDY błąd językowy, ortograficzny, interpunkcyjny i rzeczowy.
-   - KATEGORYCZNY ZAKAZ wymieniania błędów wyłącznie w tekście komentarza! Jeśli widzisz błąd (np. "Chcę pochować brata", "na która", "rządze dusz"), Twoim pierwszym obowiązkiem jest dodać go do tablicy "annotations"!
+   - ABSOLUTNY ZAKAZ PODAWANIA PRÓBEK! Jeśli w kryteriach piszesz "naliczono 14 błędów językowych i 10 interpunkcyjnych", to tablica "annotations" MUSI zawierać dokładnie WSZYSTKIE te błędy (np. 24 oddzielne obiekty)! Każda usterka, za którą odejmujesz punkty, musi mieć swój wpis.
+   - JAK OZNACZAĆ BRAKUJĄCY PRZECINEK: W polu "original" podaj słowo przed i słowo po brakującym przecinku z tekstu ucznia (np. "bohaterka pomimo że"), a w "replacement" podaj poprawną formę z przecinkiem ("bohaterka, pomimo że").
+   - JAK OZNACZAĆ BŁĘDNE SPACJE / INTERPUNKCJĘ: Np. "original": "Zewnętrznej , " -> "replacement": "Zewnętrznej,".
    - "original": MUSI TO BYĆ BEZWZGLĘDNA KOPIA 1:1 (COPY-PASTE) fragmentu tekstu ucznia (1-4 słowa).
    - "replacement": poprawna forma.
    - "type": dokładnie jeden z: "rzeczowy" | "językowy" | "ortograficzny" | "interpunkcyjny".
@@ -252,9 +253,9 @@ Zwróć pełną ocenę za pomocą dedykowanego narzędzia ocen_rozprawke_cke.`;
     </essay>
 
     Oceń powyższą rozprawkę zgodnie z oficjalnymi kryteriami CKE Formuła 2023. 
-WAŻNE: 
-1. Opieraj się WYŁĄCZNIE na podanej wyżej liczbie słów z serwera (${wordCount} słów).
-2. KRYTYCZNE DLA INTERFEJSU: Wypełnij tablicę "annotations" wszystkimi wykrytymi błędami. Bez tego uczeń nie zobaczy kolorowych podświetleń w edytorze! Nie ograniczaj się tylko do wypisania ich w komentarzu.
+WAŻNE DLA INTERFEJSU:
+1. W tablicy "annotations" wypisz WSZYSTKIE wykryte usterki (językowe, ortograficzne, interpunkcyjne ze spacjami i brakującymi przecinkami, rzeczowe). 
+2. Nie ograniczaj się do 2-3 przykładów! Liczba wpisów w "annotations" ma odpowiadać liczbie błędów podanych w kryterium JW i KLiK, aby uczeń widział każde podświetlenie w tekście.
 Wywołaj narzędzie ocen_rozprawke_cke.`;
 
     // 7. WYWOŁANIE CLAUDE
@@ -313,17 +314,14 @@ Wywołaj narzędzie ocen_rozprawke_cke.`;
 
     const parsedResult = toolUseBlock.input as any;
 
-    // 🛡️ PANZERNY FALLBACK: Jeśli Claude wypisał błędy w komentarzu zamiast w annotations, wyciągamy je automatycznie!
     if (!Array.isArray(parsedResult.annotations)) {
       parsedResult.annotations = [];
     }
 
-    if (parsedResult.annotations.length === 0 && Array.isArray(parsedResult.details)) {
-      console.warn("-> Claude zwrócił pustą tablicę annotations. Uruchamiam Auto-Extractor z komentarzy...");
-      
+    // 🛡️ DODATKOWY AUTO-EXTRACTOR (Gdyby model pominął któryś z cytowanych w recenzji błędów)
+    if (Array.isArray(parsedResult.details)) {
       parsedResult.details.forEach((d: any) => {
         const commentText = String(d?.comment || "");
-        // Wyłapuje konstrukcje typu: 'błąd' zamiast 'poprawnie' lub „błąd” zamiast „poprawnie”
         const regexPair = /['„"]([^'”"]+)['”"]\s+zamiast\s+['„"]([^'”"]+)['”"]/gi;
         let match: RegExpExecArray | null;
 
@@ -331,21 +329,20 @@ Wywołaj narzędzie ocen_rozprawke_cke.`;
           const originalCandidate = match[1].trim();
           const replacementCandidate = match[2].trim();
 
-          // Sprawdzamy, czy ten fragment rzeczywiście istnieje w tekście wypracowania
-          if (essayText.toLowerCase().includes(originalCandidate.toLowerCase())) {
+          const alreadyExists = parsedResult.annotations.some(
+            (a: any) => a.original?.toLowerCase() === originalCandidate.toLowerCase()
+          );
+
+          if (!alreadyExists && essayText.toLowerCase().includes(originalCandidate.toLowerCase())) {
             parsedResult.annotations.push({
               original: originalCandidate,
               replacement: replacementCandidate,
-              type: String(d.criterion).toLowerCase().includes("język") ? "językowy" : "rzeczowy",
+              type: String(d.criterion).toLowerCase().includes("orto") ? "ortograficzny" : "językowy",
               explanation: `Błąd wskazany przez egzaminatora: powinno być „${replacementCandidate}”.`
             });
           }
         }
       });
-
-      if (parsedResult.annotations.length > 0) {
-        console.log(`-> Auto-Extractor pomyślnie odzyskał ${parsedResult.annotations.length} podświetleń!`);
-      }
     }
 
     if (!parsedResult.score || !Array.isArray(parsedResult.details)) {
