@@ -988,12 +988,20 @@ export default function OcenianieRozprawekPage() {
                     </div>
                   )}
 
-                  {analysisResult.summary && (
+{analysisResult.summary && (
                     <div className="border-t border-stone-800 pt-4 mt-2">
                       <h4 className="text-xs font-bold text-[#c68a4c] font-serif uppercase tracking-wider mb-2">Podsumowanie krytyka:</h4>
                       <p className="text-xs text-stone-300 italic leading-relaxed">{safeString(analysisResult.summary)}</p>
                     </div>
                   )}
+
+                  {/* 🌟 TUTAJ WKLEJASZ NOTKĘ */}
+                  <div className="p-3.5 rounded-2xl bg-stone-950/70 border border-stone-800/80 flex items-start gap-2.5 text-[10.5px] text-stone-400 leading-relaxed font-sans mt-3 shadow-inner">
+                    <span className="text-amber-500 text-sm shrink-0 mt-0.5 select-none">⚖️</span>
+                    <p>
+                      <strong className="text-stone-300 font-semibold">Ważna uwaga:</strong> Asystent AI dokonuje bardzo rygorystycznej, aptekarskiej i dosłownej oceny według oficjalnych wytycznych CKE. Rzeczywista punktacja na egzaminie państwowym może różnić się <strong className="text-stone-200">na Twoją korzyść</strong> ze względu na bardziej elastyczną i całościową ocenę ludzkiego egzaminatora. Pamiętaj również, że sztuczna inteligencja jest jedynie narzędziem pomocniczym i może sporadycznie popełniać błędy – traktuj tę analizę jako wymagający trening przed maturą.
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <div className="rounded-2xl border border-dashed border-stone-800 bg-stone-950/20 p-6 text-center text-xs text-stone-500 h-full flex flex-col items-center justify-center min-h-[400px]">
