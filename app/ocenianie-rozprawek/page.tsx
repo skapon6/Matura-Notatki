@@ -93,7 +93,9 @@ const escapeHtml = (val: any): string => {
     .replace(/'/g, "&#039;");
 };
 
+// 🌟 Bezpieczna funkcja escapowania znaków w wyrażeniach regularnych
 const escapeRegex = (string: string) => {
+  if (!string) return "";
   return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 };
 
@@ -382,9 +384,9 @@ export default function OcenianieRozprawekPage() {
         // KROK 2: Dopasowanie elastyczne słów
         if (!found) {
           try {
-            const words = cleanOrig.split(/[\s\W]+/).filter(w => w.length > 1);
+            const words = cleanOrig.split(/[\s\W]+/).filter((w: string) => w.length > 1);
             if (words.length > 0) {
-              const wordsRegexStr = words.map(w => escapeRegex(w)).join("[\\s\\W]{1,15}");
+              const wordsRegexStr = words.map((w: string) => escapeRegex(w)).join("[\\s\\W]{1,15}");
               const relaxedRegex = new RegExp(wordsRegexStr, "gi");
 
               let match: RegExpExecArray | null;
@@ -516,6 +518,7 @@ export default function OcenianieRozprawekPage() {
   }
 
   const creditsRemaining = profile?.essay_credits ?? 0;
+  const currentWordCount = essayText.split(/\s+/).filter(Boolean).length;
   const currentYearData = OFFICIAL_CKE_YEARS.find(y => y.year === activeYearTab);
 
   const detailsArray = Array.isArray(analysisResult?.details)
@@ -870,6 +873,27 @@ export default function OcenianieRozprawekPage() {
                     disabled={isAnalyzing || isGenerating || isGenerationMode || analysisResult !== null}
                     className="w-full min-h-[400px] bg-stone-900/50 hover:bg-stone-900/70 focus:bg-stone-900/90 border border-stone-800 rounded-2xl p-6 sm:p-8 text-base sm:text-lg text-stone-200 font-serif leading-loose focus:outline-none focus:border-amber-600/50 disabled:opacity-60 disabled:cursor-not-allowed shadow-inner transition-colors resize-none overflow-hidden"
                   />
+
+                  {/* 🌟 DYNAMICZNY LICZNIK SŁÓW I ZNAKÓW NA ŻYWO */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-stone-400 mt-2 px-1 gap-1">
+                    <span className={essayText.length > 10000 ? "text-red-400 font-bold" : "text-stone-400"}>
+                      Znaków: <strong className="font-mono text-stone-200">{essayText.length}</strong> / 10 000
+                    </span>
+                    <span className={
+                      currentWordCount < 300 
+                        ? "text-amber-400/90 font-medium" 
+                        : currentWordCount > 1500 
+                        ? "text-red-400 font-bold" 
+                        : "text-emerald-400/90 font-medium"
+                    }>
+                      Słów: <strong className="font-mono">{currentWordCount}</strong> / 1500 
+                      {currentWordCount < 300 && (
+                        <span className="text-[10px] ml-1 text-amber-500/80">
+                          (min. 300 wymagane do CKE)
+                        </span>
+                      )}
+                    </span>
+                  </div>
                 </div>
               ) : (
                 <div className="bg-stone-950/40 border border-stone-800 rounded-2xl p-6 min-h-[400px] shadow-inner">
