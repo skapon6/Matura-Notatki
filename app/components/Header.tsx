@@ -181,7 +181,7 @@ export function Header({
               className={`flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-xl border ${currentTheme.btnBorder} ${currentTheme.cardBg} hover:scale-105 active:scale-95 transition-all text-xs sm:text-sm font-medium ${currentTheme.subText} hover:text-stone-100 cursor-pointer shadow-sm`} 
               title="Przewodnik po platformie"
             >
-              <span className="text-sm">🧭</span>
+              <span className="text-sm">💡</span>
               <span className="hidden md:inline">Przewodnik</span>
             </button>
           </div>
